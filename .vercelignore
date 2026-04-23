@@ -1,0 +1,2 @@
+# 1.4GB of static assets live in Vercel Blob — see next.config.ts rewrite.
+public/assets/
