@@ -1,26 +1,201 @@
 @import "tailwindcss";
+@import "../styles/theme.css";
+@import "../styles/typography.css";
+@import "../styles/deck.css";
+
+@plugin "tailwindcss-react-aria-components";
+
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+@custom-variant focus-input-within (&:has(input:focus));
+
+@utility scrollbar-hide {
+    &::-webkit-scrollbar {
+        display: none;
+        -webkit-appearance: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@utility transition-inherit-all {
+    transition-property: inherit;
+    transition-duration: inherit;
+    transition-timing-function: inherit;
+}
+
+/* ── Emil Kowalski Design Engineering ── */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Dashboard chrome theme ──
+   Editor UI only (toolbar, sidebar, properties, canvas wrapper, chat input).
+   Never applied to slides — slides always render with the client's design. */
+
+.chrome-theme-dark {
+    --chrome-bg: #0a0a0a;
+    --chrome-bg-elevated: #111111;
+    --chrome-canvas-bg: #0a0a0a;
+    --chrome-border: #1a1a1a;
+    --chrome-divider: #222222;
+    --chrome-fg: #ffffff;
+    --chrome-fg-2: #cccccc;
+    --chrome-fg-3: #999999;
+    --chrome-fg-4: #777777;
+    --chrome-fg-5: #555555;
+    --chrome-fg-6: #444444;
+    --chrome-hover-bg: #1a1a1a;
+    --chrome-hover-bg-soft: rgba(255, 255, 255, 0.04);
+    --chrome-accent: #E9FF7B;
+    --chrome-accent-fg: #E9FF7B;
+    --chrome-accent-bg-soft: rgba(233, 255, 123, 0.1);
+    --chrome-ring-active: #E9FF7B;
+    --chrome-ring-idle: #222222;
+    --chrome-ring-idle-hover: #333333;
+    --chrome-shadow-active: 0 0 16px rgba(233, 255, 123, 0.14);
+    --chrome-thumb-bg: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.chrome-theme-light {
+    --chrome-bg: #fafafa;
+    --chrome-bg-elevated: #ffffff;
+    --chrome-canvas-bg: #f1f1f1;
+    --chrome-border: #e8e8e8;
+    --chrome-divider: #ebebeb;
+    --chrome-fg: #0a0a0a;
+    --chrome-fg-2: #333333;
+    --chrome-fg-3: #555555;
+    --chrome-fg-4: #777777;
+    --chrome-fg-5: #999999;
+    --chrome-fg-6: #bbbbbb;
+    --chrome-hover-bg: #f1f1f1;
+    --chrome-hover-bg-soft: rgba(0, 0, 0, 0.04);
+    --chrome-accent: #E9FF7B;
+    --chrome-accent-fg: #5a6e1d;
+    --chrome-accent-bg-soft: rgba(197, 221, 71, 0.22);
+    --chrome-ring-active: #c5dd47;
+    --chrome-ring-idle: #e4e4e4;
+    --chrome-ring-idle-hover: #d4d4d4;
+    --chrome-shadow-active: 0 0 16px rgba(197, 221, 71, 0.18);
+    --chrome-thumb-bg: #000000;
 }
 
+/* ── Slide theme CSS variables ── */
+
+.slide-theme-dark {
+    --slide-bg: #0D0D0D;
+    --slide-surface: #0a0a0a;
+    --slide-surface-subtle: #141414;
+    --slide-border: #222222;
+    --slide-border-subtle: #1a1a1a;
+    --slide-text: #F0F0F0;
+    --slide-text-secondary: #999999;
+    --slide-text-tertiary: #777777;
+    --slide-accent: #E9FF7B;
+    --slide-accent-text: #0a0a0a;
+    --slide-overlay-from: rgba(0,0,0,0.3);
+    --slide-overlay-to: rgba(0,0,0,0.8);
+}
+
+.slide-theme-light {
+    --slide-bg: #f5f5f7;
+    --slide-surface: #fafafa;
+    --slide-surface-subtle: #ffffff;
+    --slide-border: rgba(0,0,0,0.06);
+    --slide-border-subtle: rgba(0,0,0,0.04);
+    --slide-text: #1A1A1A;
+    --slide-text-secondary: #525252;
+    --slide-text-tertiary: #737373;
+    --slide-accent: #0071E3;
+    --slide-accent-text: #ffffff;
+    --slide-overlay-from: rgba(0,0,0,0.15);
+    --slide-overlay-to: rgba(0,0,0,0.55);
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-variant-ligatures: contextual;
+    font-variant-ligatures: contextual;
+}
+
+/* Buttons feel responsive — scale on press */
+button, [role="button"] {
+    transition: transform 160ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+        transform: scale(0.97);
+    }
+}
+
+/* Stagger animation for bento cards and grid items */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stagger-item {
+    animation: slideUp 300ms var(--ease-out) both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 40ms; }
+.stagger-item:nth-child(3) { animation-delay: 80ms; }
+.stagger-item:nth-child(4) { animation-delay: 120ms; }
+.stagger-item:nth-child(5) { animation-delay: 160ms; }
+.stagger-item:nth-child(6) { animation-delay: 200ms; }
+.stagger-item:nth-child(7) { animation-delay: 240ms; }
+.stagger-item:nth-child(8) { animation-delay: 280ms; }
+
+/* Thinking border animation (like Claude) */
+@keyframes thinking-border {
+    0% { --angle: 0deg; }
+    100% { --angle: 360deg; }
+}
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.thinking-glow {
+    position: relative;
+    isolation: isolate;
+}
+
+.thinking-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(from var(--angle), transparent 40%, #E9FF7B 50%, transparent 60%);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    animation: thinking-border 2.5s linear infinite;
+}
+
+/* Reduced motion: keep opacity, remove movement */
+@media (prefers-reduced-motion: reduce) {
+    button, [role="button"] {
+        transition: none;
+    }
+    .stagger-item {
+        animation: none;
+        opacity: 1;
+    }
 }

@@ -1,0 +1,728 @@
+/* ============================================================
+   30X Style Reference Deck — slide styles
+   Built to match the xtreme-sales / fundraising-school deck DNA.
+   Rules followed from the 30X design system:
+     · Pure black covers, Inter Display only (500/600/400).
+     · Single accent #E9FF7B. Never as body text on light.
+     · No ALL-CAPS sentences. No staccato. text-wrap:balance.
+     · One-family: Inter Display. No mono. Tabular via 'tnum' 1.
+   ============================================================ */
+
+/* ---------- Stage / reset ---------- */
+html, body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: "Inter Display", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+deck-stage > section {
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+deck-stage > section.light {
+  background: #fff;
+  color: #0A0A0A;
+}
+
+/* ---------- Chrome (top-left wordmark, top-right meta, bottom strip) ---------- */
+.chrome-top {
+  position: absolute;
+  top: 56px;
+  left: 72px;
+  right: 72px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 8;
+}
+.chrome-top .logo {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+.chrome-top .meta {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: -0.01em;
+  color: currentColor;
+  opacity: 0.72;
+}
+
+.chrome-bottom {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  bottom: 56px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 8;
+  font: 600 13px/1 "Inter Display";
+  letter-spacing: -0.01em;
+  font-feature-settings: 'tnum' 1;
+}
+.chrome-bottom .tag {
+  color: currentColor;
+  opacity: 0.78;
+}
+.chrome-bottom .n {
+  color: currentColor;
+  opacity: 0.72;
+}
+
+/* ---------- World-map motif (dotted, muted) ---------- */
+.mapbg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  opacity: 0.55;
+}
+.mapbg img {
+  width: 68%;
+  max-width: 1400px;
+  filter: invert(1) brightness(1.1);
+  mix-blend-mode: screen;
+  opacity: 0.45;
+}
+.mapbg.right img {
+  transform: translateX(25%);
+}
+
+/* ---------- COVER (xtreme-sales style) ---------- */
+.cover .body {
+  position: absolute;
+  left: 72px;
+  bottom: 180px;
+  z-index: 5;
+  max-width: 1200px;
+}
+.cover h1 {
+  font: 600 168px/0.92 "Inter Display";
+  letter-spacing: -0.055em;
+  margin: 0;
+  text-wrap: balance;
+}
+.cover h1 .accent { color: #E9FF7B; }
+.cover .tagline {
+  margin-top: 20px;
+  font: 500 22px/1.15 "Inter Display";
+  letter-spacing: -0.02em;
+  color: rgba(255,255,255,0.65);
+}
+
+/* Horizontal thin divider (used in some 30x decks below title) */
+.cover .rule {
+  width: 120px;
+  height: 2px;
+  background: #E9FF7B;
+  margin: 32px 0 0;
+}
+
+/* ---------- STAT SLIDE (big accent % + progress bar) ---------- */
+.stat .body {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  top: 160px;
+  bottom: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 5;
+}
+.stat .eyebrow {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #E9FF7B;
+  margin-bottom: 28px;
+}
+.stat h2 {
+  font: 500 64px/1 "Inter Display";
+  letter-spacing: -0.04em;
+  margin: 0;
+  max-width: 1000px;
+  text-wrap: balance;
+}
+.stat .big {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  margin-top: 24px;
+}
+.stat .big .pct {
+  font: 500 280px/0.9 "Inter Display";
+  letter-spacing: -0.06em;
+  color: #E9FF7B;
+  font-feature-settings: 'tnum' 1;
+}
+.stat .big .unit {
+  font: 500 72px/1 "Inter Display";
+  color: #E9FF7B;
+  letter-spacing: -0.04em;
+}
+.stat .foot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 80px;
+}
+.stat .desc {
+  font: 400 22px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.72);
+  max-width: 560px;
+  text-wrap: balance;
+}
+.stat .bar {
+  flex: 1;
+  max-width: 760px;
+  height: 6px;
+  background: rgba(255,255,255,0.14);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+.stat .bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #E9FF7B;
+  border-radius: 99px;
+}
+
+/* ---------- SECTION INTRO (text left, photo/color-block right) ---------- */
+.section-intro { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+.section-intro .left {
+  position: relative;
+  padding: 168px 72px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 5;
+}
+.section-intro .section-num {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #E9FF7B;
+  font-feature-settings: 'tnum' 1;
+}
+.section-intro h2 {
+  font: 600 104px/0.95 "Inter Display";
+  letter-spacing: -0.055em;
+  margin: 32px 0 0;
+  text-wrap: balance;
+}
+.section-intro .blurb {
+  margin-top: 28px;
+  font: 400 20px/1.4 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.65);
+  max-width: 460px;
+  text-wrap: balance;
+}
+.section-intro .right {
+  position: relative;
+  overflow: hidden;
+  background: #0A0A0A;
+}
+.section-intro .right img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+}
+.section-intro .right.pink { background: #0A0A0A; }
+.section-intro .right.pink img { opacity: 1; }
+.section-intro .right.black { background: #0A0A0A; }
+.section-intro .right.black img { opacity: 1; }
+
+.section-intro .bullets {
+  list-style: none;
+  padding: 0;
+  margin: 48px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.section-intro .bullets li {
+  font: 500 18px/1.35 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.82);
+  padding-left: 20px;
+  position: relative;
+  max-width: 520px;
+  text-wrap: balance;
+}
+.section-intro .bullets li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 12px;
+  width: 8px; height: 1px;
+  background: #E9FF7B;
+}
+.section-intro .footer-line {
+  margin-top: 40px;
+  font: 600 18px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: #E9FF7B;
+  max-width: 520px;
+  text-wrap: balance;
+}
+
+/* ---------- GRID of stats (3 or 4 big numbers) ---------- */
+.stat-grid .body {
+  position: absolute;
+  inset: 168px 72px 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 5;
+}
+.stat-grid h2 {
+  font: 500 52px/1 "Inter Display";
+  letter-spacing: -0.03em;
+  margin: 0;
+  max-width: 1000px;
+  text-wrap: balance;
+}
+.stat-grid h2 .accent { color: #E9FF7B; }
+.stat-grid .grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 48px;
+  border-top: 1px solid rgba(255,255,255,0.14);
+  padding-top: 40px;
+}
+.stat-grid .cell .k {
+  font: 600 12px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 16px;
+  font-feature-settings: 'tnum' 1;
+}
+.stat-grid .cell .v {
+  font: 500 96px/0.95 "Inter Display";
+  letter-spacing: -0.05em;
+  color: #fff;
+  font-feature-settings: 'tnum' 1;
+}
+.stat-grid .cell .v .accent { color: #E9FF7B; }
+.stat-grid .cell .desc {
+  margin-top: 12px;
+  font: 400 16px/1.35 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.62);
+  text-wrap: balance;
+}
+
+/* ---------- 3-COLUMN BULLETS ---------- */
+.three-col .body {
+  position: absolute;
+  inset: 160px 72px 120px;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+.three-col h2 {
+  font: 500 64px/1 "Inter Display";
+  letter-spacing: -0.04em;
+  margin: 0 0 64px;
+  max-width: 1100px;
+  text-wrap: balance;
+}
+.three-col h2 .accent { color: #E9FF7B; }
+.three-col .cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 64px;
+}
+.three-col .col {
+  border-top: 1px solid rgba(255,255,255,0.18);
+  padding-top: 24px;
+}
+.three-col .col .n {
+  font: 600 14px/1 "Inter Display";
+  color: #E9FF7B;
+  letter-spacing: -0.01em;
+  font-feature-settings: 'tnum' 1;
+  margin-bottom: 32px;
+}
+.three-col .col .head {
+  font: 500 28px/1.1 "Inter Display";
+  letter-spacing: -0.03em;
+  margin: 0 0 16px;
+  text-wrap: balance;
+}
+.three-col .col p {
+  margin: 0;
+  font: 400 17px/1.4 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.68);
+  text-wrap: balance;
+}
+
+/* ---------- AGENDA / NUMBERED LIST ---------- */
+.agenda .body {
+  position: absolute;
+  inset: 160px 72px 120px;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+.agenda h2 {
+  font: 600 88px/0.95 "Inter Display";
+  letter-spacing: -0.05em;
+  margin: 0 0 56px;
+  text-wrap: balance;
+}
+.agenda h2 .accent { color: #E9FF7B; }
+.agenda .rows { display: flex; flex-direction: column; gap: 0; }
+.agenda .row {
+  display: grid;
+  grid-template-columns: 80px 1fr 240px;
+  align-items: center;
+  gap: 48px;
+  padding: 24px 0;
+  border-top: 1px solid rgba(255,255,255,0.14);
+}
+.agenda .row:last-child { border-bottom: 1px solid rgba(255,255,255,0.14); }
+.agenda .row .n {
+  font: 500 22px/1 "Inter Display";
+  color: #E9FF7B;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.02em;
+}
+.agenda .row .label {
+  font: 500 32px/1.1 "Inter Display";
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+.agenda .row .time {
+  font: 400 18px/1 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.58);
+  justify-self: end;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ---------- PEOPLE GRID (members roster) ---------- */
+.people .body {
+  position: absolute;
+  inset: 140px 72px 108px;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+.people h2 {
+  font: 500 48px/1 "Inter Display";
+  letter-spacing: -0.04em;
+  margin: 0 0 36px;
+  max-width: 1200px;
+  text-wrap: balance;
+}
+.people h2 .accent { color: #E9FF7B; }
+.people .grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px 20px;
+}
+.people .card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.people .card .photo {
+  aspect-ratio: 1 / 1;
+  background: #141414;
+  overflow: hidden;
+  border-radius: 0;
+}
+.people .card .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.people .card .name {
+  font: 600 16px/1.15 "Inter Display";
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-wrap: balance;
+}
+.people .card .role {
+  font: 400 13px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.55);
+  text-wrap: balance;
+}
+
+/* ---------- LOGO WALL ---------- */
+.logowall .body {
+  position: absolute;
+  inset: 140px 72px 108px;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+.logowall h2 {
+  font: 500 48px/1 "Inter Display";
+  letter-spacing: -0.04em;
+  margin: 0 0 14px;
+  max-width: 1100px;
+  text-wrap: balance;
+}
+.logowall h2 .accent { color: #E9FF7B; }
+.logowall .sub {
+  font: 400 18px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.62);
+  max-width: 720px;
+  margin: 0 0 36px;
+  text-wrap: balance;
+}
+.logowall .grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 0;
+  border-top: 1px solid rgba(255,255,255,0.14);
+  border-left: 1px solid rgba(255,255,255,0.14);
+}
+.logowall .cell {
+  border-right: 1px solid rgba(255,255,255,0.14);
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.logowall .cell img {
+  max-width: 72%;
+  max-height: 48px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
+}
+
+/* ---------- QUOTE SLIDE ---------- */
+.quote .body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 44% 56%;
+  z-index: 5;
+}
+.quote .portrait { position: relative; overflow: hidden; background: #141414; }
+.quote .portrait img { width: 100%; height: 100%; object-fit: cover; }
+.quote .portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.65) 100%);
+}
+.quote .text {
+  padding: 180px 96px 120px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.quote .mark {
+  color: #E9FF7B;
+  font: 500 120px/0.7 "Inter Display";
+  margin: -40px 0 12px;
+  letter-spacing: -0.05em;
+}
+.quote blockquote {
+  margin: 0;
+  font: 500 44px/1.15 "Inter Display";
+  letter-spacing: -0.035em;
+  color: #fff;
+  text-wrap: balance;
+}
+.quote .byline {
+  margin-top: 48px;
+  font: 500 16px/1.2 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.62);
+}
+.quote .byline .name { color: #fff; font-weight: 600; }
+
+/* ---------- FULL-BLEED PHOTO ---------- */
+.photo-bleed { position: relative; }
+.photo-bleed img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.photo-bleed::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.75) 100%);
+  z-index: 2;
+}
+.photo-bleed .overlay-text {
+  position: absolute;
+  left: 72px;
+  right: 72px;
+  bottom: 120px;
+  z-index: 5;
+}
+.photo-bleed .overlay-text h2 {
+  font: 600 128px/0.95 "Inter Display";
+  letter-spacing: -0.055em;
+  margin: 0;
+  max-width: 1400px;
+  text-wrap: balance;
+}
+.photo-bleed .overlay-text h2 .accent { color: #E9FF7B; }
+.photo-bleed .overlay-text .cap {
+  margin-top: 16px;
+  font: 500 20px/1.2 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.78);
+  max-width: 820px;
+  text-wrap: balance;
+}
+
+/* ---------- MANIFESTO / BIG EDITORIAL TEXT ---------- */
+.manifesto .body {
+  position: absolute;
+  inset: 200px 160px 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 5;
+}
+.manifesto .mark-eye {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #E9FF7B;
+  margin-bottom: 40px;
+}
+.manifesto p {
+  font: 500 72px/1.05 "Inter Display";
+  letter-spacing: -0.045em;
+  margin: 0;
+  max-width: 1480px;
+  color: #fff;
+  text-wrap: balance;
+}
+.manifesto p .accent { color: #E9FF7B; }
+.manifesto p .muted { color: rgba(255,255,255,0.42); }
+.manifesto .sig {
+  margin-top: 64px;
+  font: 500 18px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.65);
+}
+
+/* ---------- CLOSING / CTA ---------- */
+.closing .body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  text-align: center;
+}
+.closing .inner { max-width: 1200px; padding: 0 72px; }
+.closing .eye {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #E9FF7B;
+  margin-bottom: 40px;
+}
+.closing h2 {
+  font: 600 144px/0.95 "Inter Display";
+  letter-spacing: -0.055em;
+  margin: 0;
+  text-wrap: balance;
+}
+.closing h2 .accent { color: #E9FF7B; }
+.closing .sub {
+  margin-top: 32px;
+  font: 400 22px/1.3 "Inter Display";
+  letter-spacing: -0.01em;
+  color: rgba(255,255,255,0.62);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  text-wrap: balance;
+}
+.closing .cta-row {
+  margin-top: 64px;
+  display: inline-flex;
+  gap: 12px;
+}
+.closing .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  font: 600 15px/1 "Inter Display";
+  letter-spacing: -0.02em;
+  border-radius: 999px;
+  background: #E9FF7B;
+  color: #0A0A0A;
+  border: 0;
+  text-decoration: none;
+}
+.closing .btn.ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.24);
+}
+
+/* ---------- DIVIDER / SIMPLE LIGHT SLIDE ---------- */
+.light-divider .body {
+  position: absolute;
+  inset: 160px 72px 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  z-index: 5;
+}
+.light-divider .eye {
+  font: 600 14px/1 "Inter Display";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0A0A0A;
+  margin-bottom: 32px;
+  opacity: 0.6;
+}
+.light-divider h2 {
+  font: 600 168px/0.92 "Inter Display";
+  letter-spacing: -0.055em;
+  margin: 0;
+  color: #0A0A0A;
+  text-wrap: balance;
+}
+.light-divider .underline {
+  width: 160px; height: 6px;
+  background: #0A0A0A;
+  margin-top: 48px;
+}
+
+/* Layout grain — tiny noise via gradient to feel photographic */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 3px 3px;
+  mix-blend-mode: overlay;
+}
