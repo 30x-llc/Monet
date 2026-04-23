@@ -7,7 +7,7 @@ import type { Deck } from "./slide-types";
  * Format: { id, deck, createdAt, updatedAt }
  */
 
-const STORAGE_KEY = "30x-deck-engine:decks";
+const STORAGE_KEY = "30x-design:decks";
 
 export interface StoredDeck {
     id: string;

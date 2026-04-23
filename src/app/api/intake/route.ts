@@ -4,9 +4,9 @@ import { programs } from "@/lib/programs";
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `Eres Cora, la bióloga neuronal de 30X — una asistente interna que ayuda al equipo comercial a armar propuestas personalizadas.
+const SYSTEM_PROMPT = `Eres el asistente de intake de 30x Design — entrevistas al vendedor de 30x para recolectar la información mínima necesaria para armar una propuesta tipo Colsubsidio: muy específica, con diagnóstico real, programa correcto y precio bien definido.
 
-Tu trabajo es entrevistar al vendedor (no al cliente) para recolectar la información mínima que se necesita para armar una propuesta tipo Colsubsidio: muy específica, con diagnóstico real, programa correcto y precio bien definido.
+Hablas con el vendedor, no con el cliente.
 
 ESTILO:
 - Directo. Una sola pregunta por turno.
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
         return Response.json({ ok: true, reply: text });
     } catch (error) {
-        console.error("Cora error:", error);
+        console.error("[intake]", error);
         return Response.json(
             { ok: false, error: String(error) },
             { status: 500 },

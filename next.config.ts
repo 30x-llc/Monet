@@ -5,7 +5,7 @@ import type { NextConfig } from "next";
 // only applies at build time on Vercel — locally, the public dir wins.
 const BLOB_BASE_URL =
     process.env.BLOB_BASE_URL ||
-    "https://hn1w2duxxggnvpal.public.blob.vercel-storage.com";
+    "https://hn1w2duxxggnvpal.public.blob.vercel-storage.com"; // 30x-design-assets store
 
 const nextConfig: NextConfig = {
     async rewrites() {

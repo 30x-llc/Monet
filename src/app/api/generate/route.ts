@@ -99,7 +99,7 @@ ${JSON.stringify(research, null, 2)}`;
         }
 
         if (intake) {
-            userMessage += `\n\nRESPUESTAS DEL INTAKE (del vendedor / Cora):\n${JSON.stringify(intake, null, 2)}`;
+            userMessage += `\n\nRESPUESTAS DEL INTAKE (del vendedor):\n${JSON.stringify(intake, null, 2)}`;
         }
 
         if (notes) {

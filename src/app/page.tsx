@@ -4,11 +4,11 @@ import { useState, useCallback, useEffect } from "react";
 import type { Deck, IntakeAnswers, ProjectFormat } from "@/lib/slide-types";
 import { EditorLayout } from "@/components/editor/editor-layout";
 import { HomeView, type CreateArgs } from "@/components/app/home-view";
-import { CoraIntake, type CoraResult } from "@/components/app/cora-intake";
+import { GuidedIntake, type IntakeResult } from "@/components/app/guided-intake";
 import { saveDeck, getRecentDecks, getDeckById, deleteDeck, type StoredDeck } from "@/lib/deck-storage";
 import { getTemplateById } from "@/lib/templates";
 
-type AppView = "home" | "cora" | "generating" | "editor";
+type AppView = "home" | "intake" | "generating" | "editor";
 
 export default function Home() {
     const [view, setView] = useState<AppView>("home");
@@ -20,7 +20,7 @@ export default function Home() {
     const [generationLog, setGenerationLog] = useState("");
     const [recentDecks, setRecentDecks] = useState<StoredDeck[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [coraFormat, setCoraFormat] = useState<ProjectFormat>("proposal");
+    const [intakeFormat, setIntakeFormat] = useState<ProjectFormat>("proposal");
     const [generationError, setGenerationError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -197,8 +197,8 @@ export default function Home() {
         [],
     );
 
-    const handleGenerateFromCora = useCallback(
-        async (result: CoraResult) => {
+    const handleGenerateFromIntake = useCallback(
+        async (result: IntakeResult) => {
             await runGeneration({
                 format: "proposal",
                 intake: result.intake,
@@ -317,9 +317,9 @@ export default function Home() {
         setCurrentDeckId(null);
     }, []);
 
-    const handleOpenCora = useCallback((format: ProjectFormat) => {
-        setCoraFormat(format);
-        setView("cora");
+    const handleOpenIntake = useCallback((format: ProjectFormat) => {
+        setIntakeFormat(format);
+        setView("intake");
     }, []);
 
     // ── Editor view ──
@@ -337,9 +337,9 @@ export default function Home() {
         );
     }
 
-    // ── Cora intake ──
-    if (view === "cora") {
-        return <CoraIntake onComplete={handleGenerateFromCora} onCancel={handleNewDeck} />;
+    // ── Guided intake ──
+    if (view === "intake") {
+        return <GuidedIntake onComplete={handleGenerateFromIntake} onCancel={handleNewDeck} />;
     }
 
     // ── Generating ──
@@ -411,7 +411,7 @@ export default function Home() {
             onDeleteDeck={handleDeleteDeck}
             onOpenTemplate={handleOpenTemplate}
             onCreateNew={handleCreateDirect}
-            onOpenCora={handleOpenCora}
+            onOpenIntake={handleOpenIntake}
         />
     );
 }

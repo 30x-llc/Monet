@@ -29,7 +29,7 @@ interface HomeViewProps {
     onDeleteDeck: (id: string) => void;
     onOpenTemplate: (id: string) => void;
     onCreateNew: (args: CreateArgs) => void;
-    onOpenCora: (format: ProjectFormat) => void;
+    onOpenIntake: (format: ProjectFormat) => void;
     userEmail?: string;
     userName?: string;
 }
@@ -51,7 +51,7 @@ export function HomeView({
     onDeleteDeck,
     onOpenTemplate,
     onCreateNew,
-    onOpenCora,
+    onOpenIntake,
     userEmail = "jdelaossa1800@gmail.com",
     userName = "Juan Diego",
 }: HomeViewProps) {
@@ -241,11 +241,11 @@ export function HomeView({
 
                             {isProposal ? (
                                 <button
-                                    onClick={() => onOpenCora(format)}
+                                    onClick={() => onOpenIntake(format)}
                                     className="w-full h-10 rounded-md bg-[#E9FF7B] text-[13px] font-semibold tracking-[-0.01em] text-[#0a0a0a] hover:brightness-95 active:brightness-90 transition-[filter] duration-150"
                                     style={{ transitionTimingFunction: "var(--ease-out)" }}
                                 >
-                                    Empezar con Cora →
+                                    Empezar guiado →
                                 </button>
                             ) : null}
                         </div>

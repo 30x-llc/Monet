@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-    title: "30x Deck Engine",
+    title: "30x Design",
     description:
-        "Generador de presentaciones comerciales de 30x, la red ejecutiva mas grande de Latinoamerica",
+        "Sistema de diseño y generación de propuestas comerciales de 30x, la red ejecutiva más grande de Latinoamérica",
 };
 
 export default function RootLayout({

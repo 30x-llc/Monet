@@ -11,15 +11,15 @@ interface SeedData {
     emailThread?: string;
 }
 
-export interface CoraResult {
+export interface IntakeResult {
     intake: IntakeAnswers;
     programId: string;
     seed: SeedData;
     corporateMode: boolean;
 }
 
-interface CoraIntakeProps {
-    onComplete: (result: CoraResult) => void;
+interface GuidedIntakeProps {
+    onComplete: (result: IntakeResult) => void;
     onCancel: () => void;
 }
 
@@ -122,7 +122,7 @@ const DECIDE_SENTINEL = "__decide__";
 // Main component
 // ──────────────────────────────────────────────────────────────
 
-export function CoraIntake({ onComplete, onCancel }: CoraIntakeProps) {
+export function GuidedIntake({ onComplete, onCancel }: GuidedIntakeProps) {
     // Project config
     const [programId, setProgramId] = useState<string>("sales-machine");
     const [corporateMode, setCorporateMode] = useState<boolean>(true);
@@ -223,7 +223,7 @@ export function CoraIntake({ onComplete, onCancel }: CoraIntakeProps) {
                     <span className="w-px h-3 bg-black/10 mx-0.5" />
                     <span className="inline-flex items-center gap-1.5 text-[11px] text-[#525252] tracking-[-0.005em]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
-                        Cora · Propuesta nueva
+                        Propuesta nueva · Modo guiado
                     </span>
                     <span className="text-[11px] text-[#737373] ml-1.5 tracking-[-0.005em]">
                         · {answered}/{QUESTIONS.length} respondidas
@@ -243,7 +243,7 @@ export function CoraIntake({ onComplete, onCancel }: CoraIntakeProps) {
                         Propuesta nueva.
                     </h1>
                     <p className="text-[16px] text-[#525252] leading-[1.5] mb-10 max-w-[560px] tracking-[-0.005em]">
-                        Responde rápido. &ldquo;Decidir por mí&rdquo; si no estás seguro — Cora infiere el resto.
+                        Responde rápido. &ldquo;Decidir por mí&rdquo; si no estás seguro — el asistente infiere el resto.
                     </p>
 
                     {/* Context section (collapsible) */}
@@ -348,7 +348,7 @@ export function CoraIntake({ onComplete, onCancel }: CoraIntakeProps) {
                                 ¿Qué programa encaja mejor?
                             </h3>
                             <p className="text-[13px] text-[#737373] tracking-[-0.005em] mb-3">
-                                Cora sugiere uno, puedes cambiarlo.
+                                Sugerimos uno, puedes cambiarlo.
                             </p>
                             <div className="grid grid-cols-2 gap-3">
                                 <select
@@ -386,7 +386,7 @@ export function CoraIntake({ onComplete, onCancel }: CoraIntakeProps) {
                         {/* Final notes */}
                         <section>
                             <h3 className="text-[17px] font-semibold tracking-[-0.015em] mb-2">
-                                ¿Algo más que Cora deba saber?
+                                ¿Algo más que el asistente deba saber?
                             </h3>
                             <p className="text-[13px] text-[#737373] tracking-[-0.005em] mb-3">
                                 Opcional. Cualquier detalle que no te cupo arriba.
