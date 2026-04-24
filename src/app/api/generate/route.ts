@@ -3,7 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getGeneratorPrompt } from "@/lib/prompts/generator";
 import type { ResearchResult, IntakeAnswers, ProjectFormat } from "@/lib/slide-types";
 
-export const maxDuration = 60;
+// Opus 4.7 with 8192 max_tokens for a 9-slide deck regularly exceeds 60s.
+// Pro plan allows up to 300s; we cap there.
+export const maxDuration = 300;
 
 async function callClaudeWithRetry(
     client: Anthropic,

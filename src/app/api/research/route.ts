@@ -2,7 +2,10 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { RESEARCH_SYSTEM_PROMPT } from "@/lib/prompts/research";
 
-export const maxDuration = 60;
+// Web search + Opus 4.7 reasoning regularly exceeds 60s on the first
+// attempt. Pro plan allows 300s; we cap there to fit the longest research
+// runs without truncating the stream.
+export const maxDuration = 300;
 
 async function callClaude(
     client: Anthropic,
