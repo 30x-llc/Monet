@@ -286,7 +286,6 @@ function PrototypeForm({
 }) {
     const [name, setName] = useState("");
     const [kind, setKind] = useState<PrototypeKind>("app");
-    const canCreate = name.trim().length > 1;
 
     return (
         <FormSurface
@@ -313,27 +312,13 @@ function PrototypeForm({
 
             <CreateRow
                 primary={{
-                    label: "Crear prototipo",
-                    disabled: !canCreate,
-                    onClick: () =>
-                        onCreate({
-                            format: "prototype",
-                            clientName: name.trim(),
-                            programId: "",
-                            corporateMode: false,
-                            theme: "dark",
-                            topic: name.trim(),
-                            prototypeKind: kind,
-                        }),
-                }}
-                secondary={{
-                    label: "Diseñar con Cora",
+                    label: "Empezar →",
+                    accent: true,
                     onClick: () =>
                         onOpenIntake("prototype", {
                             clientName: name.trim() || undefined,
                             prototypeKind: kind,
                         }),
-                    accent: true,
                 }}
             />
         </FormSurface>
@@ -349,8 +334,6 @@ function ProposalForm({
 }) {
     const [clientName, setClientName] = useState("");
     const [programId, setProgramId] = useState("sales-machine");
-    const [corporateMode, setCorporateMode] = useState(true);
-    const canCreate = clientName.trim().length > 1;
 
     return (
         <FormSurface
@@ -366,48 +349,23 @@ function ProposalForm({
                 />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
-                <Field label="Programa">
-                    <Select
-                        value={programId}
-                        onChange={setProgramId}
-                        options={programs.map((p) => ({ value: p.id, label: p.name }))}
-                    />
-                </Field>
-                <Field label="Tipo">
-                    <Segmented
-                        value={corporateMode ? "corp" : "open"}
-                        onChange={(v) => setCorporateMode(v === "corp")}
-                        options={[
-                            { value: "corp", label: "Corporativa" },
-                            { value: "open", label: "Abierta" },
-                        ]}
-                    />
-                </Field>
-            </div>
+            <Field label="Programa">
+                <Select
+                    value={programId}
+                    onChange={setProgramId}
+                    options={programs.map((p) => ({ value: p.id, label: p.name }))}
+                />
+            </Field>
 
             <CreateRow
                 primary={{
-                    label: "Crear propuesta",
-                    disabled: !canCreate,
-                    onClick: () =>
-                        onCreate({
-                            format: "proposal",
-                            clientName: clientName.trim(),
-                            programId,
-                            corporateMode,
-                            theme: "dark",
-                        }),
-                }}
-                secondary={{
-                    label: "Empezar con Cora",
+                    label: "Empezar →",
+                    accent: true,
                     onClick: () =>
                         onOpenIntake("proposal", {
                             clientName: clientName.trim() || undefined,
                             programId,
-                            corporateMode,
                         }),
-                    accent: true,
                 }}
             />
         </FormSurface>
@@ -431,7 +389,6 @@ function ContentForm({
 }) {
     const [topic, setTopic] = useState("");
     const [programId, setProgramId] = useState("");
-    const canCreate = topic.trim().length > 2;
     const label = FORMATS[format].label;
 
     return (
@@ -461,26 +418,13 @@ function ContentForm({
 
             <CreateRow
                 primary={{
-                    label: `Crear ${label.toLowerCase()}`,
-                    disabled: !canCreate,
-                    onClick: () =>
-                        onCreate({
-                            format,
-                            clientName: topic.trim().slice(0, 60),
-                            programId,
-                            corporateMode: false,
-                            theme: defaultTheme,
-                            topic: topic.trim(),
-                        }),
-                }}
-                secondary={{
-                    label: "Explorar con Cora",
+                    label: "Empezar →",
+                    accent: true,
                     onClick: () =>
                         onOpenIntake(format, {
                             topic: topic.trim() || undefined,
                             programId: programId || undefined,
                         }),
-                    accent: true,
                 }}
             />
         </FormSurface>
@@ -496,7 +440,6 @@ function DocForm({
 }) {
     const [title, setTitle] = useState("");
     const [kind, setKind] = useState<DocKind>("proposal");
-    const canCreate = title.trim().length > 1;
 
     return (
         <FormSurface
@@ -527,27 +470,13 @@ function DocForm({
 
             <CreateRow
                 primary={{
-                    label: "Crear documento",
-                    disabled: !canCreate,
-                    onClick: () =>
-                        onCreate({
-                            format: "doc",
-                            clientName: title.trim(),
-                            programId: "",
-                            corporateMode: false,
-                            theme: "light",
-                            topic: title.trim(),
-                            docKind: kind,
-                        }),
-                }}
-                secondary={{
-                    label: "Escribir con Cora",
+                    label: "Empezar →",
+                    accent: true,
                     onClick: () =>
                         onOpenIntake("doc", {
                             clientName: title.trim() || undefined,
                             docKind: kind,
                         }),
-                    accent: true,
                 }}
             />
         </FormSurface>
@@ -575,12 +504,11 @@ function OtherForm({
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
 }) {
     const [prompt, setPrompt] = useState("");
-    const canOpen = prompt.trim().length > 6;
 
     return (
         <FormSurface
             title="Describe lo que quieres diseñar"
-            subtitle="Cora escoge el formato — deck, carrusel, doc, prototipo — y lo lleva a ejecución."
+            subtitle="El asistente escoge el formato — deck, carrusel, doc, prototipo — y lo lleva a ejecución."
         >
             <Field label="¿Qué necesitas?">
                 <Textarea
@@ -594,11 +522,10 @@ function OtherForm({
 
             <CreateRow
                 primary={{
-                    label: "Trabajar con Cora",
-                    disabled: !canOpen,
-                    onClick: () =>
-                        onOpenIntake("other", { topic: prompt.trim() }),
+                    label: "Empezar →",
                     accent: true,
+                    onClick: () =>
+                        onOpenIntake("other", { topic: prompt.trim() || undefined }),
                 }}
             />
         </FormSurface>
