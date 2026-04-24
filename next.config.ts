@@ -8,6 +8,12 @@ const BLOB_BASE_URL =
     "https://hn1w2duxxggnvpal.public.blob.vercel-storage.com"; // 30x-design-assets store
 
 const nextConfig: NextConfig = {
+    // @sparticuz/chromium ships a Brotli-compressed Chromium binary it
+    // extracts at runtime from its own node_modules path. If Turbopack
+    // bundles + relocates it, the path breaks and launch fails with
+    // "input directory does not exist". Externalizing forces Next to
+    // import it from node_modules at runtime on the serverless function.
+    serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
     async rewrites() {
         return [
             {
