@@ -17,6 +17,10 @@ interface SeedData {
 }
 
 interface HomeSeed {
+    // The home's text input — the deck title / file name (e.g. "Propuesta
+    // Colsubsidio Q2"). This is NOT the client: Cora still asks for
+    // clientName / marca / persona in the intake so "Speaker Clinton"
+    // can yield clientName = "Clinton Foundation".
     clientName?: string;
     topic?: string;
     programId?: string;
@@ -42,13 +46,14 @@ interface GuidedIntakeProps {
 
 type AnswerKey =
     | "clientName"
-    | "topic"
+    | "proposalType"
+    | "programName"
     | "sector"
     | "companySize"
     | "objective"
     | "format"
-    | "budget"
     | "seats"
+    | "budget"
     | "audience"
     | "hook"
     | "ctaLabel"
@@ -57,7 +62,8 @@ type AnswerKey =
     | "prototypeKind"
     | "docKind"
     | "suggestedFormat"
-    | "theme";
+    | "theme"
+    | "topic";
 
 type QuestionType = "text" | "textarea" | "pills";
 
@@ -68,25 +74,58 @@ interface Question {
     helper?: string;
     placeholder?: string;
     options?: string[];
-    /** Show "Decidir por mí" pill (default true for pills) */
     allowDecide?: boolean;
-    /** Show "Otra…" escape hatch (default true for pills) */
     allowOther?: boolean;
+    /** Only render when this predicate over current answers returns true. */
+    showIf?: (answers: Record<string, string>) => boolean;
 }
+
+// ──────────────────────────────────────────────────────────────
+// Constants
+// ──────────────────────────────────────────────────────────────
+
+const DECIDE = "__decide__";
+
+const PROPOSAL_TYPES = [
+    "Comercial",
+    "Speaker",
+    "Marca",
+    "Partnership",
+    "Estratégica",
+];
+
+// Commercial / strategic proposals need a 30x program; speaker/marca/
+// partnership proposals don't. Cora uses this to hide the program question.
+const PROGRAM_RELEVANT = new Set(["Comercial", "Estratégica"]);
 
 // ──────────────────────────────────────────────────────────────
 // Question sets per format
 // ──────────────────────────────────────────────────────────────
 
-const DECIDE = "__decide__";
-
 const Q_PROPOSAL: Question[] = [
+    {
+        id: "proposalType",
+        type: "pills",
+        label: "¿Qué tipo de propuesta es?",
+        options: PROPOSAL_TYPES,
+        allowOther: true,
+        allowDecide: false,
+    },
     {
         id: "clientName",
         type: "text",
-        label: "¿Para qué cliente es la propuesta?",
-        helper: "Usaremos este nombre en la portada. Con la empresa alcanza.",
-        placeholder: "Ej: Colsubsidio, Corficolombiana, Grupo Éxito…",
+        label: "¿Para quién es?",
+        helper: "Cliente, marca, empresa o persona — lo que aparezca en la portada.",
+        placeholder: "Ej: Colsubsidio · Bavaria · Clinton Foundation · Dylan Rosemberg",
+    },
+    {
+        id: "programName",
+        type: "pills",
+        label: "¿Qué programa o track aplica?",
+        helper: "Solo para propuestas comerciales o estratégicas.",
+        options: programs.map((p) => p.name),
+        allowOther: true,
+        showIf: (a) => PROGRAM_RELEVANT.has(a.proposalType ?? ""),
     },
     {
         id: "sector",
@@ -102,18 +141,21 @@ const Q_PROPOSAL: Question[] = [
             "Servicios profesionales",
             "Energía",
         ],
+        showIf: (a) => a.proposalType !== "Speaker" && a.proposalType !== "Marca",
     },
     {
         id: "companySize",
         type: "pills",
         label: "¿Qué tamaño tiene la empresa?",
         options: ["1–50 empleados", "50–200", "200–1,000", "1,000–5,000", "5,000+"],
+        showIf: (a) => a.proposalType !== "Speaker",
     },
     {
         id: "seats",
         type: "pills",
-        label: "¿Cuántos cupos necesitan?",
+        label: "¿Cuántos cupos o asistentes?",
         options: ["10–20", "20–40", "40–80", "80–150", "150+"],
+        showIf: (a) => PROGRAM_RELEVANT.has(a.proposalType ?? ""),
     },
     {
         id: "format",
@@ -125,7 +167,7 @@ const Q_PROPOSAL: Question[] = [
         id: "budget",
         type: "pills",
         label: "¿Presupuesto aproximado?",
-        helper: "USD para el programa completo.",
+        helper: "USD para el proyecto completo.",
         options: ["< $20K", "$20K – $50K", "$50K – $100K", "$100K – $250K", "$250K+"],
     },
     {
@@ -138,16 +180,11 @@ const Q_PROPOSAL: Question[] = [
 
 const Q_PROTOTYPE: Question[] = [
     {
-        id: "clientName",
-        type: "text",
-        label: "¿Cómo se llama el prototipo?",
-        placeholder: "Ej: Sales Machine Dashboard",
-    },
-    {
         id: "prototypeKind",
         type: "pills",
         label: "¿Qué tipo de prototipo es?",
         options: ["App", "Landing", "Componente"],
+        allowDecide: false,
     },
     {
         id: "audience",
@@ -193,7 +230,7 @@ const Q_CAROUSEL: Question[] = [
         id: "topic",
         type: "textarea",
         label: "¿De qué trata el carrusel?",
-        placeholder: "Ej: 5 lecciones que aprendimos escalando ventas B2B",
+        placeholder: "Ej: 5 lecciones escalando ventas B2B",
     },
     {
         id: "audience",
@@ -245,8 +282,8 @@ const Q_STORY: Question[] = [
     {
         id: "topic",
         type: "text",
-        label: "¿Qué anuncia o comunica la historia?",
-        placeholder: "Ej: Nueva cohort de Sales Machine arranca en abril",
+        label: "¿Qué anuncia o comunica?",
+        placeholder: "Ej: Apertura cohort Sales Machine abril 2026",
     },
     {
         id: "ctaLabel",
@@ -264,22 +301,17 @@ const Q_STORY: Question[] = [
 
 const Q_DOC: Question[] = [
     {
-        id: "clientName",
-        type: "text",
-        label: "¿Título del documento?",
-        placeholder: "Ej: Contrato de formación ejecutiva — Grupo Éxito",
-    },
-    {
         id: "docKind",
         type: "pills",
         label: "¿Qué tipo de documento?",
         options: ["Propuesta corta", "Contrato", "One-pager", "Brief"],
+        allowDecide: false,
     },
     {
-        id: "audience",
+        id: "clientName",
         type: "text",
-        label: "¿Para quién es?",
-        placeholder: "Ej: VP de Talento de Bancolombia",
+        label: "¿Para quién es el documento?",
+        placeholder: "Ej: Grupo Éxito, Equipo legal, Nueva cohort Sales Machine",
     },
     {
         id: "tone",
@@ -306,7 +338,7 @@ const Q_OTHER: Question[] = [
         id: "suggestedFormat",
         type: "pills",
         label: "¿Qué formato crees que encaja?",
-        helper: "Si no sabes, déjalo en Decide tú.",
+        helper: "Si no sabes, déjalo en Decidir por mí.",
         options: ["Propuesta", "Carrusel IG", "Historia IG", "Documento", "Prototipo"],
         allowOther: false,
     },
@@ -343,29 +375,39 @@ export function GuidedIntake({
     format = "proposal",
     home,
 }: GuidedIntakeProps) {
-    // Skip questions already answered by the home seed. Each entry in this
-    // set is a question id that we won't render — its value is pulled from
-    // the home seed at submit time.
-    const seededIds = useMemo(() => {
-        const s = new Set<AnswerKey>();
-        if (home?.clientName) s.add("clientName");
-        if (home?.topic) s.add("topic");
-        if (home?.prototypeKind) s.add("prototypeKind");
-        if (home?.docKind) s.add("docKind");
-        return s;
-    }, [home]);
-
-    const visibleQuestions = useMemo(
-        () => QUESTIONS_BY_FORMAT[format].filter((q) => !seededIds.has(q.id)),
-        [format, seededIds],
-    );
-
-    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [answers, setAnswers] = useState<Record<string, string>>(() => {
+        // Preload seeded answers that match question ids so the home's
+        // pre-selected values appear as active pills immediately.
+        const initial: Record<string, string> = {};
+        if (home?.prototypeKind) {
+            initial.prototypeKind =
+                home.prototypeKind === "app" ? "App" :
+                home.prototypeKind === "landing" ? "Landing" :
+                "Componente";
+        }
+        if (home?.docKind) {
+            initial.docKind =
+                home.docKind === "proposal" ? "Propuesta corta" :
+                home.docKind === "contract" ? "Contrato" :
+                home.docKind === "one-pager" ? "One-pager" :
+                "Brief";
+        }
+        if (home?.topic) initial.topic = home.topic;
+        return initial;
+    });
+    const [finalNotes, setFinalNotes] = useState("");
     const [contextOpen, setContextOpen] = useState(false);
     const [notes, setNotes] = useState("");
     const [emailThread, setEmailThread] = useState("");
     const [audioFileName, setAudioFileName] = useState<string | null>(null);
     const [audioTranscript, setAudioTranscript] = useState("");
+
+    const allQuestions = QUESTIONS_BY_FORMAT[format];
+    const visibleQuestions = useMemo(
+        () =>
+            allQuestions.filter((q) => (q.showIf ? q.showIf(answers) : true)),
+        [allQuestions, answers],
+    );
 
     const setAnswer = useCallback((id: string, value: string) => {
         setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -404,11 +446,26 @@ export function GuidedIntake({
             suggestedFormatRaw === "prototipo" ? "prototype" :
             undefined;
 
+        // Resolve program: prefer intake answer, then home seed, then a safe
+        // default for commercial-style proposals. Only relevant when the
+        // proposal actually needs a program.
+        const selectedProgramName = clean(answers.programName);
+        const programByName = selectedProgramName
+            ? programs.find((p) => p.name === selectedProgramName)?.id
+            : undefined;
+        const resolvedProgramId =
+            programByName || home?.programId ||
+            (PROGRAM_RELEVANT.has(answers.proposalType ?? "")
+                ? "sales-machine"
+                : "");
+
         const seatsBlock = clean(answers.seats) ? `Cupos: ${answers.seats}` : undefined;
-        const mergedNotes = [seatsBlock, clean(answers.notes)].filter(Boolean).join("\n");
+        const mergedNotes = [seatsBlock, finalNotes.trim() || undefined]
+            .filter(Boolean)
+            .join("\n");
 
         const intake: IntakeAnswers = {
-            clientName: clean(answers.clientName) || home?.clientName || "30X",
+            clientName: clean(answers.clientName) || "30X",
             sector: clean(answers.sector),
             companySize: clean(answers.companySize),
             objective: clean(answers.objective),
@@ -422,6 +479,9 @@ export function GuidedIntake({
             keyScreens: clean(answers.keyScreens),
             suggestedFormat: mappedSuggested,
             theme,
+            proposalType: clean(answers.proposalType),
+            projectName: home?.clientName,
+            finalNotes: finalNotes.trim() || undefined,
             notes: mergedNotes || undefined,
             audioTranscript: audioTranscript || undefined,
             emailThread: emailThread || undefined,
@@ -433,7 +493,6 @@ export function GuidedIntake({
             emailThread: emailThread || undefined,
         };
 
-        const resolvedProgramId = home?.programId || "sales-machine";
         const resolvedFormat = mappedSuggested ?? format;
 
         onComplete({
@@ -443,14 +502,18 @@ export function GuidedIntake({
             corporateMode: home?.corporateMode ?? true,
             format: resolvedFormat,
         });
-    }, [answers, audioTranscript, emailThread, notes, format, home, onComplete]);
+    }, [answers, finalNotes, audioTranscript, emailThread, notes, format, home, onComplete]);
 
-    // The only truly required field is the client/project name (unless home seeded it)
-    const canSubmit = seededIds.has("clientName")
-        ? true
-        : format === "proposal" || format === "prototype" || format === "doc"
-          ? (answers.clientName ?? "").trim().length > 1
-          : (answers.topic ?? "").trim().length > 2;
+    // Minimum to submit: proposals need clientName + proposalType; prototypes/
+    // docs need clientName; content formats need topic.
+    const canSubmit =
+        format === "proposal"
+            ? Boolean(answers.clientName?.trim() && answers.proposalType)
+            : format === "prototype" || format === "doc"
+              ? Boolean(answers.clientName?.trim() || home?.clientName)
+              : format === "other"
+                ? Boolean((answers.topic ?? home?.topic)?.trim())
+                : Boolean((answers.topic ?? home?.topic)?.trim());
 
     const formatLabel = FORMATS[format].label.toLowerCase();
     const heroTitle =
@@ -497,15 +560,17 @@ export function GuidedIntake({
                         {heroTitle}
                     </h1>
                     <p className="text-[16px] text-[#525252] leading-[1.5] mb-10 max-w-[560px] tracking-[-0.005em]">
-                        Escoge lo que aplica. Si no sabes, pon Decidir por mí y lo infiero.
+                        Escoge lo que aplica. &ldquo;Decidir por mí&rdquo; si no estás seguro — el asistente infiere el resto.
                     </p>
 
-                    {/* What we already know from the home */}
-                    {seededIds.size > 0 || home?.programId ? (
-                        <SeedStrip home={home} seededIds={seededIds} />
+                    {home?.clientName ? (
+                        <div className="mb-8 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/[0.04] text-[12.5px] tracking-[-0.005em]">
+                            <span className="text-[#737373]">Proyecto:</span>
+                            <span className="text-[#0a0a0a] font-medium">{home.clientName}</span>
+                        </div>
                     ) : null}
 
-                    {/* Optional context */}
+                    {/* Optional context (audio / emails / notas) */}
                     <section className="mb-12 rounded-md border border-black/[0.08] overflow-hidden bg-white">
                         <button
                             onClick={() => setContextOpen((v) => !v)}
@@ -609,13 +674,28 @@ export function GuidedIntake({
                                 />
                             ),
                         )}
+
+                        {/* Final notes — always last */}
+                        <section>
+                            <h3 className="text-[17px] font-semibold tracking-[-0.015em] mb-2">
+                                ¿Algo más que deba saber?
+                            </h3>
+                            <p className="text-[13px] text-[#737373] tracking-[-0.005em] mb-3">
+                                Opcional. Cualquier detalle que no te cupo arriba — contexto, restricciones, referencias, quirks del cliente.
+                            </p>
+                            <textarea
+                                value={finalNotes}
+                                onChange={(e) => setFinalNotes(e.target.value)}
+                                placeholder="Ej: ya hicimos un piloto en enero; el CEO quiere más data-driven que la vez pasada; la marca usa azul corporativo estricto…"
+                                rows={4}
+                                className="w-full resize-none bg-white border border-black/[0.1] rounded-md px-3.5 py-3 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/40 focus:ring-2 focus:ring-black/[0.04] leading-[1.5] tracking-[-0.005em]"
+                            />
+                        </section>
                     </div>
 
                     <div className="mt-12 flex items-center justify-between">
                         <p className="text-[12px] text-[#737373] tracking-[-0.005em]">
-                            {canSubmit
-                                ? "Listo para generar."
-                                : "Escribe al menos el nombre del proyecto para empezar."}
+                            {canSubmit ? "Listo para generar." : "Escribe al menos el cliente / tema para empezar."}
                         </p>
                         <button
                             onClick={handleSubmit}
@@ -632,42 +712,6 @@ export function GuidedIntake({
                     </div>
                 </div>
             </div>
-        </div>
-    );
-}
-
-// ──────────────────────────────────────────────────────────────
-// Seeded-from-home strip
-// ──────────────────────────────────────────────────────────────
-
-function SeedStrip({ home, seededIds }: { home: HomeSeed | undefined; seededIds: Set<AnswerKey> }) {
-    if (!home) return null;
-    const chips: { label: string; value: string }[] = [];
-    if (seededIds.has("clientName") && home.clientName)
-        chips.push({ label: "Cliente", value: home.clientName });
-    if (seededIds.has("topic") && home.topic)
-        chips.push({ label: "Tema", value: home.topic.slice(0, 80) });
-    if (home.programId) {
-        const prog = programs.find((p) => p.id === home.programId);
-        if (prog) chips.push({ label: "Programa", value: prog.name });
-    }
-    if (seededIds.has("prototypeKind") && home.prototypeKind)
-        chips.push({ label: "Tipo", value: home.prototypeKind });
-    if (seededIds.has("docKind") && home.docKind)
-        chips.push({ label: "Tipo", value: home.docKind });
-    if (chips.length === 0) return null;
-
-    return (
-        <div className="mb-8 flex flex-wrap gap-2">
-            {chips.map((c, i) => (
-                <div
-                    key={i}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/[0.04] text-[11.5px] tracking-[-0.005em]"
-                >
-                    <span className="text-[#737373]">{c.label}:</span>
-                    <span className="text-[#0a0a0a] font-medium">{c.value}</span>
-                </div>
-            ))}
         </div>
     );
 }

@@ -206,28 +206,23 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
             >
                 <div className="p-6">
                     {tab === "prototype" ? (
-                        <PrototypeForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                        <PrototypeForm onOpenIntake={onOpenIntake} />
                     ) : tab === "proposal" ? (
-                        <ProposalForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                        <ProposalForm onOpenIntake={onOpenIntake} />
                     ) : tab === "carousel-ig" ? (
                         <ContentForm
                             format="carousel-ig"
-                            onCreate={onCreate}
                             onOpenIntake={onOpenIntake}
-                            defaultTheme="dark"
-                            topicPlaceholder="Ej: 5 lecciones que aprendimos escalando ventas B2B"
+                            topicPlaceholder="Ej: 5 lecciones escalando ventas B2B"
                         />
                     ) : tab === "story-ig" ? (
                         <ContentForm
                             format="story-ig"
-                            onCreate={onCreate}
                             onOpenIntake={onOpenIntake}
-                            defaultTheme="dark"
-                            topicPlaceholder="Ej: Nueva cohort de Sales Machine arranca en abril"
-                            compact
+                            topicPlaceholder="Ej: Apertura cohort Sales Machine"
                         />
                     ) : tab === "doc" ? (
-                        <DocForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                        <DocForm onOpenIntake={onOpenIntake} />
                     ) : tab === "template" ? (
                         <TemplateGrid onOpenTemplate={onOpenTemplate} />
                     ) : (
@@ -278,14 +273,12 @@ function TabButton({
 // ──────────────────────────────────────────────────────────────
 
 function PrototypeForm({
-    onCreate,
     onOpenIntake,
 }: {
-    onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
 }) {
     const [name, setName] = useState("");
-    const [kind, setKind] = useState<PrototypeKind>("app");
+    const canStart = name.trim().length > 1;
 
     return (
         <FormSurface
@@ -293,18 +286,11 @@ function PrototypeForm({
             subtitle="App, landing o componente con el sistema 30X."
         >
             <Field label="Nombre del proyecto">
-                <TextInput value={name} onChange={setName} placeholder="Ej: Dashboard Sales Machine" autoFocus />
-            </Field>
-
-            <Field label="Tipo">
-                <Segmented
-                    value={kind}
-                    onChange={setKind}
-                    options={[
-                        { value: "app", label: "App" },
-                        { value: "landing", label: "Landing" },
-                        { value: "component", label: "Componente" },
-                    ]}
+                <TextInput
+                    value={name}
+                    onChange={setName}
+                    placeholder="Ej: Sales Machine Dashboard"
+                    autoFocus
                 />
             </Field>
 
@@ -314,11 +300,9 @@ function PrototypeForm({
                 primary={{
                     label: "Empezar",
                     accent: true,
+                    disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake("prototype", {
-                            clientName: name.trim() || undefined,
-                            prototypeKind: kind,
-                        }),
+                        onOpenIntake("prototype", { clientName: name.trim() }),
                 }}
             />
         </FormSurface>
@@ -326,46 +310,36 @@ function PrototypeForm({
 }
 
 function ProposalForm({
-    onCreate,
     onOpenIntake,
 }: {
-    onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
 }) {
-    const [clientName, setClientName] = useState("");
-    const [programId, setProgramId] = useState("sales-machine");
+    const [name, setName] = useState("");
+    const canStart = name.trim().length > 1;
 
     return (
         <FormSurface
-            title="Nueva propuesta comercial"
-            subtitle="Deck 16:9 personalizado con research, mentores y precio."
+            title="Nueva propuesta"
+            subtitle="Deck 16:9 — comercial, speaker, marca, partnership o estratégica."
         >
-            <Field label="Cliente">
+            <Field label="Nombre del proyecto">
                 <TextInput
-                    value={clientName}
-                    onChange={setClientName}
-                    placeholder="Nombre del cliente"
+                    value={name}
+                    onChange={setName}
+                    placeholder="Ej: Propuesta Colsubsidio Q2 · Speaker Dylan · Partnership Bavaria…"
                     autoFocus
                 />
             </Field>
 
-            <Field label="Programa">
-                <Select
-                    value={programId}
-                    onChange={setProgramId}
-                    options={programs.map((p) => ({ value: p.id, label: p.name }))}
-                />
-            </Field>
+            <DesignSystemField />
 
             <CreateRow
                 primary={{
                     label: "Empezar",
                     accent: true,
+                    disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake("proposal", {
-                            clientName: clientName.trim() || undefined,
-                            programId,
-                        }),
+                        onOpenIntake("proposal", { clientName: name.trim() }),
                 }}
             />
         </FormSurface>
@@ -374,57 +348,32 @@ function ProposalForm({
 
 function ContentForm({
     format,
-    onCreate,
     onOpenIntake,
-    defaultTheme,
     topicPlaceholder,
-    compact,
 }: {
     format: ProjectFormat;
-    onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
-    defaultTheme: Theme;
     topicPlaceholder: string;
-    compact?: boolean;
 }) {
-    const [topic, setTopic] = useState("");
-    const [programId, setProgramId] = useState("");
+    const [name, setName] = useState("");
+    const canStart = name.trim().length > 1;
     const label = FORMATS[format].label;
 
     return (
         <FormSurface title={`Nuevo ${label.toLowerCase()}`} subtitle={FORMATS[format].description}>
-            <Field label="Tema">
-                <Textarea
-                    value={topic}
-                    onChange={setTopic}
-                    placeholder={topicPlaceholder}
-                    rows={compact ? 2 : 3}
-                    autoFocus
-                />
+            <Field label="Nombre del proyecto">
+                <TextInput value={name} onChange={setName} placeholder={topicPlaceholder} autoFocus />
             </Field>
 
-            {compact ? null : (
-                <Field label="Programa (contexto)">
-                    <Select
-                        value={programId}
-                        onChange={setProgramId}
-                        options={[
-                            { value: "", label: "Sin programa específico" },
-                            ...programs.map((p) => ({ value: p.id, label: p.name })),
-                        ]}
-                    />
-                </Field>
-            )}
+            <DesignSystemField />
 
             <CreateRow
                 primary={{
                     label: "Empezar",
                     accent: true,
+                    disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake(format, {
-                            topic: topic.trim() || undefined,
-                            programId: programId || undefined,
-                        }),
+                        onOpenIntake(format, { clientName: name.trim() }),
                 }}
             />
         </FormSurface>
@@ -432,51 +381,36 @@ function ContentForm({
 }
 
 function DocForm({
-    onCreate,
     onOpenIntake,
 }: {
-    onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
 }) {
-    const [title, setTitle] = useState("");
-    const [kind, setKind] = useState<DocKind>("proposal");
+    const [name, setName] = useState("");
+    const canStart = name.trim().length > 1;
 
     return (
         <FormSurface
             title="Nuevo documento"
-            subtitle="A4 para propuestas, contratos y one-pagers."
+            subtitle="A4 para propuestas, contratos, briefs y one-pagers."
         >
-            <Field label="Título">
+            <Field label="Nombre del proyecto">
                 <TextInput
-                    value={title}
-                    onChange={setTitle}
-                    placeholder="Ej: Contrato de formación ejecutiva"
+                    value={name}
+                    onChange={setName}
+                    placeholder="Ej: Contrato 30X — Bancolombia"
                     autoFocus
                 />
             </Field>
 
-            <Field label="Tipo de documento">
-                <Segmented
-                    value={kind}
-                    onChange={setKind}
-                    options={[
-                        { value: "proposal", label: "Propuesta" },
-                        { value: "contract", label: "Contrato" },
-                        { value: "one-pager", label: "One-pager" },
-                        { value: "other", label: "Otro" },
-                    ]}
-                />
-            </Field>
+            <DesignSystemField />
 
             <CreateRow
                 primary={{
                     label: "Empezar",
                     accent: true,
+                    disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake("doc", {
-                            clientName: title.trim() || undefined,
-                            docKind: kind,
-                        }),
+                        onOpenIntake("doc", { clientName: name.trim() }),
                 }}
             />
         </FormSurface>

@@ -320,6 +320,12 @@ export interface IntakeAnswers {
     keyScreens?: string;
     suggestedFormat?: ProjectFormat;
     theme?: "dark" | "light";
+    // Propuesta: tipo (Comercial, Speaker, Marca, Partnership, Estratégica, Otra)
+    proposalType?: string;
+    // Project title as typed in the home (deck title / file name, separate from clientName)
+    projectName?: string;
+    // Free-form context the user adds at the END of the intake
+    finalNotes?: string;
     // Seed context
     notes?: string;
     audioTranscript?: string;
