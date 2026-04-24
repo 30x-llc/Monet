@@ -312,7 +312,7 @@ function PrototypeForm({
 
             <CreateRow
                 primary={{
-                    label: "Empezar →",
+                    label: "Empezar",
                     accent: true,
                     onClick: () =>
                         onOpenIntake("prototype", {
@@ -359,7 +359,7 @@ function ProposalForm({
 
             <CreateRow
                 primary={{
-                    label: "Empezar →",
+                    label: "Empezar",
                     accent: true,
                     onClick: () =>
                         onOpenIntake("proposal", {
@@ -418,7 +418,7 @@ function ContentForm({
 
             <CreateRow
                 primary={{
-                    label: "Empezar →",
+                    label: "Empezar",
                     accent: true,
                     onClick: () =>
                         onOpenIntake(format, {
@@ -470,7 +470,7 @@ function DocForm({
 
             <CreateRow
                 primary={{
-                    label: "Empezar →",
+                    label: "Empezar",
                     accent: true,
                     onClick: () =>
                         onOpenIntake("doc", {
@@ -522,7 +522,7 @@ function OtherForm({
 
             <CreateRow
                 primary={{
-                    label: "Empezar →",
+                    label: "Empezar",
                     accent: true,
                     onClick: () =>
                         onOpenIntake("other", { topic: prompt.trim() || undefined }),
@@ -747,7 +747,6 @@ function CreateRow({
                 }`}
                 style={{ transitionTimingFunction: "var(--ease-out)" }}
             >
-                <PlusIcon />
                 {primary.label}
             </button>
             {secondary ? (
