@@ -636,15 +636,17 @@ function Segmented<T extends string>({
 function DesignSystemField() {
     return (
         <Field label="Sistema de diseño">
-            <div className="flex items-center gap-2.5 h-10 px-3 rounded-lg border border-black/[0.09] bg-white">
-                <span className="w-6 h-6 rounded-md bg-[#E9FF7B] flex items-center justify-center">
-                    <Logo30x variant="dark" className="h-2.5" />
-                </span>
+            <div className="flex items-center gap-2.5 h-12 px-3 rounded-lg border border-black/[0.09] bg-white">
+                <img
+                    src="/30x-logo-square.svg"
+                    alt="30X Design System"
+                    className="w-8 h-8 rounded-lg shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-[#0a0a0a] tracking-[-0.005em] leading-[1.2]">
                         30X Design System
                     </div>
-                    <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2]">Default</div>
+                    <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2] mt-0.5">Default</div>
                 </div>
                 <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-black/[0.04] text-[#737373] font-medium">
                     Locked
