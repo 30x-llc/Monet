@@ -2,7 +2,7 @@
 
 import type { Slide, ProjectFormat } from "@/lib/slide-types";
 import { SlideStage } from "@/components/slides/slide-stage";
-import { SlideRenderer } from "@/components/slides/deck-slides";
+import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { FORMATS } from "@/lib/slide-types";
 
 interface SlideCanvasProps {

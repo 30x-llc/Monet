@@ -4,7 +4,7 @@ import type { Slide, ProjectFormat } from "@/lib/slide-types";
 import { cx } from "@/utils/cx";
 import { useState } from "react";
 import { SlideStage } from "@/components/slides/slide-stage";
-import { SlideRenderer } from "@/components/slides/deck-slides";
+import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 
 const SLIDE_TYPE_LABELS: Record<string, string> = {
     "cover-hero": "Cover",

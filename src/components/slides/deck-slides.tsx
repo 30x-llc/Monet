@@ -1,5 +1,3 @@
-"use client";
-
 import type { ReactNode } from "react";
 import type {
     CoverHeroSlide,
@@ -1093,9 +1091,7 @@ function dotStyle(color: string): React.CSSProperties {
 // MASTER SWITCH
 // ============================================================
 
-import { SlideErrorBoundary } from "./slide-error-boundary";
-
-function renderSlide(
+export function renderSlide(
     slide: Slide,
     clientLogoUrl?: string,
     pageIndex?: number,
@@ -1158,6 +1154,10 @@ function renderSlide(
     }
 }
 
+/**
+ * Pure server-safe renderer — no error boundary. Used directly by the
+ * SSR PDF export path and indirectly by SlideRendererClient (editor).
+ */
 export function SlideRenderer({
     slide,
     clientLogoUrl,
@@ -1167,9 +1167,5 @@ export function SlideRenderer({
     clientLogoUrl?: string;
     pageIndex?: number;
 }) {
-    return (
-        <SlideErrorBoundary slideType={slide?.type}>
-            {renderSlide(slide, clientLogoUrl, pageIndex)}
-        </SlideErrorBoundary>
-    );
+    return <>{renderSlide(slide, clientLogoUrl, pageIndex)}</>;
 }

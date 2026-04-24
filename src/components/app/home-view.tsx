@@ -7,7 +7,7 @@ import { programs } from "@/lib/programs";
 import type { Deck, ProjectFormat } from "@/lib/slide-types";
 import { FORMATS } from "@/lib/slide-types";
 import { SlideStage } from "@/components/slides/slide-stage";
-import { SlideRenderer } from "@/components/slides/deck-slides";
+import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
 
 type Theme = "dark" | "light";
