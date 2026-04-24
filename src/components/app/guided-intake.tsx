@@ -220,7 +220,7 @@ export function GuidedIntake({
                     <span className="w-px h-3 bg-black/10" />
                     <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#525252] tracking-[-0.005em]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
-                        Cora · Diseñando tu {formatLabel}
+                        Diseñando tu {formatLabel}
                     </span>
                 </div>
                 <button
@@ -359,7 +359,7 @@ export function GuidedIntake({
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder={`Escríbele a Cora sobre tu ${formatLabel}…`}
+                            placeholder={`Escribe sobre tu ${formatLabel}…`}
                             rows={2}
                             disabled={sending}
                             autoFocus
@@ -411,18 +411,26 @@ export function GuidedIntake({
 function CoraMessage({ text }: { text: string }) {
     return (
         <div className="flex items-start gap-3">
-            <div className="shrink-0 w-7 h-7 rounded-full bg-[#E9FF7B] flex items-center justify-center">
-                <Logo30x variant="dark" className="h-2.5" />
-            </div>
+            <AssistantAvatar />
             <div className="flex-1 pt-0.5">
                 <div className="text-[11px] font-semibold text-[#737373] mb-1 tracking-[-0.005em]">
-                    Cora
+                    30x Design
                 </div>
                 <div className="text-[14.5px] text-[#0a0a0a] leading-[1.55] tracking-[-0.005em] whitespace-pre-wrap">
                     {text}
                 </div>
             </div>
         </div>
+    );
+}
+
+function AssistantAvatar() {
+    return (
+        <img
+            src="/30x-avatar.svg"
+            alt="30x"
+            className="shrink-0 w-7 h-7 rounded-full"
+        />
     );
 }
 
@@ -446,12 +454,10 @@ function UserMessage({ text }: { text: string }) {
 function CoraTyping() {
     return (
         <div className="flex items-start gap-3">
-            <div className="shrink-0 w-7 h-7 rounded-full bg-[#E9FF7B] flex items-center justify-center">
-                <Logo30x variant="dark" className="h-2.5" />
-            </div>
+            <AssistantAvatar />
             <div className="flex-1 pt-0.5">
                 <div className="text-[11px] font-semibold text-[#737373] mb-1 tracking-[-0.005em]">
-                    Cora
+                    30x Design
                 </div>
                 <div className="flex items-center gap-1 h-[22px]">
                     <Dot />

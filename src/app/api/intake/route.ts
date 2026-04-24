@@ -26,17 +26,18 @@ const PROPOSAL_BRIEF: FormatBrief = {
     label: "propuesta comercial",
     identity:
         "Armas una propuesta tipo Colsubsidio: muy específica, con diagnóstico real, programa correcto y precio bien definido. Hablas con el vendedor de 30x, no con el cliente.",
-    fields: `1. clientName — nombre exacto del cliente/empresa.
-2. decisionMaker — quién decide (nombre + cargo si existe).
-3. sector — industria / sector.
-4. companySize — tamaño (empleados, revenue, o descripción libre).
-5. objective — qué problema quieren resolver / objetivo principal.
-6. format — presencial, virtual o híbrido.
-7. budget — presupuesto estimado (rango es suficiente).
-8. theme — oscuro o claro (opcional; default oscuro. Solo pregunta si el cliente/contexto sugiere claro, ej. marcas muy luminosas, o si el usuario lo pide).`,
+    fields: `1. clientName — nombre exacto del cliente/empresa. Con el nombre de la empresa alcanza: usaremos su logo en la portada.
+2. sector — industria / sector.
+3. companySize — tamaño (empleados, revenue, o descripción libre).
+4. objective — qué problema quieren resolver / objetivo principal.
+5. format — presencial, virtual o híbrido.
+6. budget — presupuesto estimado (rango es suficiente).
+7. theme — oscuro o claro (opcional; default oscuro. Solo pregunta si el cliente/contexto sugiere claro, ej. marcas muy luminosas, o si el usuario lo pide).
+
+NO preguntes por el decisor / punto de contacto / quién autoriza. Con el nombre de la empresa es suficiente.`,
     doneRule:
-        "Mínimo 5 de 8, siempre incluyendo clientName, objective y format. Theme es opcional.",
-    closeJson: `{"done": true, "intake": {"clientName": "...", "decisionMaker": "...", "sector": "...", "companySize": "...", "objective": "...", "format": "presencial|virtual|hybrid", "budget": "...", "theme": "dark|light"}, "suggestedProgramId": "id-del-programa-de-la-lista"}`,
+        "Mínimo 4 de 7, siempre incluyendo clientName, objective y format. Theme es opcional.",
+    closeJson: `{"done": true, "intake": {"clientName": "...", "sector": "...", "companySize": "...", "objective": "...", "format": "presencial|virtual|hybrid", "budget": "...", "theme": "dark|light"}, "suggestedProgramId": "id-del-programa-de-la-lista"}`,
 };
 
 const PROTOTYPE_BRIEF: FormatBrief = {
