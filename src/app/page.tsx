@@ -60,6 +60,7 @@ export default function Home() {
 
                 // Research only for proposals
                 if (isProposal) {
+                    setGenerationLog("Investigando la empresa…");
                     const researchRes = await fetch("/api/research", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -69,7 +70,6 @@ export default function Home() {
                                 intake?.objective ? `Objetivo: ${intake.objective}` : "",
                                 intake?.sector ? `Sector: ${intake.sector}` : "",
                                 intake?.companySize ? `Tamaño: ${intake.companySize}` : "",
-                                intake?.decisionMaker ? `Decision maker: ${intake.decisionMaker}` : "",
                                 seed?.notes ? `Notas: ${seed.notes}` : "",
                                 seed?.emailThread ? `Emails: ${seed.emailThread}` : "",
                             ]
@@ -77,50 +77,19 @@ export default function Home() {
                                 .join("\n"),
                         }),
                     });
-                    if (!researchRes.ok) {
-                        const body = await researchRes.text().catch(() => "");
+                    const researchData = await researchRes.json().catch(() => ({
+                        ok: false,
+                        error: `Research devolvió HTTP ${researchRes.status} sin JSON`,
+                    }));
+                    if (!researchData.ok || !researchData.research) {
                         throw new Error(
-                            `Research falló (HTTP ${researchRes.status}). ${body.slice(0, 200)}`,
+                            `Research falló: ${researchData.error || `HTTP ${researchRes.status}`}`,
                         );
                     }
-                    const reader = researchRes.body?.getReader();
-                    if (!reader) throw new Error("Research no devolvió un stream legible");
-                    const decoder = new TextDecoder();
-                    let researchText = "";
-                    let researchStreamError: string | null = null;
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        const chunk = decoder.decode(value, { stream: true });
-                        for (const line of chunk.split("\n\n").filter(Boolean)) {
-                            if (!line.startsWith("data: ")) continue;
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                if (data.type === "text") {
-                                    researchText += data.content;
-                                    setGenerationLog(researchText);
-                                } else if (data.type === "error") {
-                                    researchStreamError = String(data.content ?? "Error desconocido");
-                                }
-                            } catch {}
-                        }
-                    }
-                    if (researchStreamError) {
-                        throw new Error(`Research falló durante el stream: ${researchStreamError}`);
-                    }
-                    const researchJson = researchText.match(/\{[\s\S]*\}/)?.[0];
-                    research = researchJson
-                        ? JSON.parse(researchJson)
-                        : {
-                              companyName: effectiveClientName,
-                              industry: intake?.sector ?? "",
-                              size: intake?.companySize ?? "",
-                              headquarters: "",
-                              leadership: [],
-                              painPoints: [],
-                              recentNews: [],
-                              relevantContext: intake?.objective ?? "",
-                          };
+                    research = researchData.research;
+                    setGenerationLog(
+                        `Research listo para ${research.companyName}. Industria: ${research.industry}.`,
+                    );
                 }
 
                 const slideCount =
@@ -130,6 +99,10 @@ export default function Home() {
                     format === "prototype" ? 1 :
                     format === "other" ? 5 :
                     /* doc */ 5;
+
+                setGenerationLog(
+                    `${research ? `Research de ${research.companyName} listo. ` : ""}Generando el deck con Claude Opus 4.7…`,
+                );
 
                 const genRes = await fetch("/api/generate", {
                     method: "POST",
@@ -145,46 +118,17 @@ export default function Home() {
                         topic,
                     }),
                 });
-                if (!genRes.ok) {
-                    const body = await genRes.text().catch(() => "");
+                const genData = await genRes.json().catch(() => ({
+                    ok: false,
+                    error: `Generate devolvió HTTP ${genRes.status} sin JSON`,
+                }));
+                if (!genData.ok || !genData.deck) {
                     throw new Error(
-                        `Generate falló (HTTP ${genRes.status}). ${body.slice(0, 300)}`,
+                        `Generate falló: ${genData.error || `HTTP ${genRes.status}`}`,
                     );
                 }
 
-                const genReader = genRes.body?.getReader();
-                if (!genReader) throw new Error("Generate no devolvió un stream legible");
-                const decoder = new TextDecoder();
-                let genText = "";
-                let genStreamError: string | null = null;
-                while (true) {
-                    const { done, value } = await genReader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    for (const line of chunk.split("\n\n").filter(Boolean)) {
-                        if (!line.startsWith("data: ")) continue;
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.type === "text") {
-                                genText += data.content;
-                                setGenerationLog(genText);
-                            } else if (data.type === "error") {
-                                genStreamError = String(data.content ?? "Error desconocido");
-                            }
-                        } catch {}
-                    }
-                }
-                if (genStreamError) {
-                    throw new Error(`Claude rechazó la generación: ${genStreamError}`);
-                }
-
-                const jsonMatch = genText.match(/\{[\s\S]*"slides"[\s\S]*\}/);
-                if (!jsonMatch) {
-                    throw new Error(
-                        `El modelo no devolvió un deck válido. Salida (primeros 400 char): ${genText.slice(0, 400) || "(vacía)"}`,
-                    );
-                }
-                const generatedDeck: Deck = JSON.parse(jsonMatch[0]);
+                const generatedDeck: Deck = genData.deck;
                 generatedDeck.generatedAt = new Date().toISOString();
                 generatedDeck.theme = theme || generatedDeck.theme || "dark";
                 generatedDeck.format = format;

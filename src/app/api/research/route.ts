@@ -1,37 +1,107 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { RESEARCH_SYSTEM_PROMPT } from "@/lib/prompts/research";
+import type { ResearchResult } from "@/lib/slide-types";
 
-// Web search + Opus 4.7 reasoning regularly exceeds 60s on the first
-// attempt. Pro plan allows 300s; we cap there to fit the longest research
-// runs without truncating the stream.
+// Opus 4.7 + web_search can take 30-120s; Pro plan allows up to 300s.
 export const maxDuration = 300;
 
-async function callClaude(
+// Forcing the model to emit via a tool call with an input_schema is the only
+// reliable way to get clean JSON out of a free-form generation — the previous
+// "dump text, parse with regex" approach kept breaking on unescaped quotes
+// inside string values and leftover <cite> fragments from web_search.
+const RESEARCH_TOOL: Anthropic.Messages.Tool = {
+    name: "save_research",
+    description:
+        "Guarda el research de la empresa como datos estructurados. Llama esta herramienta UNA sola vez cuando tengas la investigación completa.",
+    input_schema: {
+        type: "object",
+        properties: {
+            companyName: { type: "string", description: "Nombre oficial" },
+            industry: { type: "string", description: "Industria / sector" },
+            size: {
+                type: "string",
+                description: "Tamaño aproximado (empleados, ingresos)",
+            },
+            headquarters: { type: "string", description: "Ciudad, país" },
+            leadership: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                    "Liderazgo visible: cada item 'Nombre - Cargo'",
+            },
+            painPoints: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                    "Desafíos estratégicos o pain points públicos",
+            },
+            recentNews: {
+                type: "array",
+                items: { type: "string" },
+                description: "Noticias relevantes últimos 6 meses",
+            },
+            relevantContext: {
+                type: "string",
+                description:
+                    "Párrafo con contexto relevante para la propuesta de 30x",
+            },
+        },
+        required: [
+            "companyName",
+            "industry",
+            "size",
+            "headquarters",
+            "leadership",
+            "painPoints",
+            "recentNews",
+            "relevantContext",
+        ],
+    },
+};
+
+const WEB_SEARCH_TOOL = {
+    type: "web_search_20250305" as const,
+    name: "web_search",
+    max_uses: 5,
+} as unknown as Anthropic.Messages.Tool;
+
+async function runResearch(
     client: Anthropic,
     userMessage: string,
     useWebSearch: boolean,
-): Promise<string> {
-    const tools: Anthropic.Messages.Tool[] = useWebSearch
-        ? [
-              {
-                  type: "web_search_20250305" as const,
-                  name: "web_search",
-                  max_uses: 5,
-              } as unknown as Anthropic.Messages.Tool,
-          ]
-        : [];
+): Promise<ResearchResult> {
+    const tools = useWebSearch
+        ? [WEB_SEARCH_TOOL, RESEARCH_TOOL]
+        : [RESEARCH_TOOL];
 
     const response = await client.messages.create({
         model: "claude-opus-4-7",
         max_tokens: 4096,
         system: RESEARCH_SYSTEM_PROMPT,
-        ...(tools.length > 0 ? { tools } : {}),
+        tools,
+        tool_choice: useWebSearch
+            ? { type: "auto" }
+            : { type: "tool", name: "save_research" },
         messages: [{ role: "user", content: userMessage }],
     });
 
-    const textBlocks = response.content.filter((c) => c.type === "text");
-    return textBlocks.map((c) => (c as { type: "text"; text: string }).text).join("");
+    const toolUse = response.content.find(
+        (c) => c.type === "tool_use" && c.name === "save_research",
+    ) as Anthropic.Messages.ToolUseBlock | undefined;
+
+    if (!toolUse) {
+        const textDump = response.content
+            .filter((c) => c.type === "text")
+            .map((c) => (c as { type: "text"; text: string }).text)
+            .join("\n")
+            .slice(0, 500);
+        throw new Error(
+            `El modelo no llamó save_research. Texto devuelto: ${textDump || "(vacío)"}`,
+        );
+    }
+
+    return toolUse.input as unknown as ResearchResult;
 }
 
 export async function POST(request: NextRequest) {
@@ -48,90 +118,30 @@ export async function POST(request: NextRequest) {
         const client = new Anthropic();
 
         const userMessage = notes
-            ? `Investiga la empresa "${companyName}" para preparar una presentacion comercial de 30x.\n\nNotas adicionales del vendedor:\n${notes}`
-            : `Investiga la empresa "${companyName}" para preparar una presentacion comercial de 30x.`;
+            ? `Investiga la empresa "${companyName}" para preparar una presentacion comercial de 30x. Usa web_search si lo necesitas y luego llama save_research con los datos.\n\nNotas del vendedor:\n${notes}`
+            : `Investiga la empresa "${companyName}" para preparar una presentacion comercial de 30x. Usa web_search si lo necesitas y luego llama save_research con los datos.`;
 
-        const encoder = new TextEncoder();
-        const readable = new ReadableStream({
-            async start(controller) {
-                try {
-                    // Try with web search first, fall back to without
-                    let result: string;
-                    try {
-                        controller.enqueue(
-                            encoder.encode(
-                                `data: ${JSON.stringify({ type: "text", content: "Investigando con busqueda web...\n\n" })}\n\n`,
-                            ),
-                        );
-                        result = await callClaude(client, userMessage, true);
-                    } catch (err) {
-                        const errStr = String(err);
-                        if (
-                            errStr.includes("overloaded") ||
-                            errStr.includes("529")
-                        ) {
-                            controller.enqueue(
-                                encoder.encode(
-                                    `data: ${JSON.stringify({ type: "text", content: "API sobrecargada. Investigando con conocimiento base...\n\n" })}\n\n`,
-                                ),
-                            );
-                            // Retry without web search
-                            result = await callClaude(
-                                client,
-                                userMessage,
-                                false,
-                            );
-                        } else {
-                            throw err;
-                        }
-                    }
+        let research: ResearchResult;
+        try {
+            research = await runResearch(client, userMessage, true);
+        } catch (err) {
+            const errStr = String(err);
+            if (errStr.includes("overloaded") || errStr.includes("529")) {
+                // Fallback without web search
+                research = await runResearch(client, userMessage, false);
+            } else {
+                throw err;
+            }
+        }
 
-                    // Sanitize before streaming. Two model-output failure modes
-                    // we keep hitting:
-                    //   1. web_search wraps cited fragments in <cite index="..">
-                    //      tags. Stripping just <cite> can leave orphan quotes
-                    //      from the attributes inside the JSON string values.
-                    //   2. Markdown code fences around the JSON block.
-                    // Strip ALL HTML-like tags (web_search emits <cite>, but
-                    // models sometimes throw <sup>/<a> too) and any code fences.
-                    const cleaned = result
-                        .replace(/<[^>]+>/g, "")
-                        .replace(/```(?:json)?\s*/gi, "")
-                        .replace(/```/g, "");
-
-                    controller.enqueue(
-                        encoder.encode(
-                            `data: ${JSON.stringify({ type: "text", content: cleaned })}\n\n`,
-                        ),
-                    );
-                    controller.enqueue(
-                        encoder.encode(
-                            `data: ${JSON.stringify({ type: "done" })}\n\n`,
-                        ),
-                    );
-                    controller.close();
-                } catch (error) {
-                    controller.enqueue(
-                        encoder.encode(
-                            `data: ${JSON.stringify({ type: "error", content: String(error) })}\n\n`,
-                        ),
-                    );
-                    controller.close();
-                }
-            },
-        });
-
-        return new Response(readable, {
-            headers: {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                Connection: "keep-alive",
-            },
-        });
+        return Response.json({ ok: true, research });
     } catch (error) {
-        console.error("Error en research:", error);
+        console.error("[research]", error);
         return Response.json(
-            { ok: false, error: "Error investigando la empresa" },
+            {
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+            },
             { status: 500 },
         );
     }
