@@ -10,6 +10,31 @@ import { getTemplateById } from "@/lib/templates";
 
 type AppView = "home" | "intake" | "generating" | "editor";
 
+// Fetch with an explicit AbortController timeout so a stuck serverless call
+// surfaces as a visible error instead of an infinite spinner. The default
+// browser fetch has no time limit, so without this a hanging /api/generate
+// would leave the "Construyendo tu diseño" screen frozen forever.
+async function fetchWithTimeout(
+    url: string,
+    init: RequestInit,
+    timeoutMs: number,
+): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...init, signal: controller.signal });
+    } catch (e) {
+        if ((e as { name?: string })?.name === "AbortError") {
+            throw new Error(
+                `La petición a ${url} no respondió en ${Math.round(timeoutMs / 1000)}s. Es probable que el modelo se haya atascado — reintenta.`,
+            );
+        }
+        throw e;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 export default function Home() {
     const [view, setView] = useState<AppView>("home");
     const [deck, setDeck] = useState<Deck | null>(null);
@@ -60,36 +85,44 @@ export default function Home() {
 
                 // Research only for proposals
                 if (isProposal) {
-                    setGenerationLog("Investigando la empresa…");
-                    const researchRes = await fetch("/api/research", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            companyName: effectiveClientName,
-                            notes: [
-                                intake?.objective ? `Objetivo: ${intake.objective}` : "",
-                                intake?.sector ? `Sector: ${intake.sector}` : "",
-                                intake?.companySize ? `Tamaño: ${intake.companySize}` : "",
-                                seed?.notes ? `Notas: ${seed.notes}` : "",
-                                seed?.emailThread ? `Emails: ${seed.emailThread}` : "",
-                            ]
-                                .filter(Boolean)
-                                .join("\n"),
-                        }),
-                    });
+                    setGenerationLog(`1/2 · Investigando ${effectiveClientName}…`);
+                    console.log("[gen] research:start", { clientName: effectiveClientName });
+                    const t0 = Date.now();
+                    const researchRes = await fetchWithTimeout(
+                        "/api/research",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                companyName: effectiveClientName,
+                                notes: [
+                                    intake?.objective ? `Objetivo: ${intake.objective}` : "",
+                                    intake?.sector ? `Sector: ${intake.sector}` : "",
+                                    intake?.companySize ? `Tamaño: ${intake.companySize}` : "",
+                                    seed?.notes ? `Notas: ${seed.notes}` : "",
+                                    seed?.emailThread ? `Emails: ${seed.emailThread}` : "",
+                                ]
+                                    .filter(Boolean)
+                                    .join("\n"),
+                            }),
+                        },
+                        240_000, // research can run web_search for a while
+                    );
                     const researchData = await researchRes.json().catch(() => ({
                         ok: false,
                         error: `Research devolvió HTTP ${researchRes.status} sin JSON`,
                     }));
+                    console.log("[gen] research:done", {
+                        ms: Date.now() - t0,
+                        ok: researchData.ok,
+                        hasResearch: !!researchData.research,
+                    });
                     if (!researchData.ok || !researchData.research) {
                         throw new Error(
                             `Research falló: ${researchData.error || `HTTP ${researchRes.status}`}`,
                         );
                     }
                     research = researchData.research;
-                    setGenerationLog(
-                        `Research listo para ${research.companyName}. Industria: ${research.industry}.`,
-                    );
                 }
 
                 const slideCount =
@@ -101,27 +134,41 @@ export default function Home() {
                     /* doc */ 5;
 
                 setGenerationLog(
-                    `${research ? `Research de ${research.companyName} listo. ` : ""}Generando el deck con Claude Opus 4.7…`,
+                    `${isProposal ? "2/2 · " : ""}Generando deck con Claude Opus 4.7…`,
                 );
-
-                const genRes = await fetch("/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        format,
-                        research,
-                        program: programId,
-                        slideCount,
-                        notes: seed?.notes || intake?.notes,
-                        intake,
-                        corporateMode,
-                        topic,
-                    }),
+                console.log("[gen] generate:start", {
+                    format,
+                    slideCount,
+                    hasResearch: !!research,
                 });
+                const tg = Date.now();
+                const genRes = await fetchWithTimeout(
+                    "/api/generate",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            format,
+                            research,
+                            program: programId,
+                            slideCount,
+                            notes: seed?.notes || intake?.notes,
+                            intake,
+                            corporateMode,
+                            topic,
+                        }),
+                    },
+                    180_000,
+                );
                 const genData = await genRes.json().catch(() => ({
                     ok: false,
                     error: `Generate devolvió HTTP ${genRes.status} sin JSON`,
                 }));
+                console.log("[gen] generate:done", {
+                    ms: Date.now() - tg,
+                    ok: genData.ok,
+                    slides: genData.deck?.slides?.length,
+                });
                 if (!genData.ok || !genData.deck) {
                     throw new Error(
                         `Generate falló: ${genData.error || `HTTP ${genRes.status}`}`,
@@ -139,7 +186,7 @@ export default function Home() {
                 setView("editor");
                 setRefreshKey((k) => k + 1);
             } catch (err) {
-                console.error("[generation]", err);
+                console.error("[gen] failed", err);
                 const message = err instanceof Error ? err.message : String(err);
                 setGenerationError(message);
                 // Stay on the generating view so the user sees the error
@@ -364,20 +411,18 @@ export default function Home() {
                     <div className="rounded-xl bg-[#fafafa] border border-black/[0.06] p-4 h-[260px] overflow-y-auto text-[11px] text-[#525252] text-left whitespace-pre-wrap scrollbar-hide">
                         {generationLog || (hasError ? "(sin salida del modelo)" : "Conectando…")}
                     </div>
-                    {hasError ? (
-                        <div className="mt-6 flex items-center justify-center gap-2">
-                            <button
-                                onClick={() => {
-                                    setGenerationError(null);
-                                    setGenerationLog("");
-                                    setView("home");
-                                }}
-                                className="h-9 px-4 rounded-md text-[12px] font-semibold text-[#0a0a0a] border border-black/15 bg-white hover:bg-black/[0.04] transition-colors"
-                            >
-                                Volver al home
-                            </button>
-                        </div>
-                    ) : null}
+                    <div className="mt-6 flex items-center justify-center gap-2">
+                        <button
+                            onClick={() => {
+                                setGenerationError(null);
+                                setGenerationLog("");
+                                setView("home");
+                            }}
+                            className="h-9 px-4 rounded-md text-[12px] font-semibold text-[#0a0a0a] border border-black/15 bg-white hover:bg-black/[0.04] transition-colors"
+                        >
+                            {hasError ? "Volver al home" : "Cancelar"}
+                        </button>
+                    </div>
                 </div>
             </div>
         );
