@@ -141,20 +141,33 @@ function buildSystemPrompt(
 ): string {
     const brief = BRIEFS[format] ?? OTHER_BRIEF;
 
-    const homeBlock = home
-        ? `\nCONTEXTO DEL HOME (lo que el usuario YA te dijo — NO lo vuelvas a preguntar):
-${[
-    home.clientName ? `- clientName: ${home.clientName}` : "",
-    home.topic ? `- topic: ${home.topic}` : "",
-    home.programId ? `- programId sugerido: ${home.programId}` : "",
-    home.corporateMode !== undefined
-        ? `- modo: ${home.corporateMode ? "corporativa" : "abierta"}`
-        : "",
-    home.prototypeKind ? `- tipo de prototipo: ${home.prototypeKind}` : "",
-    home.docKind ? `- tipo de documento: ${home.docKind}` : "",
-]
-    .filter(Boolean)
-    .join("\n")}\n`
+    const homeLines = home
+        ? [
+              home.clientName ? `- clientName: ${home.clientName}` : "",
+              home.topic ? `- topic: ${home.topic}` : "",
+              home.programId ? `- programId sugerido: ${home.programId}` : "",
+              home.corporateMode !== undefined
+                  ? `- modo: ${home.corporateMode ? "corporativa" : "abierta"}`
+                  : "",
+              home.prototypeKind
+                  ? `- tipo de prototipo: ${home.prototypeKind}`
+                  : "",
+              home.docKind ? `- tipo de documento: ${home.docKind}` : "",
+          ].filter(Boolean)
+        : [];
+
+    const resolvedProgram =
+        format === "proposal" && home?.programId
+            ? programs.find((p) => p.id === home.programId)
+            : undefined;
+
+    const homeBlock = homeLines.length
+        ? `\nCONTEXTO DEL HOME (lo que el usuario YA te dijo — NO lo vuelvas a preguntar, bajo ninguna circunstancia):
+${homeLines.join("\n")}${
+              resolvedProgram
+                  ? `\n\nEl programa ${resolvedProgram.name} ya está elegido. El OBJETIVO del cliente se deriva del programa: "${resolvedProgram.tagline || resolvedProgram.description?.slice(0, 180)}". NO preguntes por el objetivo — asúmelo del programa.`
+                  : ""
+          }\n`
         : "";
 
     const seedBlock = seed
@@ -184,8 +197,10 @@ ESTILO:
 - Directo. UNA pregunta por turno.
 - Español, sin emojis, sin hype. Nada de "¡Genial!", "¡Perfecto!".
 - Máximo una línea corta de acknowledgment antes de la siguiente pregunta.
-- Si ya tienes la respuesta por el contexto del home o por un turno previo, NO lo vuelvas a preguntar — úsalo.
+- PROHIBIDO preguntar por cualquier campo que ya esté en el "CONTEXTO DEL HOME". Eso no es opcional — si ves clientName en el contexto, NO preguntes "¿para qué cliente es?". Usa el valor. Mismo con topic, programId, modo, etc.
+- PROHIBIDO preguntar por el objetivo cuando hay un programa elegido. El objetivo del cliente es comprar ese programa y obtener lo que enseña.
 - Si el usuario dice "decide tú" o "lo que veas", tómalo como señal para saltar ese campo.
+- Si ya tienes lo mínimo para cerrar, CIERRA con el JSON — no busques excusas para preguntar más.
 
 CAMPOS A RECOLECTAR (en este orden, saltando los que ya tengas):
 ${brief.fields}

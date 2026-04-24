@@ -43,13 +43,14 @@ interface ChatMessage {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Opening lines (friendly cold-start per format). Cora writes the
-// actual questions — these are just stage-setters.
+// Opening lines — cold-start when the home gave us nothing.
+// When the home already passed client/topic/program, initialOpener
+// composes a smarter first question instead of these.
 // ──────────────────────────────────────────────────────────────
 
 const OPENERS: Record<ProjectFormat, string> = {
     proposal:
-        "Listo. Armamos una propuesta. Cuéntame — ¿para qué cliente es?",
+        "Listo. Armamos una propuesta. ¿Para qué cliente es?",
     prototype:
         "Vamos con un prototipo. ¿Cuál es el producto y qué tiene que resolver?",
     "carousel-ig":
@@ -502,21 +503,33 @@ function SeedField({ label, children }: { label: string; children: ReactNode }) 
 
 function initialOpener(format: ProjectFormat, home: HomeSeed | undefined): string {
     const base = OPENERS[format] ?? OPENERS.other;
-    const pieces: string[] = [];
+    if (!home) return base;
 
-    if (home?.clientName) {
-        pieces.push(`Tengo "${home.clientName}" del home.`);
-    }
-    if (home?.topic && !home?.clientName) {
-        pieces.push(`Tengo el brief: "${home.topic.slice(0, 120)}".`);
-    }
-    if (home?.programId) {
+    // Proposal with client + program already picked: both clientName and
+    // objective are known (the objective is whatever the program teaches).
+    // Jump straight to delivery details instead of re-asking things we have.
+    if (format === "proposal" && home.clientName && home.programId) {
         const prog = programs.find((p) => p.id === home.programId);
-        if (prog) pieces.push(`Programa sugerido: ${prog.name}.`);
+        const progName = prog?.name ?? "el programa";
+        return `${progName} para ${home.clientName}. ¿Cuántos cupos y en qué formato — presencial, virtual o híbrido?`;
     }
 
-    if (pieces.length === 0) return base;
-    return `${pieces.join(" ")} ${base}`;
+    if (format === "proposal" && home.clientName) {
+        return `Propuesta para ${home.clientName}. ¿Qué programa de 30x les queremos vender?`;
+    }
+
+    if (format === "proposal" && home.programId) {
+        const prog = programs.find((p) => p.id === home.programId);
+        const progName = prog?.name ?? "el programa";
+        return `Vamos con ${progName}. ¿Para qué cliente es?`;
+    }
+
+    if (home.topic && !home.clientName) {
+        // Content formats seeded from the home textarea.
+        return `Tengo el brief: "${home.topic.slice(0, 140)}". Cuéntame un poco más si hay algo clave que falte — o dime "listo" y lo diseño.`;
+    }
+
+    return base;
 }
 
 function normalizeIntake(raw: unknown, home: HomeSeed | undefined): IntakeAnswers {
