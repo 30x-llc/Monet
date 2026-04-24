@@ -83,10 +83,18 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
-                    // Web search emits <cite index="..."> tags inline. They land
-                    // inside the JSON string values and break JSON.parse on the
-                    // client. Strip them before streaming.
-                    const cleaned = result.replace(/<\/?cite[^>]*>/g, "");
+                    // Sanitize before streaming. Two model-output failure modes
+                    // we keep hitting:
+                    //   1. web_search wraps cited fragments in <cite index="..">
+                    //      tags. Stripping just <cite> can leave orphan quotes
+                    //      from the attributes inside the JSON string values.
+                    //   2. Markdown code fences around the JSON block.
+                    // Strip ALL HTML-like tags (web_search emits <cite>, but
+                    // models sometimes throw <sup>/<a> too) and any code fences.
+                    const cleaned = result
+                        .replace(/<[^>]+>/g, "")
+                        .replace(/```(?:json)?\s*/gi, "")
+                        .replace(/```/g, "");
 
                     controller.enqueue(
                         encoder.encode(

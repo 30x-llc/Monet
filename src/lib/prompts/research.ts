@@ -18,6 +18,13 @@ REGLAS:
 - Enfocate en informacion relevante para venderles un programa de desarrollo ejecutivo
 - Busca al menos 3-4 fuentes diferentes
 
+REGLAS DE FORMATO (CRÍTICAS):
+- Responde con UN SOLO bloque JSON. Sin texto antes ni después.
+- NO incluyas tags HTML de ningún tipo en el JSON: nada de <cite>, <sup>, <a>, <span>, etc. La búsqueda web añade <cite> automáticamente — tú debes quitarlas.
+- NO incluyas referencias inline tipo [1], (Fuente: ...), o footnote markers dentro de los valores.
+- Los valores deben ser texto plano, sin comillas dobles internas. Si necesitas citar algo, usa comillas simples o reformula.
+- Sin code fences (\`\`\`json), sin markdown.
+
 Responde en JSON con esta estructura exacta:
 {
   "companyName": "nombre oficial",
