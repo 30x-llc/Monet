@@ -159,6 +159,12 @@ button, [role="button"] {
 .stagger-item:nth-child(7) { animation-delay: 240ms; }
 .stagger-item:nth-child(8) { animation-delay: 280ms; }
 
+/* Cora typing dots */
+@keyframes coraDot {
+    0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-2px); }
+}
+
 /* Thinking border animation (like Claude) */
 @keyframes thinking-border {
     0% { --angle: 0deg; }

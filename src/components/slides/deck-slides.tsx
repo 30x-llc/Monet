@@ -23,6 +23,7 @@ import type {
     StoryTextSlide,
     DocCoverSlide,
     DocSectionSlide,
+    PrototypeFrameSlide,
     Slide,
 } from "@/lib/slide-types";
 import { getMentorImage, BRAND_ASSETS, getCompanyLogo } from "@/lib/assets";
@@ -666,6 +667,423 @@ export function DocSection({ slide, pageNumber }: { slide: DocSectionSlide; page
 }
 
 // ============================================================
+// PROTOTYPE FRAME (1440x900 mock app UI)
+// ============================================================
+
+export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
+    const nav = slide.nav?.length
+        ? slide.nav
+        : ["Overview", "Pipeline", "Insights", "Team"];
+    const sidebar = slide.sidebar;
+
+    return (
+        <section
+            className="deck-slide"
+            style={{
+                position: "absolute",
+                inset: 0,
+                background: "#0a0a0a",
+                color: "#F0F0F0",
+                fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+                letterSpacing: "-0.01em",
+            }}
+        >
+            {/* Browser chrome */}
+            <div
+                style={{
+                    position: "absolute",
+                    top: 24,
+                    left: 48,
+                    right: 48,
+                    bottom: 24,
+                    background: "#111111",
+                    borderRadius: 16,
+                    border: "1px solid #232323",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                {/* Window bar */}
+                <div
+                    style={{
+                        height: 40,
+                        background: "#0D0D0D",
+                        borderBottom: "1px solid #1A1A1A",
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "0 16px",
+                        gap: 6,
+                    }}
+                >
+                    <span style={dotStyle("#FF5F57")} />
+                    <span style={dotStyle("#FEBC2E")} />
+                    <span style={dotStyle("#28C840")} />
+                    <div
+                        style={{
+                            marginLeft: 24,
+                            height: 22,
+                            padding: "0 12px",
+                            background: "#1A1A1A",
+                            borderRadius: 6,
+                            color: "#999",
+                            fontSize: 11,
+                            display: "flex",
+                            alignItems: "center",
+                            letterSpacing: "-0.01em",
+                        }}
+                    >
+                        30x.design / {slide.appName.toLowerCase().replace(/\s+/g, "-")}
+                    </div>
+                </div>
+
+                {/* App top nav */}
+                <div
+                    style={{
+                        height: 56,
+                        borderBottom: "1px solid #1A1A1A",
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "0 32px",
+                        gap: 32,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            fontWeight: 700,
+                            fontSize: 15,
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 6,
+                                background: "#E9FF7B",
+                                display: "grid",
+                                placeItems: "center",
+                                color: "#0a0a0a",
+                                fontSize: 11,
+                                fontWeight: 800,
+                                letterSpacing: "-0.04em",
+                            }}
+                        >
+                            30X
+                        </div>
+                        <span>{slide.appName}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 24 }}>
+                        {nav.map((n, i) => (
+                            <span
+                                key={i}
+                                style={{
+                                    fontSize: 13,
+                                    color: i === 0 ? "#F0F0F0" : "#777",
+                                    fontWeight: i === 0 ? 600 : 500,
+                                    borderBottom: i === 0 ? "2px solid #E9FF7B" : "none",
+                                    paddingBottom: 18,
+                                    marginBottom: -18,
+                                }}
+                            >
+                                {n}
+                            </span>
+                        ))}
+                    </div>
+                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+                        <div
+                            style={{
+                                height: 28,
+                                padding: "0 10px",
+                                background: "#1A1A1A",
+                                borderRadius: 6,
+                                color: "#999",
+                                fontSize: 11,
+                                display: "flex",
+                                alignItems: "center",
+                            }}
+                        >
+                            ⌘ K
+                        </div>
+                        <div
+                            style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: "50%",
+                                background: "#0a0a0a",
+                                border: "1px solid #232323",
+                                color: "#F0F0F0",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                display: "grid",
+                                placeItems: "center",
+                            }}
+                        >
+                            JD
+                        </div>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+                    {sidebar && sidebar.length > 0 ? (
+                        <aside
+                            style={{
+                                width: 220,
+                                borderRight: "1px solid #1A1A1A",
+                                padding: "20px 12px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 2,
+                            }}
+                        >
+                            {sidebar.map((s, i) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        height: 34,
+                                        padding: "0 12px",
+                                        borderRadius: 8,
+                                        background: s.active ? "#1A1A1A" : "transparent",
+                                        color: s.active ? "#F0F0F0" : "#999",
+                                        fontSize: 13,
+                                        fontWeight: s.active ? 600 : 500,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            width: 6,
+                                            height: 6,
+                                            borderRadius: 2,
+                                            background: s.active ? "#E9FF7B" : "#333",
+                                        }}
+                                    />
+                                    {s.label}
+                                </div>
+                            ))}
+                        </aside>
+                    ) : null}
+
+                    <div style={{ flex: 1, padding: "40px 48px", overflow: "hidden" }}>
+                        {/* Headline */}
+                        <div
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "4px 10px",
+                                background: "rgba(233,255,123,0.1)",
+                                border: "1px solid rgba(233,255,123,0.3)",
+                                borderRadius: 999,
+                                color: "#E9FF7B",
+                                fontSize: 11,
+                                fontWeight: 600,
+                                letterSpacing: "0.02em",
+                                textTransform: "uppercase",
+                                marginBottom: 18,
+                            }}
+                        >
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#E9FF7B" }} />
+                            {slide.kind === "landing" ? "Landing" : slide.kind === "component" ? "Componente" : "Prototipo"}
+                        </div>
+                        <h1
+                            style={{
+                                fontSize: 44,
+                                fontWeight: 600,
+                                lineHeight: 1.05,
+                                letterSpacing: "-0.035em",
+                                color: "#F0F0F0",
+                                margin: 0,
+                                marginBottom: 12,
+                                maxWidth: 820,
+                            }}
+                        >
+                            {slide.headline}
+                        </h1>
+                        {slide.description ? (
+                            <p
+                                style={{
+                                    fontSize: 16,
+                                    lineHeight: 1.55,
+                                    color: "#999",
+                                    margin: 0,
+                                    marginBottom: 28,
+                                    maxWidth: 640,
+                                    letterSpacing: "-0.005em",
+                                }}
+                            >
+                                {slide.description}
+                            </p>
+                        ) : null}
+
+                        {slide.primaryCta ? (
+                            <div
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    height: 40,
+                                    padding: "0 18px",
+                                    background: "#E9FF7B",
+                                    color: "#0a0a0a",
+                                    borderRadius: 10,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    letterSpacing: "-0.01em",
+                                    marginBottom: 32,
+                                }}
+                            >
+                                {slide.primaryCta}
+                                <span style={{ fontSize: 15 }}>→</span>
+                            </div>
+                        ) : null}
+
+                        {/* Stats row */}
+                        {slide.stats && slide.stats.length > 0 ? (
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: `repeat(${Math.min(slide.stats.length, 3)}, 1fr)`,
+                                    gap: 12,
+                                    marginBottom: 24,
+                                }}
+                            >
+                                {slide.stats.slice(0, 3).map((s, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            background: "#141414",
+                                            border: "1px solid #232323",
+                                            borderRadius: 14,
+                                            padding: "18px 20px",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                fontSize: 28,
+                                                fontWeight: 700,
+                                                color: "#F0F0F0",
+                                                letterSpacing: "-0.03em",
+                                                lineHeight: 1,
+                                                marginBottom: 6,
+                                            }}
+                                        >
+                                            {s.value}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: "#777", letterSpacing: "-0.005em" }}>
+                                            {s.label}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+
+                        {/* List / table card */}
+                        {slide.listRows && slide.listRows.length > 0 ? (
+                            <div
+                                style={{
+                                    background: "#141414",
+                                    border: "1px solid #232323",
+                                    borderRadius: 14,
+                                    overflow: "hidden",
+                                }}
+                            >
+                                {slide.listRows.map((row, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            height: 48,
+                                            padding: "0 18px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 12,
+                                            borderTop: i === 0 ? "none" : "1px solid #1A1A1A",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: 6,
+                                                height: 6,
+                                                borderRadius: "50%",
+                                                background: "#E9FF7B",
+                                            }}
+                                        />
+                                        <span
+                                            style={{
+                                                fontSize: 13,
+                                                color: "#F0F0F0",
+                                                fontWeight: 500,
+                                                letterSpacing: "-0.005em",
+                                                flex: 1,
+                                            }}
+                                        >
+                                            {row.title}
+                                        </span>
+                                        {row.meta ? (
+                                            <span style={{ fontSize: 12, color: "#777" }}>{row.meta}</span>
+                                        ) : null}
+                                        {row.badge ? (
+                                            <span
+                                                style={{
+                                                    fontSize: 10,
+                                                    fontWeight: 700,
+                                                    letterSpacing: "0.06em",
+                                                    textTransform: "uppercase",
+                                                    padding: "3px 8px",
+                                                    background: "rgba(233,255,123,0.1)",
+                                                    border: "1px solid rgba(233,255,123,0.3)",
+                                                    color: "#E9FF7B",
+                                                    borderRadius: 6,
+                                                }}
+                                            >
+                                                {row.badge}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+
+            {/* Footer caption */}
+            {slide.subtitle ? (
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 4,
+                        left: 0,
+                        right: 0,
+                        textAlign: "center",
+                        color: "#555",
+                        fontSize: 11,
+                        letterSpacing: "-0.005em",
+                    }}
+                >
+                    {slide.subtitle}
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+function dotStyle(color: string): React.CSSProperties {
+    return {
+        width: 10,
+        height: 10,
+        borderRadius: "50%",
+        background: color,
+        display: "inline-block",
+    };
+}
+
+// ============================================================
 // MASTER SWITCH
 // ============================================================
 
@@ -721,6 +1139,8 @@ export function SlideRenderer({
             return <DocCover slide={slide} />;
         case "doc-section":
             return <DocSection slide={slide} pageNumber={pageIndex} />;
+        case "prototype-frame":
+            return <PrototypeFrame slide={slide} />;
         case "content":
             return <Content slide={slide} clientLogoUrl={clientLogoUrl} />;
         default:

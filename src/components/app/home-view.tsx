@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import type { StoredDeck } from "@/lib/deck-storage";
 import { TEMPLATES, type Template } from "@/lib/templates";
 import { programs } from "@/lib/programs";
 import type { Deck, ProjectFormat } from "@/lib/slide-types";
-
-type Theme = "dark" | "light";
 import { FORMATS } from "@/lib/slide-types";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRenderer } from "@/components/slides/deck-slides";
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
 
-type MainTab = "recent" | "mine" | "examples" | "systems";
+type Theme = "dark" | "light";
+type PrototypeKind = "app" | "landing" | "component";
+type DocKind = "proposal" | "contract" | "one-pager" | "other";
 
 export interface CreateArgs {
     format: ProjectFormat;
@@ -21,6 +21,18 @@ export interface CreateArgs {
     corporateMode: boolean;
     theme: Theme;
     topic?: string;
+    prototypeKind?: PrototypeKind;
+    docKind?: DocKind;
+    freePrompt?: string;
+}
+
+export interface HomeSeed {
+    clientName?: string;
+    topic?: string;
+    programId?: string;
+    corporateMode?: boolean;
+    prototypeKind?: PrototypeKind;
+    docKind?: DocKind;
 }
 
 interface HomeViewProps {
@@ -29,21 +41,30 @@ interface HomeViewProps {
     onDeleteDeck: (id: string) => void;
     onOpenTemplate: (id: string) => void;
     onCreateNew: (args: CreateArgs) => void;
-    onOpenIntake: (format: ProjectFormat) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
     userEmail?: string;
     userName?: string;
 }
 
 // ──────────────────────────────────────────────────────────────
-// Format picker config (top tabs + sidebar field sets)
+// Tabs (order + icons)
 // ──────────────────────────────────────────────────────────────
 
-const TOP_TABS: { id: ProjectFormat; label: string; icon: React.ReactNode }[] = [
+type TabId = "prototype" | "proposal" | "carousel-ig" | "story-ig" | "doc" | "template" | "other";
+
+const TAB_DEFS: { id: TabId; label: string; icon: ReactNode }[] = [
+    { id: "prototype", label: "Prototipo", icon: <IconPrototype /> },
     { id: "proposal", label: "Propuesta", icon: <IconSlide /> },
-    { id: "carousel-ig", label: "Carrusel IG", icon: <IconCarousel /> },
-    { id: "story-ig", label: "Historia IG", icon: <IconStory /> },
+    { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel /> },
+    { id: "story-ig", label: "Historia", icon: <IconStory /> },
     { id: "doc", label: "Documento", icon: <IconDoc /> },
+    { id: "template", label: "Plantilla", icon: <IconTemplate /> },
+    { id: "other", label: "Otro", icon: <IconSpark /> },
 ];
+
+// ──────────────────────────────────────────────────────────────
+// Main
+// ──────────────────────────────────────────────────────────────
 
 export function HomeView({
     recentDecks,
@@ -55,269 +76,802 @@ export function HomeView({
     userEmail = "jdelaossa1800@gmail.com",
     userName = "Juan Diego",
 }: HomeViewProps) {
-    const [format, setFormat] = useState<ProjectFormat>("proposal");
-    const [mainTab, setMainTab] = useState<MainTab>("recent");
+    const [tab, setTab] = useState<TabId>("proposal");
     const [query, setQuery] = useState("");
-
-    // Proposal-specific fields
-    const [clientName, setClientName] = useState("");
-    const [programId, setProgramId] = useState("sales-machine");
-    const [corporateMode, setCorporateMode] = useState(true);
-    // Carousel / story / doc fields
-    const [topic, setTopic] = useState("");
-    // Theme (shared across formats; doc defaults to light, others to dark)
-    const [theme, setTheme] = useState<Theme>("dark");
 
     const filteredDecks = useMemo(() => {
         const q = query.trim().toLowerCase();
-        const byFormat = mainTab === "mine"
-            ? recentDecks.filter((d) => (d.deck.format ?? "proposal") === format)
-            : recentDecks;
-        if (!q) return byFormat;
-        return byFormat.filter(
+        if (!q) return recentDecks;
+        return recentDecks.filter(
             (d) =>
                 d.deck.deckTitle.toLowerCase().includes(q) ||
                 d.deck.companyName.toLowerCase().includes(q) ||
                 d.deck.programName.toLowerCase().includes(q),
         );
-    }, [recentDecks, query, mainTab, format]);
-
-    const isProposal = format === "proposal";
-    const isContentFormat = format === "carousel-ig" || format === "story-ig" || format === "doc";
-
-    const canCreate = isProposal ? clientName.trim().length > 1 : topic.trim().length > 2;
-
-    const handleCreate = () => {
-        if (!canCreate) return;
-        onCreateNew({
-            format,
-            clientName: clientName.trim() || (topic ? topic.trim() : "30X"),
-            programId,
-            corporateMode,
-            theme,
-            topic: topic || undefined,
-        });
-    };
+    }, [recentDecks, query]);
 
     return (
-        <div className="flex flex-col h-screen bg-white text-[#0a0a0a]">
-            {/* ── Top bar ── */}
-            <div className="h-10 shrink-0 border-b border-black/[0.06] flex items-center">
-                <div className="w-[240px] shrink-0 px-5 flex items-center gap-2">
-                    <Logo30x variant="dark" className="h-3.5" />
-                    <span className="text-[11px] font-medium text-[#737373]">Design</span>
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-[0.06em] uppercase text-[#525252] bg-black/[0.04]">
-                        Research Preview
-                    </span>
+        <div className="min-h-screen bg-[#fafafa] text-[#0a0a0a]">
+            {/* Top bar */}
+            <header className="sticky top-0 z-20 bg-[#fafafa]/80 backdrop-blur-md border-b border-black/[0.04]">
+                <div className="h-12 flex items-center px-5">
+                    <div className="flex items-center gap-2">
+                        <Logo30x variant="dark" className="h-3.5" />
+                        <span className="text-[11px] font-medium text-[#737373]">Design</span>
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-[0.06em] uppercase text-[#525252] bg-black/[0.04]">
+                            Research Preview
+                        </span>
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                        <SearchInput value={query} onChange={setQuery} />
+                        <UserChip name={userName} email={userEmail} />
+                    </div>
                 </div>
-                <div className="flex-1 flex items-center gap-0.5 px-2 border-l border-black/[0.06] h-full">
-                    {TOP_TABS.map((t) => (
-                        <TopTabButton
-                            key={t.id}
-                            active={format === t.id}
-                            onClick={() => setFormat(t.id)}
-                            label={t.label}
-                            icon={t.icon}
-                        />
-                    ))}
-                </div>
-                <div className="px-5">
-                    <SearchInput value={query} onChange={setQuery} />
-                </div>
-            </div>
+            </header>
 
-            <div className="flex flex-1 min-h-0">
-                {/* ── Sidebar ── */}
-                <aside className="w-[240px] shrink-0 border-r border-black/[0.06] flex flex-col">
-                    <div className="flex-1 overflow-y-auto px-5 py-5">
-                        <h2 className="text-[13px] font-semibold tracking-[-0.015em] mb-1">
-                            Nuevo {FORMATS[format].label.toLowerCase()}
+            {/* Hero + card */}
+            <section className="pt-14 pb-16 px-6">
+                <div className="max-w-[960px] mx-auto">
+                    <div className="text-center mb-9">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.02)] mb-4">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
+                            <span className="text-[11px] font-medium tracking-[-0.005em] text-[#525252]">
+                                Diseñando con Claude Opus 4.7
+                            </span>
+                        </div>
+                        <h1 className="text-[44px] font-semibold tracking-[-0.035em] leading-[1.02] text-[#0a0a0a]">
+                            ¿Qué vamos a diseñar hoy?
+                        </h1>
+                        <p className="mt-3 text-[15px] text-[#525252] tracking-[-0.005em] leading-[1.5] max-w-[520px] mx-auto">
+                            Prototipos, propuestas, carruseles, historias o documentos — todo con el sistema 30X.
+                        </p>
+                    </div>
+
+                    <TabCard
+                        tab={tab}
+                        onTabChange={setTab}
+                        onCreate={(args) => onCreateNew(args)}
+                        onOpenIntake={onOpenIntake}
+                        onOpenTemplate={onOpenTemplate}
+                    />
+
+                    <p className="mt-3 text-center text-[11px] text-[#a3a3a3] tracking-[-0.005em]">
+                        Solo tú puedes ver tus diseños por defecto.
+                    </p>
+                </div>
+            </section>
+
+            {/* Recent designs */}
+            <section className="px-6 pb-24">
+                <div className="max-w-[1120px] mx-auto">
+                    <div className="flex items-baseline justify-between mb-5">
+                        <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[#0a0a0a]">
+                            Tus diseños
                         </h2>
-                        <p className="text-[11px] text-[#737373] tracking-[-0.005em] mb-4 leading-[1.4]">
-                            {FORMATS[format].description}
-                        </p>
-
-                        <div className="space-y-4">
-                            {isProposal ? (
-                                <>
-                                    <Field label="Cliente">
-                                        <input
-                                            type="text"
-                                            value={clientName}
-                                            onChange={(e) => setClientName(e.target.value)}
-                                            placeholder="Nombre del cliente"
-                                            className="w-full h-9 px-3 rounded-md border border-black/[0.1] bg-white text-[13px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/40 focus:ring-2 focus:ring-black/[0.04] tracking-[-0.005em]"
-                                        />
-                                    </Field>
-
-                                    <Field label="Programa">
-                                        <select
-                                            value={programId}
-                                            onChange={(e) => setProgramId(e.target.value)}
-                                            className="w-full h-9 px-3 rounded-md border border-black/[0.1] bg-white text-[13px] text-[#0a0a0a] focus:outline-none focus:border-black/40 focus:ring-2 focus:ring-black/[0.04] appearance-none bg-no-repeat bg-right tracking-[-0.005em]"
-                                            style={{
-                                                backgroundImage:
-                                                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'><path d='M4 6L8 10L12 6' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>\")",
-                                                backgroundPosition: "right 10px center",
-                                                paddingRight: "28px",
-                                            }}
-                                        >
-                                            {programs.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Field>
-
-                                    <Field label="Tipo">
-                                        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-md bg-black/[0.04]">
-                                            <SmallToggle
-                                                active={corporateMode}
-                                                onClick={() => setCorporateMode(true)}
-                                                label="Corporativa"
-                                            />
-                                            <SmallToggle
-                                                active={!corporateMode}
-                                                onClick={() => setCorporateMode(false)}
-                                                label="Abierta"
-                                            />
-                                        </div>
-                                    </Field>
-                                    <ThemeField theme={theme} onChange={setTheme} />
-                                </>
-                            ) : null}
-
-                            {isContentFormat ? (
-                                <>
-                                    <Field label="Tema">
-                                        <textarea
-                                            value={topic}
-                                            onChange={(e) => setTopic(e.target.value)}
-                                            placeholder={
-                                                format === "carousel-ig"
-                                                    ? "Ej: 5 lecciones que aprendimos escalando ventas B2B"
-                                                    : format === "story-ig"
-                                                      ? "Ej: Nueva cohort de Sales Machine arranca en abril"
-                                                      : "Ej: Contrato de formación ejecutiva"
-                                            }
-                                            rows={3}
-                                            className="w-full resize-none bg-white border border-black/[0.1] rounded-md px-3 py-2 text-[13px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/40 focus:ring-2 focus:ring-black/[0.04] tracking-[-0.005em] leading-[1.45]"
-                                        />
-                                    </Field>
-                                    <Field label="Programa (contexto)">
-                                        <select
-                                            value={programId}
-                                            onChange={(e) => setProgramId(e.target.value)}
-                                            className="w-full h-9 px-3 rounded-md border border-black/[0.1] bg-white text-[13px] text-[#0a0a0a] focus:outline-none focus:border-black/40 focus:ring-2 focus:ring-black/[0.04] appearance-none bg-no-repeat bg-right tracking-[-0.005em]"
-                                            style={{
-                                                backgroundImage:
-                                                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'><path d='M4 6L8 10L12 6' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>\")",
-                                                backgroundPosition: "right 10px center",
-                                                paddingRight: "28px",
-                                            }}
-                                        >
-                                            <option value="">Sin programa específico</option>
-                                            {programs.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                    {p.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Field>
-                                    <ThemeField theme={theme} onChange={setTheme} />
-                                </>
-                            ) : null}
-
-                            <button
-                                onClick={handleCreate}
-                                disabled={!canCreate}
-                                className="w-full h-10 rounded-md border border-dashed border-black/15 bg-white text-[13px] font-semibold tracking-[-0.01em] text-[#0a0a0a] hover:bg-black/[0.03] hover:border-black/30 disabled:opacity-40 disabled:cursor-not-allowed transition-[background,border-color] duration-150 flex items-center justify-center gap-2"
-                                style={{ transitionTimingFunction: "var(--ease-out)" }}
-                            >
-                                <PlusIcon />
-                                Crear
-                            </button>
-
-                            {isProposal ? (
-                                <button
-                                    onClick={() => onOpenIntake(format)}
-                                    className="w-full h-10 rounded-md bg-[#E9FF7B] text-[13px] font-semibold tracking-[-0.01em] text-[#0a0a0a] hover:brightness-95 active:brightness-90 transition-[filter] duration-150"
-                                    style={{ transitionTimingFunction: "var(--ease-out)" }}
-                                >
-                                    Empezar guiado →
-                                </button>
-                            ) : null}
-                        </div>
-
-                        <p className="mt-4 text-[11px] text-[#737373] leading-[1.5]">
-                            Solo tú puedes ver tus diseños. Cada diseño usa el sistema 30X: Inter Display, acento #E9FF7B, fotos reales.
-                        </p>
+                        <span className="text-[12px] text-[#a3a3a3]">
+                            {filteredDecks.length} {filteredDecks.length === 1 ? "diseño" : "diseños"}
+                        </span>
                     </div>
-
-                    <div className="border-t border-black/[0.06] px-4 py-3 space-y-0.5">
-                        <FooterChip icon={<DocsIcon />} label="Docs" />
-                        <FooterChip icon={<OrgIcon />} label={userEmail} subtle />
-                        <FooterChip icon={<UserIcon />} label={userName} />
-                    </div>
-                </aside>
-
-                {/* ── Main area ── */}
-                <main className="flex-1 overflow-y-auto">
-                    <div className="px-8 pt-6">
-                        <div className="flex items-center gap-1 border-b border-black/[0.06]">
-                            <MainTabButton active={mainTab === "recent"} onClick={() => setMainTab("recent")} label="Recientes" />
-                            <MainTabButton active={mainTab === "mine"} onClick={() => setMainTab("mine")} label={`Mis ${FORMATS[format].label.toLowerCase()}s`} />
-                            <MainTabButton active={mainTab === "examples"} onClick={() => setMainTab("examples")} label="Ejemplos" />
-                            <MainTabButton active={mainTab === "systems"} onClick={() => setMainTab("systems")} label="Plantillas" />
-                        </div>
-                    </div>
-
-                    <div className="px-8 py-8">
-                        {mainTab === "systems" || mainTab === "examples" ? (
-                            <Grid>
-                                {TEMPLATES.map((t) => (
-                                    <TemplateCard key={t.id} template={t} onClick={() => onOpenTemplate(t.id)} />
-                                ))}
-                            </Grid>
-                        ) : filteredDecks.length === 0 ? (
-                            <Empty label={FORMATS[format].label.toLowerCase()} />
-                        ) : (
-                            <Grid>
-                                {filteredDecks.map((d) => (
-                                    <DeckCard key={d.id} stored={d} onClick={() => onOpenDeck(d.id)} onDelete={() => onDeleteDeck(d.id)} />
-                                ))}
-                            </Grid>
-                        )}
-                    </div>
-                </main>
-            </div>
+                    {filteredDecks.length === 0 ? (
+                        <EmptyState />
+                    ) : (
+                        <DesignsGrid
+                            decks={filteredDecks}
+                            onOpen={onOpenDeck}
+                            onDelete={onDeleteDeck}
+                        />
+                    )}
+                </div>
+            </section>
         </div>
     );
 }
 
 // ──────────────────────────────────────────────────────────────
-// Cards (thumbnails adapt aspect ratio per format)
+// Tab card (Claude Design style — tabs above a floating card)
 // ──────────────────────────────────────────────────────────────
 
-function Grid({ children }: { children: React.ReactNode }) {
-    return <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5">{children}</div>;
+interface TabCardProps {
+    tab: TabId;
+    onTabChange: (t: TabId) => void;
+    onCreate: (args: CreateArgs) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+    onOpenTemplate: (id: string) => void;
 }
 
-function thumbAspectFor(f: ProjectFormat | undefined): string {
-    switch (f) {
-        case "carousel-ig":
-            return "1 / 1";
-        case "story-ig":
-            return "9 / 16";
-        case "doc":
-            return "794 / 1123";
-        default:
-            return "4 / 3";
-    }
+function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: TabCardProps) {
+    return (
+        <div className="max-w-[720px] mx-auto">
+            {/* Tab strip */}
+            <div className="flex items-end px-1 gap-0.5 overflow-x-auto scrollbar-hide">
+                {TAB_DEFS.map((t) => (
+                    <TabButton
+                        key={t.id}
+                        active={tab === t.id}
+                        onClick={() => onTabChange(t.id)}
+                        label={t.label}
+                        icon={t.icon}
+                    />
+                ))}
+            </div>
+
+            {/* Card surface */}
+            <div
+                className="relative bg-white rounded-2xl rounded-tl-none border border-black/[0.06] shadow-[0_2px_4px_rgba(0,0,0,0.02),0_12px_32px_-12px_rgba(0,0,0,0.08)]"
+                style={{
+                    // Hide the top border segment under the active tab
+                    boxShadow:
+                        "0 2px 4px rgba(0,0,0,0.02), 0 12px 32px -12px rgba(0,0,0,0.08)",
+                }}
+            >
+                <div className="p-6">
+                    {tab === "prototype" ? (
+                        <PrototypeForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                    ) : tab === "proposal" ? (
+                        <ProposalForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                    ) : tab === "carousel-ig" ? (
+                        <ContentForm
+                            format="carousel-ig"
+                            onCreate={onCreate}
+                            onOpenIntake={onOpenIntake}
+                            defaultTheme="dark"
+                            topicPlaceholder="Ej: 5 lecciones que aprendimos escalando ventas B2B"
+                        />
+                    ) : tab === "story-ig" ? (
+                        <ContentForm
+                            format="story-ig"
+                            onCreate={onCreate}
+                            onOpenIntake={onOpenIntake}
+                            defaultTheme="dark"
+                            topicPlaceholder="Ej: Nueva cohort de Sales Machine arranca en abril"
+                            compact
+                        />
+                    ) : tab === "doc" ? (
+                        <DocForm onCreate={onCreate} onOpenIntake={onOpenIntake} />
+                    ) : tab === "template" ? (
+                        <TemplateGrid onOpenTemplate={onOpenTemplate} />
+                    ) : (
+                        <OtherForm onOpenIntake={onOpenIntake} />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
-function DeckCard({
+function TabButton({
+    active,
+    onClick,
+    label,
+    icon,
+}: {
+    active: boolean;
+    onClick: () => void;
+    label: string;
+    icon: ReactNode;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={`relative h-9 px-3 flex items-center gap-1.5 text-[12.5px] tracking-[-0.005em] transition-[color,background-color] duration-150 rounded-t-lg whitespace-nowrap ${
+                active
+                    ? "bg-white text-[#0a0a0a] font-semibold border border-black/[0.06] border-b-transparent"
+                    : "text-[#737373] hover:text-[#0a0a0a] font-medium"
+            }`}
+            style={{ transitionTimingFunction: "var(--ease-out)" }}
+        >
+            <span className="w-3.5 h-3.5 flex items-center justify-center text-current">{icon}</span>
+            {label}
+            {active ? (
+                // Hide the 1px border line where the active tab meets the card
+                <span
+                    className="absolute left-0 right-0 -bottom-px h-px bg-white"
+                    aria-hidden="true"
+                />
+            ) : null}
+        </button>
+    );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Per-format forms
+// ──────────────────────────────────────────────────────────────
+
+function PrototypeForm({
+    onCreate,
+    onOpenIntake,
+}: {
+    onCreate: (args: CreateArgs) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+}) {
+    const [name, setName] = useState("");
+    const [kind, setKind] = useState<PrototypeKind>("app");
+    const canCreate = name.trim().length > 1;
+
+    return (
+        <FormSurface
+            title="Nuevo prototipo"
+            subtitle="App, landing o componente con el sistema 30X."
+        >
+            <Field label="Nombre del proyecto">
+                <TextInput value={name} onChange={setName} placeholder="Ej: Dashboard Sales Machine" autoFocus />
+            </Field>
+
+            <Field label="Tipo">
+                <Segmented
+                    value={kind}
+                    onChange={setKind}
+                    options={[
+                        { value: "app", label: "App" },
+                        { value: "landing", label: "Landing" },
+                        { value: "component", label: "Componente" },
+                    ]}
+                />
+            </Field>
+
+            <DesignSystemField />
+
+            <CreateRow
+                primary={{
+                    label: "Crear prototipo",
+                    disabled: !canCreate,
+                    onClick: () =>
+                        onCreate({
+                            format: "prototype",
+                            clientName: name.trim(),
+                            programId: "",
+                            corporateMode: false,
+                            theme: "dark",
+                            topic: name.trim(),
+                            prototypeKind: kind,
+                        }),
+                }}
+                secondary={{
+                    label: "Diseñar con Cora",
+                    onClick: () =>
+                        onOpenIntake("prototype", {
+                            clientName: name.trim() || undefined,
+                            prototypeKind: kind,
+                        }),
+                    accent: true,
+                }}
+            />
+        </FormSurface>
+    );
+}
+
+function ProposalForm({
+    onCreate,
+    onOpenIntake,
+}: {
+    onCreate: (args: CreateArgs) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+}) {
+    const [clientName, setClientName] = useState("");
+    const [programId, setProgramId] = useState("sales-machine");
+    const [corporateMode, setCorporateMode] = useState(true);
+    const canCreate = clientName.trim().length > 1;
+
+    return (
+        <FormSurface
+            title="Nueva propuesta comercial"
+            subtitle="Deck 16:9 personalizado con research, mentores y precio."
+        >
+            <Field label="Cliente">
+                <TextInput
+                    value={clientName}
+                    onChange={setClientName}
+                    placeholder="Nombre del cliente"
+                    autoFocus
+                />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+                <Field label="Programa">
+                    <Select
+                        value={programId}
+                        onChange={setProgramId}
+                        options={programs.map((p) => ({ value: p.id, label: p.name }))}
+                    />
+                </Field>
+                <Field label="Tipo">
+                    <Segmented
+                        value={corporateMode ? "corp" : "open"}
+                        onChange={(v) => setCorporateMode(v === "corp")}
+                        options={[
+                            { value: "corp", label: "Corporativa" },
+                            { value: "open", label: "Abierta" },
+                        ]}
+                    />
+                </Field>
+            </div>
+
+            <CreateRow
+                primary={{
+                    label: "Crear propuesta",
+                    disabled: !canCreate,
+                    onClick: () =>
+                        onCreate({
+                            format: "proposal",
+                            clientName: clientName.trim(),
+                            programId,
+                            corporateMode,
+                            theme: "dark",
+                        }),
+                }}
+                secondary={{
+                    label: "Empezar con Cora",
+                    onClick: () =>
+                        onOpenIntake("proposal", {
+                            clientName: clientName.trim() || undefined,
+                            programId,
+                            corporateMode,
+                        }),
+                    accent: true,
+                }}
+            />
+        </FormSurface>
+    );
+}
+
+function ContentForm({
+    format,
+    onCreate,
+    onOpenIntake,
+    defaultTheme,
+    topicPlaceholder,
+    compact,
+}: {
+    format: ProjectFormat;
+    onCreate: (args: CreateArgs) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+    defaultTheme: Theme;
+    topicPlaceholder: string;
+    compact?: boolean;
+}) {
+    const [topic, setTopic] = useState("");
+    const [programId, setProgramId] = useState("");
+    const canCreate = topic.trim().length > 2;
+    const label = FORMATS[format].label;
+
+    return (
+        <FormSurface title={`Nuevo ${label.toLowerCase()}`} subtitle={FORMATS[format].description}>
+            <Field label="Tema">
+                <Textarea
+                    value={topic}
+                    onChange={setTopic}
+                    placeholder={topicPlaceholder}
+                    rows={compact ? 2 : 3}
+                    autoFocus
+                />
+            </Field>
+
+            {compact ? null : (
+                <Field label="Programa (contexto)">
+                    <Select
+                        value={programId}
+                        onChange={setProgramId}
+                        options={[
+                            { value: "", label: "Sin programa específico" },
+                            ...programs.map((p) => ({ value: p.id, label: p.name })),
+                        ]}
+                    />
+                </Field>
+            )}
+
+            <CreateRow
+                primary={{
+                    label: `Crear ${label.toLowerCase()}`,
+                    disabled: !canCreate,
+                    onClick: () =>
+                        onCreate({
+                            format,
+                            clientName: topic.trim().slice(0, 60),
+                            programId,
+                            corporateMode: false,
+                            theme: defaultTheme,
+                            topic: topic.trim(),
+                        }),
+                }}
+                secondary={{
+                    label: "Explorar con Cora",
+                    onClick: () =>
+                        onOpenIntake(format, {
+                            topic: topic.trim() || undefined,
+                            programId: programId || undefined,
+                        }),
+                    accent: true,
+                }}
+            />
+        </FormSurface>
+    );
+}
+
+function DocForm({
+    onCreate,
+    onOpenIntake,
+}: {
+    onCreate: (args: CreateArgs) => void;
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+}) {
+    const [title, setTitle] = useState("");
+    const [kind, setKind] = useState<DocKind>("proposal");
+    const canCreate = title.trim().length > 1;
+
+    return (
+        <FormSurface
+            title="Nuevo documento"
+            subtitle="A4 para propuestas, contratos y one-pagers."
+        >
+            <Field label="Título">
+                <TextInput
+                    value={title}
+                    onChange={setTitle}
+                    placeholder="Ej: Contrato de formación ejecutiva"
+                    autoFocus
+                />
+            </Field>
+
+            <Field label="Tipo de documento">
+                <Segmented
+                    value={kind}
+                    onChange={setKind}
+                    options={[
+                        { value: "proposal", label: "Propuesta" },
+                        { value: "contract", label: "Contrato" },
+                        { value: "one-pager", label: "One-pager" },
+                        { value: "other", label: "Otro" },
+                    ]}
+                />
+            </Field>
+
+            <CreateRow
+                primary={{
+                    label: "Crear documento",
+                    disabled: !canCreate,
+                    onClick: () =>
+                        onCreate({
+                            format: "doc",
+                            clientName: title.trim(),
+                            programId: "",
+                            corporateMode: false,
+                            theme: "light",
+                            topic: title.trim(),
+                            docKind: kind,
+                        }),
+                }}
+                secondary={{
+                    label: "Escribir con Cora",
+                    onClick: () =>
+                        onOpenIntake("doc", {
+                            clientName: title.trim() || undefined,
+                            docKind: kind,
+                        }),
+                    accent: true,
+                }}
+            />
+        </FormSurface>
+    );
+}
+
+function TemplateGrid({ onOpenTemplate }: { onOpenTemplate: (id: string) => void }) {
+    return (
+        <FormSurface
+            title="Empezar desde plantilla"
+            subtitle="Elige un punto de partida curado del catálogo 30X."
+        >
+            <div className="grid grid-cols-2 gap-3">
+                {TEMPLATES.map((t) => (
+                    <TemplateMiniCard key={t.id} template={t} onClick={() => onOpenTemplate(t.id)} />
+                ))}
+            </div>
+        </FormSurface>
+    );
+}
+
+function OtherForm({
+    onOpenIntake,
+}: {
+    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+}) {
+    const [prompt, setPrompt] = useState("");
+    const canOpen = prompt.trim().length > 6;
+
+    return (
+        <FormSurface
+            title="Describe lo que quieres diseñar"
+            subtitle="Cora escoge el formato — deck, carrusel, doc, prototipo — y lo lleva a ejecución."
+        >
+            <Field label="¿Qué necesitas?">
+                <Textarea
+                    value={prompt}
+                    onChange={setPrompt}
+                    placeholder="Ej: un one-pager para Bancolombia explicando Sales Machine, con diagnóstico y precio"
+                    rows={4}
+                    autoFocus
+                />
+            </Field>
+
+            <CreateRow
+                primary={{
+                    label: "Trabajar con Cora",
+                    disabled: !canOpen,
+                    onClick: () =>
+                        onOpenIntake("other", { topic: prompt.trim() }),
+                    accent: true,
+                }}
+            />
+        </FormSurface>
+    );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Shared form primitives
+// ──────────────────────────────────────────────────────────────
+
+function FormSurface({
+    title,
+    subtitle,
+    children,
+}: {
+    title: string;
+    subtitle: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className="space-y-4">
+            <div>
+                <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-[#0a0a0a]">
+                    {title}
+                </h3>
+                <p className="mt-0.5 text-[12.5px] text-[#737373] tracking-[-0.005em] leading-[1.45]">
+                    {subtitle}
+                </p>
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div>
+            <div className="text-[11px] font-medium text-[#525252] tracking-[-0.005em] mb-1.5">
+                {label}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function TextInput({
+    value,
+    onChange,
+    placeholder,
+    autoFocus,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    autoFocus?: boolean;
+}) {
+    return (
+        <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            className="w-full h-10 px-3.5 rounded-lg border border-black/[0.09] bg-white text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] tracking-[-0.005em] transition-[border-color,box-shadow] duration-150"
+            style={{ transitionTimingFunction: "var(--ease-out)" }}
+        />
+    );
+}
+
+function Textarea({
+    value,
+    onChange,
+    placeholder,
+    rows = 3,
+    autoFocus,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    rows?: number;
+    autoFocus?: boolean;
+}) {
+    return (
+        <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+            autoFocus={autoFocus}
+            className="w-full resize-none bg-white border border-black/[0.09] rounded-lg px-3.5 py-2.5 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] tracking-[-0.005em] leading-[1.5] transition-[border-color,box-shadow] duration-150"
+            style={{ transitionTimingFunction: "var(--ease-out)" }}
+        />
+    );
+}
+
+function Select<T extends string>({
+    value,
+    onChange,
+    options,
+}: {
+    value: T;
+    onChange: (v: T) => void;
+    options: { value: T; label: string }[];
+}) {
+    return (
+        <div className="relative">
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value as T)}
+                className="w-full h-10 pl-3.5 pr-9 rounded-lg border border-black/[0.09] bg-white text-[14px] text-[#0a0a0a] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] appearance-none tracking-[-0.005em] transition-[border-color,box-shadow] duration-150"
+                style={{ transitionTimingFunction: "var(--ease-out)" }}
+            >
+                {options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                        {o.label}
+                    </option>
+                ))}
+            </select>
+            <svg
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737373] pointer-events-none"
+            >
+                <path
+                    d="M4 6L8 10L12 6"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </svg>
+        </div>
+    );
+}
+
+function Segmented<T extends string>({
+    value,
+    onChange,
+    options,
+}: {
+    value: T;
+    onChange: (v: T) => void;
+    options: { value: T; label: string }[];
+}) {
+    return (
+        <div
+            className="grid gap-1 p-1 rounded-lg bg-black/[0.04]"
+            style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+        >
+            {options.map((o) => {
+                const active = value === o.value;
+                return (
+                    <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => onChange(o.value)}
+                        className={`h-8 rounded-md text-[12.5px] tracking-[-0.005em] transition-[background-color,color,box-shadow] duration-150 ${
+                            active
+                                ? "bg-white text-[#0a0a0a] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05),0_1px_1px_rgba(0,0,0,0.04)]"
+                                : "text-[#525252] hover:text-[#0a0a0a] font-medium"
+                        }`}
+                        style={{ transitionTimingFunction: "var(--ease-out)" }}
+                    >
+                        {o.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function DesignSystemField() {
+    return (
+        <Field label="Sistema de diseño">
+            <div className="flex items-center gap-2.5 h-10 px-3 rounded-lg border border-black/[0.09] bg-white">
+                <span className="w-6 h-6 rounded-md bg-[#E9FF7B] flex items-center justify-center">
+                    <Logo30x variant="dark" className="h-2.5" />
+                </span>
+                <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-[#0a0a0a] tracking-[-0.005em] leading-[1.2]">
+                        30X Design System
+                    </div>
+                    <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2]">Default</div>
+                </div>
+                <span className="text-[10.5px] px-1.5 py-0.5 rounded bg-black/[0.04] text-[#737373] font-medium">
+                    Locked
+                </span>
+            </div>
+        </Field>
+    );
+}
+
+interface CreateButton {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    accent?: boolean;
+}
+
+function CreateRow({
+    primary,
+    secondary,
+}: {
+    primary: CreateButton;
+    secondary?: CreateButton;
+}) {
+    return (
+        <div className="pt-2 flex flex-col gap-2">
+            <button
+                type="button"
+                onClick={primary.onClick}
+                disabled={primary.disabled}
+                className={`w-full h-11 rounded-lg text-[13.5px] font-semibold tracking-[-0.01em] transition-[background-color,border-color,color,filter] duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                    primary.accent
+                        ? "bg-[#E9FF7B] text-[#0a0a0a] hover:brightness-95 active:brightness-90"
+                        : "bg-[#0a0a0a] text-white hover:bg-[#262626] active:bg-[#0a0a0a]"
+                }`}
+                style={{ transitionTimingFunction: "var(--ease-out)" }}
+            >
+                <PlusIcon />
+                {primary.label}
+            </button>
+            {secondary ? (
+                <button
+                    type="button"
+                    onClick={secondary.onClick}
+                    disabled={secondary.disabled}
+                    className={`w-full h-10 rounded-lg text-[13px] font-semibold tracking-[-0.01em] transition-[background-color,filter] duration-150 flex items-center justify-center gap-1.5 ${
+                        secondary.accent
+                            ? "bg-[#E9FF7B]/30 text-[#0a0a0a] hover:bg-[#E9FF7B]/50"
+                            : "bg-transparent text-[#0a0a0a] border border-black/[0.09] hover:bg-black/[0.03]"
+                    }`}
+                    style={{ transitionTimingFunction: "var(--ease-out)" }}
+                >
+                    <SparkIcon />
+                    {secondary.label}
+                    <ArrowRightIcon />
+                </button>
+            ) : null}
+        </div>
+    );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Recent designs grid
+// ──────────────────────────────────────────────────────────────
+
+function DesignsGrid({
+    decks,
+    onOpen,
+    onDelete,
+}: {
+    decks: StoredDeck[];
+    onOpen: (id: string) => void;
+    onDelete: (id: string) => void;
+}) {
+    return (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5">
+            {decks.map((d) => (
+                <DesignCard
+                    key={d.id}
+                    stored={d}
+                    onClick={() => onOpen(d.id)}
+                    onDelete={() => onDelete(d.id)}
+                />
+            ))}
+        </div>
+    );
+}
+
+function DesignCard({
     stored,
     onClick,
     onDelete,
@@ -334,9 +888,13 @@ function DeckCard({
     return (
         <div className="group relative">
             <button
+                type="button"
                 onClick={onClick}
-                className="w-full rounded-lg overflow-hidden bg-[#f5f5f5] border border-black/[0.06] hover:border-black/[0.14] transition-colors duration-150"
-                style={{ aspectRatio: thumbAspectFor(format), transitionTimingFunction: "var(--ease-out)" }}
+                className="w-full rounded-xl overflow-hidden bg-[#f0f0f0] border border-black/[0.06] hover:border-black/[0.14] transition-colors duration-150"
+                style={{
+                    aspectRatio: thumbAspectFor(format),
+                    transitionTimingFunction: "var(--ease-out)",
+                }}
             >
                 <div className="w-full h-full">
                     <SlideStage format={format}>
@@ -344,15 +902,18 @@ function DeckCard({
                     </SlideStage>
                 </div>
             </button>
-            <div className="mt-3">
-                <h3 className="text-[13px] font-semibold tracking-[-0.015em] text-[#0a0a0a] leading-[1.35] truncate">
-                    {deck.deckTitle}
-                </h3>
-                <p className="mt-0.5 text-[12px] text-[#737373] tracking-[-0.005em] truncate">
-                    {FORMATS[format].label} · {dateLabel}
-                </p>
+            <div className="mt-3 flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                    <h3 className="text-[13px] font-semibold tracking-[-0.015em] text-[#0a0a0a] leading-[1.35] truncate">
+                        {deck.deckTitle}
+                    </h3>
+                    <p className="mt-0.5 text-[11.5px] text-[#a3a3a3] tracking-[-0.005em] truncate">
+                        {FORMATS[format].label} · {dateLabel}
+                    </p>
+                </div>
             </div>
             <button
+                type="button"
                 onClick={(e) => {
                     e.stopPropagation();
                     onDelete();
@@ -368,199 +929,123 @@ function DeckCard({
     );
 }
 
-function TemplateCard({ template, onClick }: { template: Template; onClick: () => void }) {
+function TemplateMiniCard({ template, onClick }: { template: Template; onClick: () => void }) {
     const format = template.deck.format ?? "proposal";
     return (
-        <button onClick={onClick} className="group relative text-left">
+        <button
+            type="button"
+            onClick={onClick}
+            className="group text-left rounded-lg border border-black/[0.06] hover:border-black/[0.18] overflow-hidden transition-colors duration-150"
+            style={{ transitionTimingFunction: "var(--ease-out)" }}
+        >
             <div
-                className="w-full rounded-lg overflow-hidden bg-[#f5f5f5] border border-black/[0.06] group-hover:border-black/[0.14] transition-colors duration-150"
+                className="w-full bg-[#f0f0f0] overflow-hidden"
                 style={{ aspectRatio: thumbAspectFor(format) }}
             >
-                <div className="w-full h-full">
-                    <SlideStage format={format}>
-                        <SlideRenderer
-                            slide={template.deck.slides[0]}
-                            clientLogoUrl={(template.deck as Deck).clientLogoUrl}
-                        />
-                    </SlideStage>
+                <SlideStage format={format}>
+                    <SlideRenderer
+                        slide={template.deck.slides[0]}
+                        clientLogoUrl={(template.deck as Deck).clientLogoUrl}
+                    />
+                </SlideStage>
+            </div>
+            <div className="px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                    <h4 className="text-[12.5px] font-semibold tracking-[-0.01em] text-[#0a0a0a] truncate">
+                        {template.name}
+                    </h4>
+                    {template.badge ? (
+                        <span className="px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-[0.04em] uppercase text-[#525252] bg-black/[0.04]">
+                            {template.badge}
+                        </span>
+                    ) : null}
                 </div>
-            </div>
-            <div className="mt-3">
-                <h3 className="text-[13px] font-semibold tracking-[-0.015em] text-[#0a0a0a] leading-[1.35] truncate">
-                    {template.name}
-                </h3>
-                <p className="mt-0.5 text-[12px] text-[#737373] tracking-[-0.005em] truncate">
-                    {template.description}
-                </p>
+                <p className="mt-0.5 text-[11.5px] text-[#737373] truncate">{template.description}</p>
             </div>
         </button>
     );
 }
 
-function Empty({ label }: { label: string }) {
+function EmptyState() {
     return (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-[14px] text-[#525252] mb-2">Aún no tienes {label}s.</p>
-            <p className="text-[12px] text-[#737373]">Rellena el formulario de la izquierda y dale a Crear.</p>
+        <div className="rounded-xl border border-dashed border-black/[0.09] bg-white px-6 py-14 text-center">
+            <div className="w-9 h-9 mx-auto rounded-lg bg-black/[0.04] flex items-center justify-center mb-3">
+                <IconSpark />
+            </div>
+            <p className="text-[13.5px] text-[#525252] mb-1">Aún no has creado diseños.</p>
+            <p className="text-[12px] text-[#a3a3a3]">
+                Elige un formato arriba y dale a Crear.
+            </p>
         </div>
     );
 }
 
 // ──────────────────────────────────────────────────────────────
-// Small pieces
+// Top bar pieces
 // ──────────────────────────────────────────────────────────────
-
-function TopTabButton({
-    active,
-    onClick,
-    label,
-    icon,
-}: {
-    active: boolean;
-    onClick: () => void;
-    label: string;
-    icon: React.ReactNode;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            className={`relative h-10 px-3 flex items-center gap-1.5 text-[13px] tracking-[-0.01em] transition-colors ${
-                active ? "text-[#0a0a0a] font-semibold" : "text-[#737373] hover:text-[#0a0a0a]"
-            }`}
-        >
-            <span className="w-3.5 h-3.5 flex items-center justify-center text-current">{icon}</span>
-            {label}
-            {active ? <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#0a0a0a]" /> : null}
-        </button>
-    );
-}
-
-function MainTabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`relative h-9 px-3 text-[13px] tracking-[-0.01em] transition-colors ${
-                active ? "text-[#0a0a0a] font-semibold" : "text-[#737373] hover:text-[#0a0a0a]"
-            }`}
-        >
-            {label}
-            {active ? <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#0a0a0a]" /> : null}
-        </button>
-    );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <div>
-            <div className="text-[11px] font-medium text-[#525252] tracking-[-0.005em] mb-1.5">{label}</div>
-            {children}
-        </div>
-    );
-}
-
-function ThemeField({ theme, onChange }: { theme: Theme; onChange: (t: Theme) => void }) {
-    return (
-        <Field label="Apariencia">
-            <div className="grid grid-cols-2 gap-2">
-                <ThemeCard
-                    active={theme === "dark"}
-                    onClick={() => onChange("dark")}
-                    label="Oscuro"
-                    preview={
-                        <div className="w-full h-full bg-[#0a0a0a] relative overflow-hidden">
-                            <div className="absolute top-2 left-2 right-2 h-[2px] bg-white/40 rounded" />
-                            <div className="absolute top-5 left-2 w-[40%] h-[2px] bg-white/25 rounded" />
-                            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full bg-[#E9FF7B]" />
-                        </div>
-                    }
-                />
-                <ThemeCard
-                    active={theme === "light"}
-                    onClick={() => onChange("light")}
-                    label="Claro"
-                    preview={
-                        <div className="w-full h-full bg-white relative overflow-hidden">
-                            <div className="absolute top-2 left-2 right-2 h-[2px] bg-black/50 rounded" />
-                            <div className="absolute top-5 left-2 w-[40%] h-[2px] bg-black/30 rounded" />
-                            <div className="absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
-                        </div>
-                    }
-                />
-            </div>
-        </Field>
-    );
-}
-
-function ThemeCard({
-    active,
-    onClick,
-    label,
-    preview,
-}: {
-    active: boolean;
-    onClick: () => void;
-    label: string;
-    preview: React.ReactNode;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            className={`rounded-md overflow-hidden border transition-colors text-left ${
-                active ? "border-[#0a0a0a]" : "border-black/[0.1] hover:border-black/25"
-            }`}
-        >
-            <div className="w-full aspect-[4/3] border-b border-inherit">{preview}</div>
-            <div className="px-2.5 py-1.5 flex items-center justify-between">
-                <span className="text-[11px] font-semibold tracking-[-0.005em] text-[#0a0a0a]">
-                    {label}
-                </span>
-                {active ? (
-                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-                        <path d="M3 8L7 12L13 4" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                ) : null}
-            </div>
-        </button>
-    );
-}
-
-function SmallToggle({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`h-7 rounded text-[11px] font-semibold tracking-[-0.005em] transition-[background,color] duration-150 ${
-                active ? "bg-white text-[#0a0a0a] shadow-sm" : "text-[#525252] hover:text-[#0a0a0a]"
-            }`}
-        >
-            {label}
-        </button>
-    );
-}
 
 function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     return (
-        <div className="relative">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]">
+        <div className="relative hidden sm:block">
+            <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]"
+            >
                 <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M10.5 10.5L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             <input
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Buscar…"
-                className="h-7 w-[200px] pl-7 pr-3 rounded-md border border-black/[0.08] bg-white text-[12px] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/30 focus:ring-2 focus:ring-black/[0.04]"
+                placeholder="Buscar diseños…"
+                className="h-8 w-[220px] pl-7 pr-3 rounded-md border border-black/[0.06] bg-white text-[12px] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/30 focus:ring-2 focus:ring-black/[0.04]"
             />
         </div>
     );
 }
 
-function FooterChip({ icon, label, subtle }: { icon: React.ReactNode; label: string; subtle?: boolean }) {
+function UserChip({ name, email }: { name: string; email: string }) {
+    const initials = name
+        .split(" ")
+        .map((p) => p[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
     return (
-        <button className={`w-full flex items-center gap-2 px-2 h-7 rounded text-[12px] tracking-[-0.005em] hover:bg-black/[0.04] transition-colors text-left ${subtle ? "text-[#737373]" : "text-[#0a0a0a]"}`}>
-            <span className="w-3.5 h-3.5 flex items-center justify-center text-[#737373]">{icon}</span>
-            <span className="truncate">{label}</span>
+        <button
+            type="button"
+            className="flex items-center gap-2 h-8 pl-1 pr-2.5 rounded-full border border-black/[0.06] bg-white hover:bg-black/[0.02] transition-colors"
+            title={email}
+        >
+            <span className="w-6 h-6 rounded-full bg-[#0a0a0a] text-white text-[10.5px] font-semibold flex items-center justify-center">
+                {initials || "JD"}
+            </span>
+            <span className="text-[12px] font-medium text-[#0a0a0a] tracking-[-0.005em]">{name}</span>
         </button>
     );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Utils + Icons
+// ──────────────────────────────────────────────────────────────
+
+function thumbAspectFor(f: ProjectFormat | undefined): string {
+    switch (f) {
+        case "carousel-ig":
+            return "1 / 1";
+        case "story-ig":
+            return "9 / 16";
+        case "doc":
+            return "794 / 1123";
+        case "prototype":
+            return "16 / 10";
+        default:
+            return "4 / 3";
+    }
 }
 
 function formatRelativeDate(d: Date): string {
@@ -575,20 +1060,47 @@ function formatRelativeDate(d: Date): string {
     return d.toLocaleDateString("es", { month: "short", day: "numeric" });
 }
 
-// ──────────────────────────────────────────────────────────────
-// Icons
-// ──────────────────────────────────────────────────────────────
-
 function PlusIcon() {
     return (
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+    );
+}
+function ArrowRightIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path
+                d="M4 8h8m0 0l-3-3m3 3l-3 3"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+function SparkIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path
+                d="M8 2l1.2 3.2L12.5 6.5 9.2 7.8 8 11 6.8 7.8 3.5 6.5 6.8 5.2 8 2z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}
+function IconPrototype() {
+    return (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+            <rect x="3" y="4" width="18" height="14" rx="2" />
+            <path d="M8 20h8M9 18v2M15 18v2" strokeLinecap="round" />
         </svg>
     );
 }
 function IconSlide() {
     return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
             <rect x="3" y="5" width="18" height="14" rx="1.5" />
             <path d="M3 9h18" strokeLinecap="round" />
         </svg>
@@ -596,7 +1108,7 @@ function IconSlide() {
 }
 function IconCarousel() {
     return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
             <rect x="6" y="4" width="12" height="16" rx="1.5" />
             <path d="M3 7v10M21 7v10" strokeLinecap="round" />
         </svg>
@@ -604,7 +1116,7 @@ function IconCarousel() {
 }
 function IconStory() {
     return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
             <rect x="6" y="3" width="12" height="18" rx="2" />
             <circle cx="12" cy="17" r="1" fill="currentColor" />
         </svg>
@@ -612,33 +1124,29 @@ function IconStory() {
 }
 function IconDoc() {
     return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
             <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" strokeLinejoin="round" />
             <path d="M14 3v5h5" strokeLinejoin="round" />
         </svg>
     );
 }
-function DocsIcon() {
+function IconTemplate() {
     return (
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" strokeLinejoin="round" />
-            <path d="M10 2v3h3" strokeLinejoin="round" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+            <rect x="3" y="3" width="8" height="8" rx="1.5" />
+            <rect x="13" y="3" width="8" height="5" rx="1.5" />
+            <rect x="3" y="13" width="8" height="8" rx="1.5" />
+            <rect x="13" y="10" width="8" height="11" rx="1.5" />
         </svg>
     );
 }
-function OrgIcon() {
+function IconSpark() {
     return (
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="3" y="3" width="10" height="10" rx="1" />
-            <path d="M6 7h4M6 10h4M6 4v9M10 4v9" strokeLinecap="round" />
-        </svg>
-    );
-}
-function UserIcon() {
-    return (
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="8" cy="5.5" r="2.5" />
-            <path d="M3 14c0-2.76 2.24-5 5-5s5 2.24 5 5" />
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+            <path
+                d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"
+                strokeLinecap="round"
+            />
         </svg>
     );
 }

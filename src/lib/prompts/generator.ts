@@ -167,6 +167,34 @@ export function getGeneratorPrompt(opts: GeneratorOptions): string {
             modeBlock = DOC_STRUCTURE;
             outputHint = `slides de tipo doc-cover, doc-section`;
             break;
+        case "prototype":
+            modeBlock = `## PROTOTIPO 30X (mockup app/web)
+
+Devuelve UN SOLO slide de tipo "prototype-frame". Es un mock de app con ventana cromada, nav 30X, y contenido principal. El diseño visual está implementado — tú solo produces el JSON con los datos.
+
+ESTRUCTURA del slide:
+- type: "prototype-frame"
+- appName: nombre del producto (ej: "Sales Machine", "30X Dashboard")
+- subtitle: una línea de contexto opcional al pie (ej: "Prototipo v0 · Abril 2026")
+- kind: "app" | "landing" | "component" (segun el brief)
+- nav: 3-4 labels del nav top (primero es el activo). Ej: ["Overview","Pipeline","Insights","Team"]
+- sidebar: 4-6 items opcionales con {label, active?}. Usa sidebar para apps densas. Para landings, omite.
+- headline: el H1 grande del frame. Directo, producto-first.
+- description: 1-2 frases de apoyo (máximo ~140 chars).
+- primaryCta: label del botón principal (ej: "Crear propuesta", "Ver pipeline").
+- stats: 2-3 KPIs con {value, label}. Ej: [{value:"$1.8M", label:"Pipeline abierto"}].
+- listRows: 3-5 filas con {title, meta?, badge?} — representan data real que vería el usuario.
+
+REGLAS DE VOZ:
+- Nombres y copy reales del proyecto. Si no hay data concreta, inventa plausible (no "Item 1", "Row A").
+- Corto, denso, directo. Ejemplos Linear/Raycast, no placeholders.
+- Sin emojis.`;
+            outputHint = `slide de tipo prototype-frame (UNO solo)`;
+            break;
+        case "other":
+            modeBlock = `## OTRO — LIBRE\n\nA partir del brief, escoge un formato mental (deck corto, carrusel, doc) y genera 3–6 slides tipo "content" con headline, body y bullets según corresponda. Sin plantillas fijas — construye lo que el brief pide.`;
+            outputHint = `slides de tipo content`;
+            break;
         case "proposal":
         default:
             modeBlock = proposalBlock(corporateMode);

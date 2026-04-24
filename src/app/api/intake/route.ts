@@ -1,37 +1,206 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { programs } from "@/lib/programs";
+import type { ProjectFormat } from "@/lib/slide-types";
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `Eres el asistente de intake de 30x Design — entrevistas al vendedor de 30x para recolectar la información mínima necesaria para armar una propuesta tipo Colsubsidio: muy específica, con diagnóstico real, programa correcto y precio bien definido.
+// ──────────────────────────────────────────────────────────────
+// Per-format intake contracts
+// ──────────────────────────────────────────────────────────────
+//
+// Cora adapts her questions to the format. Each format has:
+// - A short identity brief (what she's designing + for whom)
+// - The minimum required fields before she can ship
+// - A closing JSON shape that matches what the generator needs
 
-Hablas con el vendedor, no con el cliente.
+interface FormatBrief {
+    label: string;
+    identity: string;
+    fields: string; // numbered list, one per line
+    doneRule: string;
+    closeJson: string;
+}
 
-ESTILO:
-- Directo. Una sola pregunta por turno.
-- Español, sin emojis, sin hype.
-- Nada de "¡Genial!", "¡Perfecto!", "¡Increíble!". Máximo una línea de acknowledgment seco.
-- Si el vendedor ya te dio la respuesta a algo en un turno anterior, NO lo vuelvas a preguntar.
-
-CAMPOS A RECOLECTAR (en este orden, saltando los que ya tengas):
-1. clientName — el nombre exacto del cliente/empresa.
+const PROPOSAL_BRIEF: FormatBrief = {
+    label: "propuesta comercial",
+    identity:
+        "Armas una propuesta tipo Colsubsidio: muy específica, con diagnóstico real, programa correcto y precio bien definido. Hablas con el vendedor de 30x, no con el cliente.",
+    fields: `1. clientName — nombre exacto del cliente/empresa.
 2. decisionMaker — quién decide (nombre + cargo si existe).
 3. sector — industria / sector.
 4. companySize — tamaño (empleados, revenue, o descripción libre).
 5. objective — qué problema quieren resolver / objetivo principal.
-6. format — presencial, virtual o híbrido (pregúntale qué formato les sirve).
-7. budget — presupuesto estimado (si no quieren decir exacto, rango es suficiente).
+6. format — presencial, virtual o híbrido.
+7. budget — presupuesto estimado (rango es suficiente).
+8. theme — oscuro o claro (opcional; default oscuro. Solo pregunta si el cliente/contexto sugiere claro, ej. marcas muy luminosas, o si el usuario lo pide).`,
+    doneRule:
+        "Mínimo 5 de 8, siempre incluyendo clientName, objective y format. Theme es opcional.",
+    closeJson: `{"done": true, "intake": {"clientName": "...", "decisionMaker": "...", "sector": "...", "companySize": "...", "objective": "...", "format": "presencial|virtual|hybrid", "budget": "...", "theme": "dark|light"}, "suggestedProgramId": "id-del-programa-de-la-lista"}`,
+};
+
+const PROTOTYPE_BRIEF: FormatBrief = {
+    label: "prototipo de producto",
+    identity:
+        "Diseñas un prototipo web/app con el sistema 30X. Hablas con el founder/diseñador — tu trabajo es entender qué están construyendo y para quién, sin preguntar cosas que ya dijo.",
+    fields: `1. clientName — nombre del producto/proyecto (lo llamaremos así en los archivos).
+2. audience — para qué usuario es (una frase corta, no un brief).
+3. objective — qué acción principal tiene que lograr el usuario.
+4. keyScreens — qué pantallas/componentes son críticos (ej: "login, dashboard, detalle de deal").
+5. tone — referencia estética o tono (ej: "Linear-like, denso, dark").
+6. theme — oscuro o claro (opcional; default oscuro para apps, claro para landings marketing).`,
+    doneRule:
+        "Mínimo 3 de 6, siempre incluyendo clientName y keyScreens. Theme es opcional.",
+    closeJson: `{"done": true, "intake": {"clientName": "...", "audience": "...", "objective": "...", "keyScreens": "...", "tone": "...", "theme": "dark|light"}}`,
+};
+
+const CAROUSEL_BRIEF: FormatBrief = {
+    label: "carrusel de Instagram",
+    identity:
+        "Diseñas un carrusel 1:1 para Instagram/LinkedIn. Hablas con el creador — tu trabajo es clavar hook, ángulo y CTA sin pedirle que escriba el brief completo.",
+    fields: `1. topic — el tema del carrusel (usa el que ya te dieron).
+2. audience — a quién le habla (founders, vendedores, C-level, etc).
+3. hook — ángulo del primer slide (lo que hace parar el scroll).
+4. ctaLabel — qué pide el último slide (ej: "aplica a Sales Machine", "comenta PLAY").
+5. theme — oscuro o claro (opcional; default oscuro. Sugiere claro solo si el tema es más editorial/suave).`,
+    doneRule:
+        "Mínimo 3 de 5, siempre incluyendo topic y hook. Theme es opcional.",
+    closeJson: `{"done": true, "intake": {"topic": "...", "audience": "...", "hook": "...", "ctaLabel": "...", "theme": "dark|light"}}`,
+};
+
+const STORY_BRIEF: FormatBrief = {
+    label: "historia de Instagram",
+    identity:
+        "Diseñas una historia 9:16 de IG — rápida, una idea, una acción. Breve: 2-3 preguntas máximo.",
+    fields: `1. topic — qué anuncia / qué comunica.
+2. ctaLabel — qué acción pide (swipe up, DM, link en bio).
+3. theme — oscuro o claro (opcional; default oscuro).`,
+    doneRule: "Mínimo topic; ctaLabel y theme si tiene sentido.",
+    closeJson: `{"done": true, "intake": {"topic": "...", "ctaLabel": "...", "theme": "dark|light"}}`,
+};
+
+const DOC_BRIEF: FormatBrief = {
+    label: "documento A4",
+    identity:
+        "Diseñas un documento A4 — propuesta corta, contrato, o one-pager. Tu trabajo es definir tipo, destinatario y tono sin sobrepreguntar.",
+    fields: `1. clientName — título o destinatario del documento.
+2. objective — tipo de documento (propuesta corta, contrato, one-pager, otro).
+3. audience — a quién se lo va a enviar el vendedor.
+4. tone — tono del documento (formal, directo, ejecutivo).
+5. theme — oscuro o claro (opcional; default claro para docs).`,
+    doneRule: "Mínimo 2 de 5, siempre incluyendo clientName. Theme es opcional.",
+    closeJson: `{"done": true, "intake": {"clientName": "...", "objective": "...", "audience": "...", "tone": "...", "theme": "dark|light"}}`,
+};
+
+const OTHER_BRIEF: FormatBrief = {
+    label: "diseño libre",
+    identity:
+        "El usuario no escogió formato — tú decides qué tiene más sentido a partir de lo que te describe. Tu primera tarea es entender qué está pidiendo; la segunda es sugerir el formato óptimo y confirmarlo.",
+    fields: `1. clientName — título del proyecto (puede ser el tema si no hay cliente).
+2. suggestedFormat — cuál de {proposal, carousel-ig, story-ig, doc, prototype} recomiendas.
+3. objective — qué tiene que lograr el diseño.
+4. audience — quién lo va a ver.`,
+    doneRule:
+        "Mínimo 3 de 4, siempre incluyendo clientName y suggestedFormat.",
+    closeJson: `{"done": true, "intake": {"clientName": "...", "suggestedFormat": "proposal|carousel-ig|story-ig|doc|prototype", "objective": "...", "audience": "..."}}`,
+};
+
+const BRIEFS: Record<ProjectFormat, FormatBrief> = {
+    proposal: PROPOSAL_BRIEF,
+    prototype: PROTOTYPE_BRIEF,
+    "carousel-ig": CAROUSEL_BRIEF,
+    "story-ig": STORY_BRIEF,
+    doc: DOC_BRIEF,
+    other: OTHER_BRIEF,
+};
+
+// ──────────────────────────────────────────────────────────────
+// System prompt builder
+// ──────────────────────────────────────────────────────────────
+
+interface HomeContext {
+    clientName?: string;
+    topic?: string;
+    programId?: string;
+    corporateMode?: boolean;
+    prototypeKind?: "app" | "landing" | "component";
+    docKind?: "proposal" | "contract" | "one-pager" | "other";
+}
+
+interface SeedContext {
+    notes?: string;
+    audioTranscript?: string;
+    emailThread?: string;
+}
+
+function buildSystemPrompt(
+    format: ProjectFormat,
+    home: HomeContext | undefined,
+    seed: SeedContext | undefined,
+): string {
+    const brief = BRIEFS[format] ?? OTHER_BRIEF;
+
+    const homeBlock = home
+        ? `\nCONTEXTO DEL HOME (lo que el usuario YA te dijo — NO lo vuelvas a preguntar):
+${[
+    home.clientName ? `- clientName: ${home.clientName}` : "",
+    home.topic ? `- topic: ${home.topic}` : "",
+    home.programId ? `- programId sugerido: ${home.programId}` : "",
+    home.corporateMode !== undefined
+        ? `- modo: ${home.corporateMode ? "corporativa" : "abierta"}`
+        : "",
+    home.prototypeKind ? `- tipo de prototipo: ${home.prototypeKind}` : "",
+    home.docKind ? `- tipo de documento: ${home.docKind}` : "",
+]
+    .filter(Boolean)
+    .join("\n")}\n`
+        : "";
+
+    const seedBlock = seed
+        ? `\nCONTEXTO INICIAL (audio/emails/notas del usuario):
+${[
+    seed.notes ? `NOTAS:\n${seed.notes}` : "",
+    seed.audioTranscript ? `AUDIO:\n${seed.audioTranscript}` : "",
+    seed.emailThread ? `EMAILS:\n${seed.emailThread}` : "",
+]
+    .filter(Boolean)
+    .join("\n\n")}\n`
+        : "";
+
+    const programsBlock =
+        format === "proposal"
+            ? `\nPROGRAMAS DISPONIBLES (para sugerir al cerrar):\n${programs
+                  .map(
+                      (p) =>
+                          `- ${p.id}: ${p.name} (${p.level}, ${p.format}, ${p.duration}, ${p.price}, audiencia: ${p.audience})`,
+                  )
+                  .join("\n")}\n`
+            : "";
+
+    return `Eres Cora, la asistente de diseño de 30X. ${brief.identity}
+
+ESTILO:
+- Directo. UNA pregunta por turno.
+- Español, sin emojis, sin hype. Nada de "¡Genial!", "¡Perfecto!".
+- Máximo una línea corta de acknowledgment antes de la siguiente pregunta.
+- Si ya tienes la respuesta por el contexto del home o por un turno previo, NO lo vuelvas a preguntar — úsalo.
+- Si el usuario dice "decide tú" o "lo que veas", tómalo como señal para saltar ese campo.
+
+CAMPOS A RECOLECTAR (en este orden, saltando los que ya tengas):
+${brief.fields}
 
 REGLA DE SALIDA:
-Cuando tengas TODOS los campos suficientes para armar una propuesta buena (mínimo 5 de 7, siempre incluyendo clientName, objective y format), responde con UN SOLO bloque JSON así:
+${brief.doneRule} Cuando tengas lo mínimo, responde con UN SOLO bloque JSON así (sin backticks ni code fences):
 
-{"done": true, "intake": {"clientName": "...", "decisionMaker": "...", "sector": "...", "companySize": "...", "objective": "...", "format": "presencial|virtual|hybrid", "budget": "..."}, "suggestedProgramId": "id-del-programa-de-la-lista"}
+${brief.closeJson}
 
-Antes de eso, responde solo texto natural con la siguiente pregunta (sin JSON, sin backticks, sin code fences).
+Antes de cerrar, responde solo texto natural con la siguiente pregunta (sin JSON).
+${homeBlock}${seedBlock}${programsBlock}`;
+}
 
-PROGRAMAS DISPONIBLES (para sugerir al final):
-${programs.map((p) => `- ${p.id}: ${p.name} (${p.level}, ${p.format}, ${p.duration}, ${p.price}, audiencia: ${p.audience})`).join("\n")}`;
+// ──────────────────────────────────────────────────────────────
+// Route
+// ──────────────────────────────────────────────────────────────
 
 interface ChatMessage {
     role: "user" | "assistant";
@@ -42,25 +211,18 @@ export async function POST(request: NextRequest) {
     try {
         const {
             messages,
+            format = "proposal",
+            home,
             seed,
         }: {
             messages: ChatMessage[];
-            seed?: { notes?: string; audioTranscript?: string; emailThread?: string };
+            format?: ProjectFormat;
+            home?: HomeContext;
+            seed?: SeedContext;
         } = await request.json();
 
         const client = new Anthropic();
-
-        const seedContext = seed
-            ? `\n\nCONTEXTO INICIAL DEL VENDEDOR (audio/emails/notas):\n${[
-                  seed.notes ? `NOTAS:\n${seed.notes}` : "",
-                  seed.audioTranscript ? `TRANSCRIPCIÓN DE AUDIO:\n${seed.audioTranscript}` : "",
-                  seed.emailThread ? `EMAILS:\n${seed.emailThread}` : "",
-              ]
-                  .filter(Boolean)
-                  .join("\n\n")}`
-            : "";
-
-        const systemPrompt = SYSTEM_PROMPT + seedContext;
+        const systemPrompt = buildSystemPrompt(format, home, seed);
 
         const response = await client.messages.create({
             model: "claude-opus-4-7",
@@ -77,9 +239,6 @@ export async function POST(request: NextRequest) {
         return Response.json({ ok: true, reply: text });
     } catch (error) {
         console.error("[intake]", error);
-        return Response.json(
-            { ok: false, error: String(error) },
-            { status: 500 },
-        );
+        return Response.json({ ok: false, error: String(error) }, { status: 500 });
     }
 }

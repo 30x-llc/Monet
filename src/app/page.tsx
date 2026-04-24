@@ -21,6 +21,14 @@ export default function Home() {
     const [recentDecks, setRecentDecks] = useState<StoredDeck[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
     const [intakeFormat, setIntakeFormat] = useState<ProjectFormat>("proposal");
+    const [intakeHome, setIntakeHome] = useState<{
+        clientName?: string;
+        topic?: string;
+        programId?: string;
+        corporateMode?: boolean;
+        prototypeKind?: "app" | "landing" | "component";
+        docKind?: "proposal" | "contract" | "one-pager" | "other";
+    } | undefined>(undefined);
     const [generationError, setGenerationError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -119,6 +127,8 @@ export default function Home() {
                     format === "proposal" ? (corporateMode ? 9 : 5) :
                     format === "carousel-ig" ? 7 :
                     format === "story-ig" ? 4 :
+                    format === "prototype" ? 1 :
+                    format === "other" ? 5 :
                     /* doc */ 5;
 
                 const genRes = await fetch("/api/generate", {
@@ -199,12 +209,17 @@ export default function Home() {
 
     const handleGenerateFromIntake = useCallback(
         async (result: IntakeResult) => {
+            const themeDefault: "dark" | "light" =
+                result.format === "doc" ? "light" : "dark";
             await runGeneration({
-                format: "proposal",
+                format: result.format,
                 intake: result.intake,
                 programId: result.programId,
                 corporateMode: result.corporateMode,
                 seed: result.seed,
+                topic: result.intake.topic,
+                clientName: result.intake.clientName,
+                theme: result.intake.theme ?? themeDefault,
             });
         },
         [runGeneration],
@@ -317,10 +332,24 @@ export default function Home() {
         setCurrentDeckId(null);
     }, []);
 
-    const handleOpenIntake = useCallback((format: ProjectFormat) => {
-        setIntakeFormat(format);
-        setView("intake");
-    }, []);
+    const handleOpenIntake = useCallback(
+        (
+            format: ProjectFormat,
+            home?: {
+                clientName?: string;
+                topic?: string;
+                programId?: string;
+                corporateMode?: boolean;
+                prototypeKind?: "app" | "landing" | "component";
+                docKind?: "proposal" | "contract" | "one-pager" | "other";
+            },
+        ) => {
+            setIntakeFormat(format);
+            setIntakeHome(home);
+            setView("intake");
+        },
+        [],
+    );
 
     // ── Editor view ──
     if (view === "editor" && deck) {
@@ -339,7 +368,14 @@ export default function Home() {
 
     // ── Guided intake ──
     if (view === "intake") {
-        return <GuidedIntake onComplete={handleGenerateFromIntake} onCancel={handleNewDeck} />;
+        return (
+            <GuidedIntake
+                onComplete={handleGenerateFromIntake}
+                onCancel={handleNewDeck}
+                format={intakeFormat}
+                home={intakeHome}
+            />
+        );
     }
 
     // ── Generating ──

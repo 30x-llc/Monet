@@ -11,10 +11,12 @@
 // ============================================================
 
 export type ProjectFormat =
+    | "prototype" // 1440 × 900 (app/web UI canvas)
     | "proposal" // 1920 × 1080 (16:9)
     | "carousel-ig" // 1080 × 1080 (1:1)
     | "story-ig" // 1080 × 1920 (9:16)
-    | "doc"; // 794 × 1123 (A4)
+    | "doc" // 794 × 1123 (A4)
+    | "other"; // free-form; resolved by Cora
 
 export interface FormatSpec {
     id: ProjectFormat;
@@ -25,10 +27,12 @@ export interface FormatSpec {
 }
 
 export const FORMATS: Record<ProjectFormat, FormatSpec> = {
+    prototype: { id: "prototype", label: "Prototipo", width: 1440, height: 900, description: "App, landing o componente con el sistema 30X" },
     proposal: { id: "proposal", label: "Propuesta comercial", width: 1920, height: 1080, description: "Presentación 16:9 para propuestas y decks" },
     "carousel-ig": { id: "carousel-ig", label: "Carrusel Instagram", width: 1080, height: 1080, description: "Carrusel 1:1 para Instagram y LinkedIn" },
     "story-ig": { id: "story-ig", label: "Historia Instagram", width: 1080, height: 1920, description: "Story 9:16 para Instagram y WhatsApp" },
     doc: { id: "doc", label: "Documento", width: 794, height: 1123, description: "A4 para contratos, docs y one-pagers" },
+    other: { id: "other", label: "Otro", width: 1440, height: 900, description: "Describe lo que quieres — Cora escoge el formato" },
 };
 
 // ============================================================
@@ -212,6 +216,24 @@ export interface DocSectionSlide {
 }
 
 // ============================================================
+// PROTOTYPE FRAME (app/web UI mockup with 30X design system)
+// ============================================================
+
+export interface PrototypeFrameSlide {
+    type: "prototype-frame";
+    appName: string;
+    subtitle?: string;
+    kind?: "app" | "landing" | "component";
+    nav?: string[]; // top nav labels
+    sidebar?: { label: string; active?: boolean }[]; // optional left nav
+    headline: string;
+    description?: string;
+    primaryCta?: string;
+    stats?: { value: string; label: string }[]; // up to 3
+    listRows?: { title: string; meta?: string; badge?: string }[]; // rows in a table/list card
+}
+
+// ============================================================
 // GENERIC FALLBACK
 // ============================================================
 
@@ -248,6 +270,7 @@ export type Slide =
     | StoryTextSlide
     | DocCoverSlide
     | DocSectionSlide
+    | PrototypeFrameSlide
     | ContentSlide;
 
 export interface Deck {
@@ -281,12 +304,23 @@ export interface ResearchResult {
 
 export interface IntakeAnswers {
     clientName: string;
+    // Proposal-specific
     decisionMaker?: string;
     sector?: string;
     companySize?: string;
     objective?: string;
     format?: "presencial" | "virtual" | "hybrid";
     budget?: string;
+    // Generic (used by prototype, carousel, story, doc, other)
+    topic?: string;
+    audience?: string;
+    hook?: string;
+    ctaLabel?: string;
+    tone?: string;
+    keyScreens?: string;
+    suggestedFormat?: ProjectFormat;
+    theme?: "dark" | "light";
+    // Seed context
     notes?: string;
     audioTranscript?: string;
     emailThread?: string;
