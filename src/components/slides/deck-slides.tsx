@@ -201,8 +201,8 @@ export function CorporateCover({ slide, clientLogoUrl }: { slide: CorporateCover
 }
 
 export function IntroMentors({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; clientLogoUrl?: string }) {
-    const mentors = slide.mentors ?? [];
-    const angles = slide.angles ?? [];
+    const mentors = Array.isArray(slide.mentors) ? slide.mentors : [];
+    const angles = Array.isArray(slide.angles) ? slide.angles : [];
     const singleCol = mentors.length <= 2;
     return (
         <section className="deck-slide s-intro">
@@ -258,7 +258,7 @@ export function ProblemCards({ slide, clientLogoUrl }: { slide: ProblemCardsSlid
             </div>
             {slide.subtitle ? <p className="lead p-lead">{slide.subtitle}</p> : null}
             <div className="grid">
-                {(slide.cards ?? []).slice(0, 6).map((c, i) => (
+                {(Array.isArray(slide.cards) ? slide.cards : []).slice(0, 6).map((c, i) => (
                     <div key={i}>
                         <h3 className="card-title">{c.title}</h3>
                         <p className="card-body">{c.body}</p>
@@ -279,7 +279,7 @@ export function Diagnostic({ slide, clientLogoUrl }: { slide: DiagnosticSlide; c
             </div>
             {slide.subtitle ? <p className="lead">{slide.subtitle}</p> : null}
             <div className="findings">
-                {(slide.findings ?? []).slice(0, 3).map((f, i) => (
+                {(Array.isArray(slide.findings) ? slide.findings : []).slice(0, 3).map((f, i) => (
                     <div key={i} className="finding">
                         <div className="n">Hallazgo {String(i + 1).padStart(2, "0")}</div>
                         <h3 className="t">{f.title}</h3>
@@ -292,7 +292,7 @@ export function Diagnostic({ slide, clientLogoUrl }: { slide: DiagnosticSlide; c
 }
 
 export function CurriculumGrid({ slide, clientLogoUrl }: { slide: CurriculumGridSlide; clientLogoUrl?: string }) {
-    const modules = slide.modules ?? [];
+    const modules = Array.isArray(slide.modules) ? slide.modules : [];
     const twoRows = modules.length > 4;
     return (
         <section className={`deck-slide s-curric${twoRows ? " rows-2" : ""}`}>
@@ -323,7 +323,7 @@ export function MentorGrid({ slide, clientLogoUrl }: { slide: MentorGridSlide; c
             </div>
             {slide.subtitle ? <p className="lead">{slide.subtitle}</p> : null}
             <div className="people">
-                {(slide.mentors ?? []).slice(0, 4).map((m, i) => (
+                {(Array.isArray(slide.mentors) ? slide.mentors : []).slice(0, 4).map((m, i) => (
                     <div key={i} className="person">
                         <div className="portrait">
                             <img src={getMentorImage(m.imageKey)} alt={m.name} />
@@ -349,7 +349,7 @@ export function MentorDuo({ slide, clientLogoUrl }: { slide: MentorDuoSlide; cli
                 <h2 className="h-title">{slide.headline}</h2>
             </div>
             <div className="people" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 1280, margin: "auto auto 0" }}>
-                {(slide.mentors ?? []).slice(0, 2).map((m, i) => (
+                {(Array.isArray(slide.mentors) ? slide.mentors : []).slice(0, 2).map((m, i) => (
                     <div key={i} className="person">
                         <div className="portrait">
                             <img src={getMentorImage(m.imageKey)} alt={m.name} />
@@ -375,7 +375,7 @@ export function Methodology({ slide, clientLogoUrl }: { slide: MethodologySlide;
             </div>
             {slide.subtitle ? <p className="lead">{slide.subtitle}</p> : null}
             <div className="steps">
-                {(slide.steps ?? []).slice(0, 4).map((s, i) => (
+                {(Array.isArray(slide.steps) ? slide.steps : []).slice(0, 4).map((s, i) => (
                     <div key={i} className="step">
                         <div className="n">{String(s.number).padStart(2, "0")}</div>
                         <h3 className="t">{s.title}</h3>
@@ -396,7 +396,7 @@ export function Impact({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLog
             </div>
             {slide.subtitle ? <p className="lead">{slide.subtitle}</p> : null}
             <div className="stats">
-                {(slide.stats ?? []).slice(0, 4).map((s, i) => (
+                {(Array.isArray(slide.stats) ? slide.stats : []).slice(0, 4).map((s, i) => (
                     <div key={i} className="stat">
                         <div className="v">{s.value}</div>
                         <p className="k">{s.label}</p>
@@ -415,7 +415,7 @@ export function PricingCta({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
                 <h2 className="h-title">{slide.headline}</h2>
                 <div className="get-label">Lo que recibirás:</div>
                 <ul className="gets">
-                    {(slide.checklist ?? []).slice(0, 6).map((item, i) => (
+                    {(Array.isArray(slide.checklist) ? slide.checklist : []).slice(0, 6).map((item, i) => (
                         <li key={i}>{item}</li>
                     ))}
                 </ul>
@@ -429,7 +429,7 @@ export function PricingCta({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
             </div>
             <div className="right">
                 <div className="facts">
-                    {(slide.sidebar ?? []).map((row, i) => (
+                    {(Array.isArray(slide.sidebar) ? slide.sidebar : []).map((row, i) => (
                         <div key={i} className="row">
                             <div className="k">{row.label}</div>
                             <div className="v">{row.value}</div>
@@ -654,7 +654,7 @@ export function DocSection({ slide, pageNumber }: { slide: DocSectionSlide; page
             <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
             {slide.sectionNumber ? <div className="secnum">Sección {slide.sectionNumber}</div> : null}
             <h2 className="secheading">{slide.heading}</h2>
-            {(slide.paragraphs ?? []).map((p, i) => (
+            {(Array.isArray(slide.paragraphs) ? slide.paragraphs : []).map((p, i) => (
                 <p key={i} className="p">
                     {p}
                 </p>
