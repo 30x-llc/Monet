@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type {
     CoverHeroSlide,
     CorporateCoverSlide,
@@ -671,6 +672,8 @@ export function DocSection({ slide, pageNumber }: { slide: DocSectionSlide; page
 // ============================================================
 
 export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
+    const appName = slide.appName ?? "30X App";
+    const headline = slide.headline ?? "Nuevo prototipo";
     const nav = slide.nav?.length
         ? slide.nav
         : ["Overview", "Pipeline", "Insights", "Team"];
@@ -733,7 +736,7 @@ export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
                             letterSpacing: "-0.01em",
                         }}
                     >
-                        30x.design / {slide.appName.toLowerCase().replace(/\s+/g, "-")}
+                        30x.design / {appName.toLowerCase().replace(/\s+/g, "-")}
                     </div>
                 </div>
 
@@ -773,7 +776,7 @@ export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
                         >
                             30X
                         </div>
-                        <span>{slide.appName}</span>
+                        <span>{appName}</span>
                     </div>
                     <div style={{ display: "flex", gap: 24 }}>
                         {nav.map((n, i) => (
@@ -903,7 +906,7 @@ export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
                                 maxWidth: 820,
                             }}
                         >
-                            {slide.headline}
+                            {headline}
                         </h1>
                         {slide.description ? (
                             <p
@@ -1087,15 +1090,13 @@ function dotStyle(color: string): React.CSSProperties {
 // MASTER SWITCH
 // ============================================================
 
-export function SlideRenderer({
-    slide,
-    clientLogoUrl,
-    pageIndex,
-}: {
-    slide: Slide;
-    clientLogoUrl?: string;
-    pageIndex?: number;
-}) {
+import { SlideErrorBoundary } from "./slide-error-boundary";
+
+function renderSlide(
+    slide: Slide,
+    clientLogoUrl?: string,
+    pageIndex?: number,
+): ReactNode {
     switch (slide.type) {
         case "cover-hero":
             return <CoverHero slide={slide} clientLogoUrl={clientLogoUrl} />;
@@ -1152,4 +1153,20 @@ export function SlideRenderer({
                 </section>
             );
     }
+}
+
+export function SlideRenderer({
+    slide,
+    clientLogoUrl,
+    pageIndex,
+}: {
+    slide: Slide;
+    clientLogoUrl?: string;
+    pageIndex?: number;
+}) {
+    return (
+        <SlideErrorBoundary slideType={slide?.type}>
+            {renderSlide(slide, clientLogoUrl, pageIndex)}
+        </SlideErrorBoundary>
+    );
 }
