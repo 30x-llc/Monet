@@ -83,9 +83,14 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
+                    // Web search emits <cite index="..."> tags inline. They land
+                    // inside the JSON string values and break JSON.parse on the
+                    // client. Strip them before streaming.
+                    const cleaned = result.replace(/<\/?cite[^>]*>/g, "");
+
                     controller.enqueue(
                         encoder.encode(
-                            `data: ${JSON.stringify({ type: "text", content: result })}\n\n`,
+                            `data: ${JSON.stringify({ type: "text", content: cleaned })}\n\n`,
                         ),
                     );
                     controller.enqueue(
