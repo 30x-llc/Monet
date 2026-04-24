@@ -45,7 +45,7 @@ export class SlideErrorBoundary extends Component<Props, State> {
                         textAlign: "center",
                     }}
                 >
-                    <div>
+                    <div style={{ maxWidth: 560 }}>
                         <div
                             style={{
                                 fontSize: 11,
@@ -63,11 +63,30 @@ export class SlideErrorBoundary extends Component<Props, State> {
                                 fontWeight: 600,
                                 letterSpacing: "-0.01em",
                                 color: "#F0F0F0",
-                                marginBottom: 4,
+                                marginBottom: 10,
                             }}
                         >
                             {this.props.slideType || "slide"}
                         </div>
+                        <pre
+                            style={{
+                                fontSize: 11,
+                                color: "#ff8a80",
+                                letterSpacing: "-0.005em",
+                                background: "#141414",
+                                border: "1px solid #232323",
+                                borderRadius: 8,
+                                padding: "10px 12px",
+                                textAlign: "left",
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                                marginBottom: 10,
+                                maxHeight: 180,
+                                overflow: "auto",
+                            }}
+                        >
+                            {this.state.error.message}
+                        </pre>
                         <div
                             style={{
                                 fontSize: 12,
@@ -75,7 +94,7 @@ export class SlideErrorBoundary extends Component<Props, State> {
                                 letterSpacing: "-0.005em",
                             }}
                         >
-                            Regenera o edita — el resto del deck sigue funcionando.
+                            El resto del deck sigue funcionando.
                         </div>
                     </div>
                 </div>
