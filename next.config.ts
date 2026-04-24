@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
     // "input directory does not exist". Externalizing forces Next to
     // import it from node_modules at runtime on the serverless function.
     serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+    // Vercel's file-tracing doesn't see the .br tarballs inside
+    // @sparticuz/chromium/bin through pnpm symlinks. Force-include them
+    // so the /var/task/ node_modules tree contains the binary at runtime.
+    outputFileTracingIncludes: {
+        "/api/export/pdf": [
+            "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
+            "./node_modules/@sparticuz/chromium/bin/**",
+        ],
+    },
     async rewrites() {
         return [
             {

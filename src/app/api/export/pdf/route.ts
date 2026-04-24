@@ -10,6 +10,43 @@ import { FORMATS } from "@/lib/slide-types";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveChromiumExecutablePath(chromium: any): Promise<string> {
+    // First attempt: let the package resolve its own bin folder.
+    try {
+        return await chromium.executablePath();
+    } catch (err) {
+        const msg = String(err);
+        if (!msg.includes("does not exist")) throw err;
+    }
+    // Second attempt: scan common node_modules paths for a folder that
+    // starts with "chromium" and contains a bin directory. Handles the
+    // Turbopack hash rename on Vercel.
+    const { readdirSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const roots = [
+        "/var/task/node_modules/@sparticuz",
+        join(process.cwd(), "node_modules/@sparticuz"),
+        join(process.cwd(), ".next/server/chunks/node_modules/@sparticuz"),
+        join(process.cwd(), ".next/standalone/node_modules/@sparticuz"),
+    ];
+    for (const root of roots) {
+        try {
+            const entries = readdirSync(root);
+            const match = entries.find((e) => e.startsWith("chromium"));
+            if (!match) continue;
+            const binPath = join(root, match, "bin");
+            statSync(binPath);
+            return await chromium.executablePath(binPath);
+        } catch {
+            // try next root
+        }
+    }
+    throw new Error(
+        "Chromium bin directory not found in any known location (Turbopack hash rename?).",
+    );
+}
+
 /**
  * POST /api/export/pdf
  *
@@ -59,8 +96,14 @@ export async function POST(request: NextRequest) {
             import("puppeteer-core"),
         ]);
 
+        // Turbopack hashes the @sparticuz/chromium folder name on Vercel
+        // (e.g. `chromium-1c0c52b587824cb1`), so the package's internal
+        // `require.resolve("@sparticuz/chromium/bin")` fails. We locate
+        // the bin folder by scanning node_modules/@sparticuz at runtime
+        // and pass it explicitly to executablePath(). Falls back to the
+        // default behavior for local dev where the folder isn't hashed.
         const executablePath =
-            process.env.LOCAL_CHROMIUM_PATH || (await chromium.executablePath());
+            process.env.LOCAL_CHROMIUM_PATH || (await resolveChromiumExecutablePath(chromium));
 
         browser = await puppeteer.launch({
             args: chromium.args,
