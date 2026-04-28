@@ -1,112 +1,212 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Deck } from "@/lib/slide-types";
-import { SlideSidebar } from "./slide-sidebar";
 import { SlideCanvas } from "./slide-canvas";
 import { EditorToolbar } from "./editor-toolbar";
-import { PropertiesPanel } from "./properties-panel";
-import { ChatInput } from "@/components/chat-input";
-import { saveDeck } from "@/lib/deck-storage";
+import { ChatPanel, type ChatMessage } from "./chat-panel";
+import { HandoffModal } from "./handoff-modal";
+
+const CHROME_THEME_KEY = "30x.chromeTheme";
 
 interface EditorLayoutProps {
     deck: Deck;
-    onDeckChange: (deck: Deck) => void;
-    onIterate: (instruction: string) => Promise<void>;
-    onDownload: () => Promise<void>;
+    onIterate: (instruction: string) => Promise<{ ok: boolean; summary?: string; error?: string }>;
     onNewDeck: () => void;
     isIterating: boolean;
-    isDownloading: boolean;
 }
 
 export function EditorLayout({
     deck,
-    onDeckChange,
     onIterate,
-    onDownload,
     onNewDeck,
     isIterating,
-    isDownloading,
 }: EditorLayoutProps) {
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [showProperties, setShowProperties] = useState(true);
-    const theme = deck.theme || "dark";
-    const toggleTheme = () =>
-        onDeckChange({ ...deck, theme: theme === "dark" ? "light" : "dark" });
+    const [chromeTheme, setChromeTheme] = useState<"dark" | "light">("light");
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [handoffOpen, setHandoffOpen] = useState(false);
 
+    // Restore chrome theme preference.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const stored = window.localStorage.getItem(CHROME_THEME_KEY);
+        if (stored === "dark" || stored === "light") setChromeTheme(stored);
+    }, []);
+    const toggleTheme = () => {
+        setChromeTheme((prev) => {
+            const next = prev === "dark" ? "light" : "dark";
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(CHROME_THEME_KEY, next);
+            }
+            return next;
+        });
+    };
+
+    const slideTheme = deck.theme || "light";
     const selectedSlide = deck.slides[selectedIndex];
 
-    const handleDeleteSlide = useCallback(
-        (index: number) => {
-            if (deck.slides.length <= 3) return;
-            const newSlides = deck.slides.filter((_, i) => i !== index);
-            onDeckChange({ ...deck, slides: newSlides });
-            if (selectedIndex >= newSlides.length) {
-                setSelectedIndex(Math.max(0, newSlides.length - 1));
+    // ── Arrow-key navigation ─────────────────────────────────────────
+    useEffect(() => {
+        function onKey(e: KeyboardEvent) {
+            const target = e.target as HTMLElement | null;
+            if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
+                return;
+            if (e.key === "ArrowLeft") {
+                setSelectedIndex((i) => Math.max(0, i - 1));
+            } else if (e.key === "ArrowRight") {
+                setSelectedIndex((i) => Math.min(deck.slides.length - 1, i + 1));
             }
-        },
-        [deck, selectedIndex, onDeckChange],
-    );
+        }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [deck.slides.length]);
 
-    const handleMoveSlide = useCallback(
-        (from: number, to: number) => {
-            if (to < 0 || to >= deck.slides.length) return;
-            const newSlides = [...deck.slides];
-            const [moved] = newSlides.splice(from, 1);
-            newSlides.splice(to, 0, moved);
-            onDeckChange({ ...deck, slides: newSlides });
-            setSelectedIndex(to);
-        },
-        [deck, onDeckChange],
-    );
+    // ── PDF pre-render: re-runs whenever the deck mutates ─────────────
+    // Debounced 1.2s so a flurry of iterate edits batch into one render.
+    const pdfBlobRef = useRef<Blob | null>(null);
+    const pdfRequestRef = useRef<Promise<Blob | null> | null>(null);
+    const [pdfReady, setPdfReady] = useState(false);
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
-    const handleDuplicate = useCallback(() => {
-        const cloned: Deck = {
-            ...deck,
-            deckTitle: `${deck.deckTitle} (copia)`,
-            generatedAt: new Date().toISOString(),
+    useEffect(() => {
+        setPdfReady(false);
+        pdfBlobRef.current = null;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => {
+            const promise = (async () => {
+                try {
+                    const res = await fetch("/api/export/pdf", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(deck),
+                        signal: ctrl.signal,
+                    });
+                    if (!res.ok) return null;
+                    const blob = await res.blob();
+                    pdfBlobRef.current = blob;
+                    setPdfReady(true);
+                    return blob;
+                } catch {
+                    return null;
+                } finally {
+                    pdfRequestRef.current = null;
+                }
+            })();
+            pdfRequestRef.current = promise;
+        }, 1200);
+
+        return () => {
+            clearTimeout(timer);
+            ctrl.abort();
         };
-        saveDeck(cloned);
-        onNewDeck();
-    }, [deck, onNewDeck]);
+    }, [deck]);
 
-    const handleDuplicateAsTemplate = useCallback(() => {
-        const cloned: Deck = {
-            ...deck,
-            deckTitle: `Plantilla · ${deck.programName}`,
-            companyName: "30X",
-            generatedAt: new Date().toISOString(),
-        };
-        saveDeck(cloned);
-        onNewDeck();
-    }, [deck, onNewDeck]);
+    const downloadPdf = useCallback(async () => {
+        setIsDownloadingPdf(true);
+        try {
+            let blob = pdfBlobRef.current;
+            if (!blob) {
+                blob = (await pdfRequestRef.current) ?? null;
+            }
+            if (!blob) {
+                // Render miss — force a fresh one synchronously.
+                const res = await fetch("/api/export/pdf", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(deck),
+                });
+                if (!res.ok) throw new Error("PDF render failed");
+                blob = await res.blob();
+                pdfBlobRef.current = blob;
+                setPdfReady(true);
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const safeName =
+                `30x-${deck.companyName}-${deck.programName}`
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "")
+                    .slice(0, 80) || "30x-design";
+            a.href = url;
+            a.download = `${safeName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err) {
+            console.error("PDF download failed", err);
+        } finally {
+            setIsDownloadingPdf(false);
+        }
+    }, [deck]);
+
+    // ── Chat send ─────────────────────────────────────────────────────
+    const handleSend = useCallback(
+        async (text: string) => {
+            const userMsg: ChatMessage = {
+                id: `u-${Date.now()}-${Math.random()}`,
+                role: "user",
+                text,
+            };
+            const thinkingId = `t-${Date.now()}-${Math.random()}`;
+            const thinking: ChatMessage = {
+                id: thinkingId,
+                role: "assistant",
+                text: "",
+                state: "thinking",
+            };
+            setMessages((prev) => [...prev, userMsg, thinking]);
+
+            const result = await onIterate(text);
+
+            setMessages((prev) =>
+                prev.map((m) =>
+                    m.id === thinkingId
+                        ? result.ok
+                            ? {
+                                  id: thinkingId,
+                                  role: "assistant",
+                                  text: result.summary?.trim() || "Listo, ya lo cambié.",
+                                  state: "done",
+                              }
+                            : {
+                                  id: thinkingId,
+                                  role: "error",
+                                  text:
+                                      result.error?.trim() ||
+                                      "No pude aplicar el cambio. Intenta otra vez.",
+                              }
+                        : m,
+                ),
+            );
+        },
+        [onIterate],
+    );
 
     return (
-        <div className={`chrome-theme-${theme} ${theme === "dark" ? "dark-mode" : ""} flex flex-col h-screen bg-[var(--chrome-bg)] text-[var(--chrome-fg)] overflow-hidden`}>
+        <div
+            className={`chrome-theme-${chromeTheme} ${chromeTheme === "dark" ? "dark-mode" : ""} flex flex-col h-screen bg-[var(--chrome-bg)] text-[var(--chrome-fg)] overflow-hidden`}
+        >
             <EditorToolbar
                 deck={deck}
-                onExportPptx={onDownload}
-                onDuplicate={handleDuplicate}
-                onDuplicateAsTemplate={handleDuplicateAsTemplate}
-                onNewDeck={onNewDeck}
-                isExportingPptx={isDownloading}
-                showProperties={showProperties}
-                onToggleProperties={() => setShowProperties(!showProperties)}
-                theme={theme}
+                onBack={onNewDeck}
+                onDownloadPdf={downloadPdf}
+                onHandoff={() => setHandoffOpen(true)}
+                isDownloadingPdf={isDownloadingPdf}
+                pdfReady={pdfReady}
+                theme={chromeTheme}
                 onToggleTheme={toggleTheme}
             />
 
             <div className="flex flex-1 min-h-0">
-                <SlideSidebar
-                    slides={deck.slides}
-                    selectedIndex={selectedIndex}
-                    onSelect={setSelectedIndex}
-                    onDelete={handleDeleteSlide}
-                    onMove={handleMoveSlide}
-                    clientLogoUrl={deck.clientLogoUrl}
-                    format={deck.format}
+                <ChatPanel
+                    messages={messages}
+                    onSend={handleSend}
+                    isLoading={isIterating}
+                    chromeTheme={chromeTheme}
                 />
-
                 <SlideCanvas
                     slide={selectedSlide}
                     slideIndex={selectedIndex}
@@ -119,22 +219,14 @@ export function EditorLayout({
                     }
                     clientLogoUrl={deck.clientLogoUrl}
                     format={deck.format}
+                    theme={slideTheme}
                 />
-
-                {showProperties && selectedSlide && (
-                    <PropertiesPanel
-                        slide={selectedSlide}
-                        slideIndex={selectedIndex}
-                        onClose={() => setShowProperties(false)}
-                    />
-                )}
             </div>
 
-            <div className="shrink-0 border-t border-[var(--chrome-border)] bg-[var(--chrome-bg)] px-4 py-3">
-                <div className="max-w-[700px] mx-auto">
-                    <ChatInput onSend={onIterate} isLoading={isIterating} />
-                </div>
-            </div>
+            {handoffOpen && (
+                <HandoffModal deck={deck} onClose={() => setHandoffOpen(false)} />
+            )}
         </div>
     );
 }
+

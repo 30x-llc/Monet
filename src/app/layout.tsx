@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { IdentityGate } from "@/components/app/identity-gate";
 
 const inter = Inter({
     variable: "--font-inter",
@@ -21,7 +24,9 @@ export default function RootLayout({
     return (
         <html lang="es" className={`${inter.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col bg-primary text-primary">
-                {children}
+                <IdentityGate>{children}</IdentityGate>
+                <Analytics />
+                <SpeedInsights />
             </body>
         </html>
     );

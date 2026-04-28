@@ -1,14 +1,45 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import type { Deck, IntakeAnswers, ProjectFormat } from "@/lib/slide-types";
+import type {
+    Deck,
+    IntakeAnswers,
+    ProjectFormat,
+    ResearchResult,
+} from "@/lib/slide-types";
 import { EditorLayout } from "@/components/editor/editor-layout";
 import { HomeView, type CreateArgs } from "@/components/app/home-view";
 import { GuidedIntake, type IntakeResult } from "@/components/app/guided-intake";
+import { ResearchReview } from "@/components/app/research-review";
 import { saveDeck, getRecentDecks, getDeckById, deleteDeck, type StoredDeck } from "@/lib/deck-storage";
 import { getTemplateById } from "@/lib/templates";
 
-type AppView = "home" | "intake" | "generating" | "editor";
+type AppView = "home" | "intake" | "researching" | "research-review" | "generating" | "editor";
+
+// Staged generation context — we carry it between the research step
+// (which calls /api/research) and the generate step (which calls
+// /api/generate) with the user's edits applied.
+interface PendingGeneration {
+    format: ProjectFormat;
+    intake?: IntakeAnswers;
+    programId?: string;
+    corporateMode?: boolean;
+    theme?: "dark" | "light";
+    topic?: string;
+    seed?: { notes?: string; audioTranscript?: string; emailThread?: string };
+    clientName?: string;
+    research: ResearchResult;
+    /** Briefing from the new ProposalForm — propagated through to
+     *  /api/generate so the model has the full salesperson intel. */
+    briefing?: string;
+    notes?: string;
+    /** Which research mode produced this payload — so the review
+     *  screen can show "Exa deep research · 18 fuentes" vs the plain
+     *  Claude web_search baseline. */
+    researchMode?: "exa-deep" | "claude-web-search";
+    sourceCount?: number;
+    sourceUrls?: string[];
+}
 
 // Fetch with an explicit AbortController timeout so a stuck serverless call
 // surfaces as a visible error instead of an infinite spinner. The default
@@ -40,7 +71,6 @@ export default function Home() {
     const [deck, setDeck] = useState<Deck | null>(null);
     const [currentDeckId, setCurrentDeckId] = useState<string | null>(null);
     const [isIterating, setIsIterating] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationLog, setGenerationLog] = useState("");
     const [recentDecks, setRecentDecks] = useState<StoredDeck[]>([]);
@@ -55,92 +85,74 @@ export default function Home() {
         docKind?: "proposal" | "contract" | "one-pager" | "other";
     } | undefined>(undefined);
     const [generationError, setGenerationError] = useState<string | null>(null);
+    const [pendingGen, setPendingGen] = useState<PendingGeneration | null>(null);
 
     useEffect(() => {
         setRecentDecks(getRecentDecks(50));
     }, [refreshKey]);
 
-    const runGeneration = useCallback(
-        async (args: {
-            format: ProjectFormat;
-            intake?: IntakeAnswers;
-            programId?: string;
-            corporateMode?: boolean;
-            theme?: "dark" | "light";
-            topic?: string;
-            seed?: { notes?: string; audioTranscript?: string; emailThread?: string };
-            clientName?: string;
-        }) => {
-            setView("generating");
-            setIsGenerating(true);
-            setGenerationLog("");
-            setGenerationError(null);
+    // Deep-link from /ops dashboard: /?open=<deckId> fetches the
+    // deck server-side (so a Sales Ops user can open someone else's
+    // deck even though it's not in their localStorage) and switches
+    // straight into the editor.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const openId = params.get("open");
+        if (!openId) return;
+        // Strip the param so back/refresh doesn't re-trigger.
+        params.delete("open");
+        const newUrl = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+        window.history.replaceState(null, "", newUrl);
+        // Try local first.
+        const local = getDeckById(openId);
+        if (local) {
+            setDeck(local.deck);
+            setCurrentDeckId(openId);
+            setView("editor");
+            return;
+        }
+        // Otherwise fetch from server (Sales Ops viewing someone else's).
+        fetch(`/api/decks/${openId}`)
+            .then((r) => r.json())
+            .then((d) => {
+                if (d?.ok && d.deck?.deckJson) {
+                    setDeck(d.deck.deckJson);
+                    setCurrentDeckId(openId);
+                    setView("editor");
+                }
+            })
+            .catch(() => {});
+    }, []);
 
-            const { format, intake, programId, corporateMode, topic, seed, clientName, theme } = args;
-            const effectiveClientName = intake?.clientName || clientName || "30X";
-            const isProposal = format === "proposal";
+    // Phase 2 — user approved / edited the research in ResearchReview.
+    // Calls /api/generate with the (possibly edited) research payload.
+    const runGenerate = useCallback(
+        async (pending: PendingGeneration, editedResearch: ResearchResult | null) => {
+            setIsGenerating(true);
+            setGenerationLog("Generando deck con Claude Opus 4.7…");
+            setGenerationError(null);
+            setView("generating");
+
+            const { format, intake, programId, corporateMode, topic, seed, theme, briefing, notes: pendingNotes } = pending;
+            const slideCount =
+                format === "proposal" ? (corporateMode ? 9 : 5) :
+                format === "carousel-ig" ? 7 :
+                format === "story-ig" ? 4 :
+                format === "prototype" ? 1 :
+                format === "other" ? 5 :
+                /* doc */ 7;
+
+            // Build the generator-side notes payload too. Briefing is
+            // separate from notes so the prompt can prioritize it.
+            const generatorNotes = [
+                briefing ? `BRIEFING DEL VENDEDOR:\n${briefing}` : "",
+                pendingNotes || seed?.notes || intake?.notes || "",
+            ]
+                .filter(Boolean)
+                .join("\n\n");
 
             try {
-                let research = null;
-
-                // Research only for proposals
-                if (isProposal) {
-                    setGenerationLog(`1/2 · Investigando ${effectiveClientName}…`);
-                    console.log("[gen] research:start", { clientName: effectiveClientName });
-                    const t0 = Date.now();
-                    const researchRes = await fetchWithTimeout(
-                        "/api/research",
-                        {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                companyName: effectiveClientName,
-                                notes: [
-                                    intake?.objective ? `Objetivo: ${intake.objective}` : "",
-                                    intake?.sector ? `Sector: ${intake.sector}` : "",
-                                    intake?.companySize ? `Tamaño: ${intake.companySize}` : "",
-                                    seed?.notes ? `Notas: ${seed.notes}` : "",
-                                    seed?.emailThread ? `Emails: ${seed.emailThread}` : "",
-                                ]
-                                    .filter(Boolean)
-                                    .join("\n"),
-                            }),
-                        },
-                        240_000, // research can run web_search for a while
-                    );
-                    const researchData = await researchRes.json().catch(() => ({
-                        ok: false,
-                        error: `Research devolvió HTTP ${researchRes.status} sin JSON`,
-                    }));
-                    console.log("[gen] research:done", {
-                        ms: Date.now() - t0,
-                        ok: researchData.ok,
-                        hasResearch: !!researchData.research,
-                    });
-                    if (!researchData.ok || !researchData.research) {
-                        throw new Error(
-                            `Research falló: ${researchData.error || `HTTP ${researchRes.status}`}`,
-                        );
-                    }
-                    research = researchData.research;
-                }
-
-                const slideCount =
-                    format === "proposal" ? (corporateMode ? 9 : 5) :
-                    format === "carousel-ig" ? 7 :
-                    format === "story-ig" ? 4 :
-                    format === "prototype" ? 1 :
-                    format === "other" ? 5 :
-                    /* doc */ 5;
-
-                setGenerationLog(
-                    `${isProposal ? "2/2 · " : ""}Generando deck con Claude Opus 4.7…`,
-                );
-                console.log("[gen] generate:start", {
-                    format,
-                    slideCount,
-                    hasResearch: !!research,
-                });
                 const tg = Date.now();
                 const genRes = await fetchWithTimeout(
                     "/api/generate",
@@ -149,10 +161,10 @@ export default function Home() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             format,
-                            research,
+                            research: editedResearch,
                             program: programId,
                             slideCount,
-                            notes: seed?.notes || intake?.notes,
+                            notes: generatorNotes,
                             intake,
                             corporateMode,
                             topic,
@@ -177,20 +189,19 @@ export default function Home() {
 
                 const generatedDeck: Deck = genData.deck;
                 generatedDeck.generatedAt = new Date().toISOString();
-                generatedDeck.theme = theme || generatedDeck.theme || "dark";
+                generatedDeck.theme = theme || generatedDeck.theme || "light";
                 generatedDeck.format = format;
 
                 const id = saveDeck(generatedDeck);
                 setCurrentDeckId(id);
                 setDeck(generatedDeck);
+                setPendingGen(null);
                 setView("editor");
                 setRefreshKey((k) => k + 1);
             } catch (err) {
                 console.error("[gen] failed", err);
                 const message = err instanceof Error ? err.message : String(err);
                 setGenerationError(message);
-                // Stay on the generating view so the user sees the error
-                // and can retry or go back; never silently bounce to home.
             } finally {
                 setIsGenerating(false);
             }
@@ -198,10 +209,154 @@ export default function Home() {
         [],
     );
 
+    // Phase 1 — research OR skip straight to generate. For proposals
+    // with a real client name, do web_search first, then let the user
+    // edit the findings on the research-review screen. Everything else
+    // goes straight to generate.
+    const runGeneration = useCallback(
+        async (args: {
+            format: ProjectFormat;
+            intake?: IntakeAnswers;
+            programId?: string;
+            corporateMode?: boolean;
+            theme?: "dark" | "light";
+            topic?: string;
+            seed?: { notes?: string; audioTranscript?: string; emailThread?: string };
+            clientName?: string;
+            /** Markdown brief from the new ProposalForm. Goes into the
+             *  Exa research notes as PRIORITY context — overrides
+             *  generic intake fields. */
+            briefing?: string;
+            /** Free-form notes from the new ProposalForm — single
+             *  context box that replaces the older two boxes. */
+            notes?: string;
+        }) => {
+            const { format, intake, programId, corporateMode, topic, seed, clientName, theme, briefing, notes: directNotes } = args;
+            const effectiveClientName = intake?.clientName || clientName || "";
+            const isProposal = format === "proposal";
+            const shouldResearch =
+                isProposal &&
+                effectiveClientName &&
+                effectiveClientName.trim().toLowerCase() !== "30x";
+
+            if (!shouldResearch) {
+                // No research step — straight to generation. Used for
+                // non-proposal formats, speaker decks, internal 30x proposals.
+                await runGenerate(
+                    {
+                        format,
+                        intake,
+                        programId,
+                        corporateMode,
+                        theme,
+                        topic,
+                        seed,
+                        clientName,
+                        briefing,
+                        notes: directNotes,
+                        // ResearchResult is required by PendingGeneration; fabricate
+                        // a minimal record so the flow works without web_search.
+                        research: {
+                            companyName: effectiveClientName || "30X",
+                            industry: intake?.sector || "",
+                            size: intake?.companySize || "",
+                            headquarters: "",
+                            leadership: [],
+                            painPoints: [],
+                            recentNews: [],
+                            relevantContext: intake?.objective || topic || briefing || "",
+                        },
+                    },
+                    null,
+                );
+                return;
+            }
+
+            // Proposal with a real company → run research → show review.
+            setView("researching");
+            setIsGenerating(true);
+            setGenerationLog(`Investigando ${effectiveClientName}…`);
+            setGenerationError(null);
+            try {
+                const t0 = Date.now();
+                // Build the research notes payload. Briefing (the markdown
+                // brief from the new ProposalForm super-prompt flow) goes
+                // first as PRIORITY context — it's the salesperson's own
+                // intel and beats anything the model can find on the web.
+                // Then the topic/objective/sector etc fall in below.
+                const researchNotes = [
+                    briefing ? `BRIEFING DEL VENDEDOR (prioritario):\n${briefing}` : "",
+                    directNotes ? `NOTAS ADICIONALES:\n${directNotes}` : "",
+                    topic ? `Proyecto: ${topic}` : "",
+                    intake?.objective ? `Objetivo: ${intake.objective}` : "",
+                    intake?.sector ? `Sector: ${intake.sector}` : "",
+                    intake?.companySize ? `Tamaño: ${intake.companySize}` : "",
+                    seed?.notes ? `Notas: ${seed.notes}` : "",
+                    seed?.emailThread ? `Emails: ${seed.emailThread}` : "",
+                ]
+                    .filter(Boolean)
+                    .join("\n\n");
+
+                const researchRes = await fetchWithTimeout(
+                    "/api/research",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            companyName: effectiveClientName,
+                            notes: researchNotes,
+                        }),
+                    },
+                    240_000,
+                );
+                const researchData = await researchRes.json().catch(() => ({
+                    ok: false,
+                    error: `Research devolvió HTTP ${researchRes.status} sin JSON`,
+                }));
+                console.log("[gen] research:done", {
+                    ms: Date.now() - t0,
+                    ok: researchData.ok,
+                });
+                if (!researchData.ok || !researchData.research) {
+                    throw new Error(
+                        `Research falló: ${researchData.error || `HTTP ${researchRes.status}`}`,
+                    );
+                }
+
+                const research = researchData.research as ResearchResult;
+                setPendingGen({
+                    format,
+                    intake,
+                    programId,
+                    corporateMode,
+                    theme,
+                    topic,
+                    seed,
+                    clientName,
+                    research,
+                    briefing,
+                    notes: directNotes,
+                    researchMode: researchData.researchMode,
+                    sourceCount: researchData.sourceCount,
+                    sourceUrls: researchData.sourceUrls,
+                });
+                setIsGenerating(false);
+                setView("research-review");
+            } catch (err) {
+                console.error("[gen] research failed", err);
+                const message = err instanceof Error ? err.message : String(err);
+                setGenerationError(message);
+                setIsGenerating(false);
+                setView("generating"); // reuse error screen
+            }
+        },
+        [runGenerate],
+    );
+
     const handleGenerateFromIntake = useCallback(
         async (result: IntakeResult) => {
-            const themeDefault: "dark" | "light" =
-                result.format === "doc" ? "light" : "dark";
+            // All formats default to light now (Juan Diego, Apr 2026).
+            const themeDefault: "dark" | "light" = "light";
             await runGeneration({
                 format: result.format,
                 intake: result.intake,
@@ -228,6 +383,8 @@ export default function Home() {
                 theme: args.theme,
                 topic: args.topic,
                 clientName: args.clientName,
+                briefing: args.briefing,
+                notes: args.notes,
             });
         },
         [runGeneration],
@@ -269,8 +426,8 @@ export default function Home() {
     );
 
     const handleIterate = useCallback(
-        async (instruction: string) => {
-            if (!deck) return;
+        async (instruction: string): Promise<{ ok: boolean; summary?: string; error?: string }> => {
+            if (!deck) return { ok: false, error: "No hay deck activo" };
             setIsIterating(true);
             try {
                 const res = await fetch("/api/iterate", {
@@ -281,41 +438,18 @@ export default function Home() {
                 const data = await res.json();
                 if (data.ok && data.deck) {
                     handleDeckChange(data.deck);
+                    return { ok: true, summary: data.summary };
                 }
+                return { ok: false, error: data.error || "El agente no pudo aplicar el cambio." };
             } catch (err) {
                 console.error(err);
+                return { ok: false, error: err instanceof Error ? err.message : "Error de red" };
             } finally {
                 setIsIterating(false);
             }
         },
         [deck, handleDeckChange],
     );
-
-    const handleDownload = useCallback(async () => {
-        if (!deck) return;
-        setIsDownloading(true);
-        try {
-            const res = await fetch("/api/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(deck),
-            });
-            if (!res.ok) throw new Error("Download failed");
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `30x-${deck.companyName.toLowerCase().replace(/\s+/g, "-")}-${deck.programName.toLowerCase()}.pptx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsDownloading(false);
-        }
-    }, [deck]);
 
     const handleNewDeck = useCallback(() => {
         setView("home");
@@ -347,12 +481,9 @@ export default function Home() {
         return (
             <EditorLayout
                 deck={deck}
-                onDeckChange={handleDeckChange}
                 onIterate={handleIterate}
-                onDownload={handleDownload}
                 onNewDeck={handleNewDeck}
                 isIterating={isIterating}
-                isDownloading={isDownloading}
             />
         );
     }
@@ -366,6 +497,54 @@ export default function Home() {
                 format={intakeFormat}
                 home={intakeHome}
             />
+        );
+    }
+
+    // ── Research review (edit the pitch before generating) ──
+    if (view === "research-review" && pendingGen) {
+        return (
+            <ResearchReview
+                initial={pendingGen.research}
+                researchMode={pendingGen.researchMode}
+                sourceCount={pendingGen.sourceCount}
+                sourceUrls={pendingGen.sourceUrls}
+                onBack={() => {
+                    setPendingGen(null);
+                    setView("intake");
+                }}
+                onGenerate={(edited) => runGenerate(pendingGen, edited)}
+                isGenerating={isGenerating}
+            />
+        );
+    }
+
+    // ── Researching (running /api/research) ──
+    if (view === "researching") {
+        return (
+            <div className="flex h-screen bg-white items-center justify-center">
+                <div className="w-full max-w-[520px] px-6 text-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-black/[0.04] border-black/[0.06] mb-6">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#E9FF7B] animate-pulse" />
+                        <span className="text-[11px] font-medium tracking-[-0.005em] text-[#0a0a0a]">
+                            Research con web_search + Opus 4.7
+                        </span>
+                    </div>
+                    <h2 className="text-[28px] font-semibold text-[#0a0a0a] tracking-[-0.03em] mb-2">
+                        Buscando intel de {pendingGen?.clientName ?? "la empresa"}…
+                    </h2>
+                    <p className="text-[13px] text-[#737373] mb-1">
+                        Logo, foto hero, noticias recientes, liderazgo, dolores.
+                    </p>
+                    <p className="text-[12px] text-[#a3a3a3]">
+                        ~30-60 segundos. Después revisas y ajustas antes de generar.
+                    </p>
+                    {generationError ? (
+                        <div className="rounded-xl bg-red-50 border border-red-200 p-4 mt-6 text-[12px] text-red-800 text-left whitespace-pre-wrap break-words">
+                            {generationError}
+                        </div>
+                    ) : null}
+                </div>
+            </div>
         );
     }
 

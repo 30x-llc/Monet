@@ -74,17 +74,30 @@ export async function exportDeckAsPdf(
 }
 
 // ============================================================
-// Send to Canva — downloads PDF, then opens Canva import
+// Send to Canva — manual handoff (no OAuth required)
+//
+// Flow: download the PDF locally, then open Canva's "Import file"
+// page in a new tab. The user drags the downloaded PDF onto that page
+// and Canva creates an editable design.
+//
+// This is the fallback that works for every user without any API
+// credentials. When Canva Partners approval lands + CANVA_OAUTH_ENABLED
+// is flipped on, the "Abrir en Canva" flow (in <CanvaExportPanel/>)
+// takes over and skips the manual drag step entirely.
 // ============================================================
 
-export async function exportDeckToCanva(
+export const CANVA_IMPORT_URL = "https://www.canva.com/create/presentations/";
+
+export async function exportDeckAsPdfToCanvaFlow(
     deck: Deck,
     onProgress?: (i: number, total: number) => void,
 ): Promise<void> {
     await exportDeckAsPdf(deck, onProgress);
-    // Canva accepts PDF imports — open the import page so the user can drop the file.
-    window.open("https://www.canva.com/design?create&type=TACQ-4YL_no", "_blank");
+    window.open(CANVA_IMPORT_URL, "_blank", "noopener,noreferrer");
 }
+
+// Back-compat export — older code paths still import the old name.
+export const exportDeckToCanva = exportDeckAsPdfToCanvaFlow;
 
 // ============================================================
 // Standalone HTML — one file with all slides, self-contained

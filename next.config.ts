@@ -22,6 +22,26 @@ const nextConfig: NextConfig = {
             "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
             "./node_modules/@sparticuz/chromium/bin/**",
         ],
+        // /api/export/canva, /api/critique also need Chromium for puppeteer.
+        "/api/export/canva": [
+            "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
+            "./node_modules/@sparticuz/chromium/bin/**",
+        ],
+        "/api/critique": [
+            "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
+            "./node_modules/@sparticuz/chromium/bin/**",
+            "./private/reference-decks/**",
+            "./src/styles/deck.css",
+        ],
+        "/api/download": [
+            "./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**",
+            "./node_modules/@sparticuz/chromium/bin/**",
+            "./src/styles/deck.css",
+        ],
+        // private/reference-decks/ is read by /api/generate at runtime to
+        // pass multimodal examples to Claude. Force-include it so the
+        // serverless bundle can find the PNGs.
+        "/api/generate": ["./private/reference-decks/**"],
     },
     async rewrites() {
         return [

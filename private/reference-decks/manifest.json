@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "note": "Curated reference images for Claude's vision input. PRIMARILY pulled from Juan Diego's 70-slide master template at private/reference-decks/30x-master-template/ — that's the canonical 30x design language as of April 2026. Each entry points to a real 30x slide that exemplifies a layout pattern. When generating, we pass 5–8 of these to Claude so it sees the visual language of a real 30x deck, not just text instructions.",
+  "references": [
+    {
+      "file": "30x-master-template/slide-01.png",
+      "tags": ["recognition-cover", "corporate-cover", "cover"],
+      "note": "THE recognition cover — Aeroméxico × 30X by Andrés Bilbao. Partner logo top-left + 30X top-right + headline with lime accent + 2 body paragraphs over dark airline photo. This is the canonical pattern for corporate proposals."
+    },
+    {
+      "file": "30x-master-template/slide-30.png",
+      "tags": ["cover", "cover-hero", "dark"],
+      "note": "Hero cover dark mode — big bold headline with lime accent line, partner logo lockup with 30X bottom-left, dotted world map background. Used when a single concept (e.g., 'AI-Ready Leadership') is the entire pitch."
+    },
+    {
+      "file": "30x-master-template/slide-05.png",
+      "tags": ["content", "diagnostic", "split", "light"],
+      "note": "Light mode bento layout — big headline + paragraph left, 3 stacked stat cards right (gray, gray, lime). Lime is reserved for the destacado / future card."
+    },
+    {
+      "file": "30x-master-template/slide-10.png",
+      "tags": ["intro-mentors", "mentor-spotlight", "split", "dark"],
+      "note": "Mentor spotlight 50/50 — left: eyebrow + title + paragraph + 5 bullets with lime icons. Right: large mentor portrait with name + role caption."
+    },
+    {
+      "file": "30x-master-template/slide-15.png",
+      "tags": ["content", "data-viz", "stats"],
+      "note": "Mentor + audience data hybrid — left: portrait of the speaker + audience metrics (followers, gender split with donut). Right: city map + age bars + country breakdown. Demonstrates 30x data-viz with lime accent in donuts/bars."
+    },
+    {
+      "file": "30x-master-template/slide-20.png",
+      "tags": ["mentor-grid", "mentors", "split", "light"],
+      "note": "Mentor duo grid in light mode — 2 mentor cards side by side with photo, name, role, company, 4 capability columns below. Pattern for showing decision-makers + skill matrix together."
+    },
+    {
+      "file": "30x-master-template/slide-25.png",
+      "tags": ["mentor-grid", "intro-mentors", "dark"],
+      "note": "Headline + 2 mentor cards + 4 capability columns — same pattern in dark mode. Title-with-lime-pause-word pattern: '...para Equipos de Growth en Hipercrecimiento.'"
+    },
+    {
+      "file": "30x-master-template/slide-35.png",
+      "tags": ["mentor-spotlight", "speaker", "dark"],
+      "note": "Single mentor full-bleed photo left + bio right with lime eyebrow ('CHARLA · EN VIVO') + name + paragraph + 3 bullets. Speaker slide pattern."
+    },
+    {
+      "file": "30x-master-template/slide-40.png",
+      "tags": ["content", "two-column", "dark"],
+      "note": "Workshop pillar slide — left: lime-accented headline + paragraph. Right: secondary headline + 4-bullet checklist. Two-column dense content pattern."
+    },
+    {
+      "file": "30x-master-template/slide-45.png",
+      "tags": ["content", "hero-quote", "dark"],
+      "note": "Hero statement with lime-accented phrase over partner photo — 'Convertir una decisión estratégica en CAPACIDAD ORGANIZACIONAL.' Dark overlay + partner logo top-right. Dramatic transition slide."
+    },
+    {
+      "file": "30x-master-template/slide-50.png",
+      "tags": ["pricing-cta", "pricing", "split", "dark"],
+      "note": "Pricing dark — left: headline + 'lo que recibirás' bullet list + big lime price. Right: data sidebar (duración / sesiones / modalidad / acceso / personas) + contact card. Canonical pricing-cta layout."
+    },
+    {
+      "file": "30x-master-template/slide-60.png",
+      "tags": ["content", "testimonials", "quotes", "dark"],
+      "note": "Testimonials — left: 'Lo que dicen los founders' eyebrow + big headline. Right: 3 quote blocks each with quote + name + lime company name. Use for social proof slides."
+    },
+    {
+      "file": "30x-master-template/slide-70.png",
+      "tags": ["pricing-cta", "rate-card", "dark"],
+      "note": "Rate card with mentor portrait — left: 4 pricing rows (Instagram, Reel, Reel Collab) with lime price headers. Right: large B&W mentor portrait. Speaker rate sheet pattern."
+    }
+  ]
+}
