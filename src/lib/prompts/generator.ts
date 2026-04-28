@@ -371,35 +371,45 @@ export function getGeneratorPrompt(opts: GeneratorOptions): string {
             outputHint = `slides de tipo doc-cover, doc-section`;
             break;
         case "prototype":
-            modeBlock = `## PROTOTIPO 30X (mockup app/web — sistema 30X Design = Untitled UI + shadcn)
+            modeBlock = `## PROTOTIPO 30X — Dashboard Untitled UI
 
-Devuelve UN SOLO slide de tipo "prototype-frame". Es un mock de dashboard con ventana cromada, sidebar nav, KPIs, lista densa con badges. El visual ya está implementado: tú produces el JSON con datos REALES, no placeholder.
-
-PRINCIPIOS (Untitled UI dashboard pattern):
-- Densidad de información alta. Como Linear, Vercel, Stripe o Untitled UI Pro.
-- KPIs SIEMPRE en la fila superior, 3 tarjetas máximo.
-- Sidebar SIEMPRE para "kind:app". Omitir sidebar solo en "kind:landing".
-- Filas tipo tabla, no cards sueltas. Cada fila representa data concreta.
-- Color: lima accent (#E9FF7B) reservado para destacar UN valor o estado, nunca dos en la misma vista.
+Devuelve UN SOLO slide de tipo "prototype-frame". El visual está construido con el patrón EXACTO de Untitled UI dashboards: sidebar 280px blanco con icons + workspace switcher + nav items + account card, header con breadcrumb + título + acciones, 3 KPIs con delta % y sparkline, tabla con avatars circulares + badges con dot + sparkline. Tú produces SOLO el JSON con data realista.
 
 ESTRUCTURA del slide:
 - type: "prototype-frame"
 - appName: nombre del producto (ej: "Sales Machine", "Cohort OS", "Pipeline 30X")
-- subtitle: una línea opcional al pie. Ej: "Prototipo v0, abril 2026"
-- kind: "app" | "landing" | "component"
-- nav: 3-4 labels (primero activo). Ej: ["Overview","Pipeline","Insights","Team"]
-- sidebar: 4-6 items con {label, active?}. Usa para apps densas. Para landings omite.
-- headline: H1 directo, producto-first. Max 8 palabras. Ej: "Tu pipeline de cohortes en un lugar."
-- description: 1-2 frases de apoyo, max 140 chars.
+- subtitle: opcional, fecha de versión. Ej: "Prototipo v0, abril 2026"
+- kind: "app" (default) | "landing" | "component"
+- sidebar: array de 5-6 items {label, icon, active?, badge?}. Iconos válidos: "home", "dashboard", "pipeline", "team", "reports", "settings", "billing", "messages", "calendar", "documents", "integrations". El primer item lleva active:true. Ej: [{"label":"Overview","icon":"home","active":true},{"label":"Pipeline","icon":"pipeline","badge":"24"},{"label":"Empresas","icon":"team"},{"label":"Reportes","icon":"reports"},{"label":"Settings","icon":"settings"}]
+- headline: H1 producto-first, max 8 palabras. Ej: "Tu pipeline de 30X en un solo lugar."
+- description: 1-2 frases, max 140 chars. Contexto del producto.
 - primaryCta: 1-3 palabras. Ej: "Crear propuesta", "Ver pipeline".
-- stats: 3 KPIs con {value, label}. Valores realistas, en moneda local cuando aplique. Ej: [{value:"$1.8M", label:"Pipeline abierto"},{value:"32%", label:"Win rate Q2"},{value:"127", label:"Empresas activas"}]
-- listRows: 5-7 filas con {title, meta?, badge?}. Cada fila es una empresa, deal, mentor, módulo o feature concreto. badge: "Activo" | "Pausa" | "Cerrado" | etc.
+- secondaryCta: opcional, 1-2 palabras. Ej: "Filtrar", "Exportar".
+- stats: 3 KPIs con {value, label, delta, trend, sparkline}. Ejemplo:
+  [
+    {"value":"$2.4M","label":"Pipeline abierto Q2","delta":"+18%","trend":"up","sparkline":[12,15,14,18,22,26,30]},
+    {"value":"38%","label":"Win rate trimestre","delta":"+4%","trend":"up","sparkline":[28,30,32,31,34,36,38]},
+    {"value":"142","label":"Empresas activas","delta":"+12","trend":"up","sparkline":[120,125,128,132,135,140,142]}
+  ]
+- filters: opcional, 3-4 chips. Ej: ["Todos","Activos","Cerrados","Q2 2026"]
+- listRows: 5-6 filas con {title, subtitle, meta, badge, badgeTone, avatarLabel}. Cada fila es UNA empresa o deal real. badgeTone: "success"|"warning"|"error"|"info"|"neutral". Ejemplo:
+  [
+    {"title":"Aeroméxico","subtitle":"AI for Executives","meta":"$180k","badge":"Activo","badgeTone":"success","avatarLabel":"AM"},
+    {"title":"Bavaria","subtitle":"Sales Machine cohorte abril","meta":"$240k","badge":"Pausa","badgeTone":"warning","avatarLabel":"BA"},
+    {"title":"Rappi","subtitle":"Hardcore AI","meta":"$320k","badge":"Activo","badgeTone":"success","avatarLabel":"RA"},
+    {"title":"GeoPark","subtitle":"AI for Boards","meta":"$95k","badge":"Cerrado","badgeTone":"error","avatarLabel":"GP"},
+    {"title":"Habi","subtitle":"Growth Rockstar","meta":"$140k","badge":"Activo","badgeTone":"success","avatarLabel":"HA"},
+    {"title":"OnTop","subtitle":"Achievers Presencial","meta":"$78k","badge":"Pausa","badgeTone":"warning","avatarLabel":"OT"}
+  ]
+- account: {name, email, initials} para el footer del sidebar. Ej: {"name":"Carla Ríos","email":"carla@30x.com","initials":"CR"}
 
-REGLAS DE VOZ:
-- Datos reales del proyecto/cliente. Si no hay, inventa plausibles tipo Aeroméxico, Bavaria, Rappi.
-- NUNCA placeholder ("Item 1", "Row A", "lorem"). Eso descalifica el deck.
-- Corto, denso, directo. Linear/Raycast, no marketing copy.
-- Sin emojis. Sin em-dashes.`;
+REGLAS DE VOZ Y DATOS:
+- Datos reales y plausibles del proyecto/cliente. Si no hay, usa empresas LATAM reales: Aeroméxico, Rappi, Bavaria, Bancolombia, Habi, Truora, Despegar, Cabify.
+- Cifras realistas: pipeline en USD millones, win rate 25-50%, 50-200 empresas activas.
+- NUNCA placeholder ("Item 1", "Row A", "lorem"). Descalifica el deck.
+- Sparkline: 7 valores numéricos con tendencia general suave (no oscilaciones bruscas).
+- Sin emojis. Sin em-dashes (—). Usa coma o dos puntos.
+- Sin marketing copy: cero "premium", "transformador", "increíble".`;
             outputHint = `slide de tipo prototype-frame (UNO solo)`;
             break;
         case "other":

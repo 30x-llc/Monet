@@ -356,14 +356,56 @@ export interface PrototypeFrameSlide {
     appName: string;
     subtitle?: string;
     kind?: "app" | "landing" | "component";
-    nav?: string[]; // top nav labels
-    sidebar?: { label: string; active?: boolean }[]; // optional left nav
+    /** Top nav labels (first one is active). Used in legacy frame only. */
+    nav?: string[];
+    /** Untitled UI sidebar items with optional icon + section grouping. */
+    sidebar?: {
+        label: string;
+        icon?: SidebarIconKey;
+        active?: boolean;
+        badge?: string;
+    }[];
+    /** Page title in the main content area. */
     headline: string;
     description?: string;
     primaryCta?: string;
-    stats?: { value: string; label: string }[]; // up to 3
-    listRows?: { title: string; meta?: string; badge?: string }[]; // rows in a table/list card
+    secondaryCta?: string;
+    /** 3 KPI cards. Each can include a delta % and trend direction. */
+    stats?: {
+        value: string;
+        label: string;
+        delta?: string;
+        trend?: "up" | "down" | "flat";
+        sparkline?: number[];
+    }[];
+    /** Untitled UI data-table rows with avatar + status badge. */
+    listRows?: {
+        title: string;
+        subtitle?: string;
+        meta?: string;
+        badge?: string;
+        badgeTone?: "success" | "warning" | "error" | "neutral" | "info";
+        avatarLabel?: string;
+    }[];
+    /** Page-level filter chips above the table. */
+    filters?: string[];
+    /** Account card at the bottom of the sidebar. */
+    account?: { name: string; email: string; initials: string };
 }
+
+export type SidebarIconKey =
+    | "home"
+    | "dashboard"
+    | "pipeline"
+    | "team"
+    | "reports"
+    | "settings"
+    | "billing"
+    | "messages"
+    | "calendar"
+    | "search"
+    | "documents"
+    | "integrations";
 
 // ============================================================
 // GENERIC FALLBACK
