@@ -27,6 +27,13 @@
     src: url("/assets/fonts/InterDisplay-SemiBold.ttf") format("truetype");
     font-display: swap;
 }
+@font-face {
+    font-family: "Inter Display";
+    font-style: normal;
+    font-weight: 700;
+    src: url("/assets/fonts/InterDisplay-Bold.woff2") format("woff2");
+    font-display: swap;
+}
 
 /* --- Stage (width/height + CSS vars set inline by SlideStage) --- */
 .deck-stage {
@@ -63,20 +70,48 @@
     max-width: 220px;
     object-fit: contain;
     z-index: 10;
+    filter: var(--t-client-logo-filter);
 }
 
-/* --- Type primitives --- */
+/* Cover slides: client logo stays white regardless of theme because it
+   sits on top of a cinematic hero image with a dark overlay. */
+.deck-slide.s-corp-cover .client-logo,
+.deck-slide.s-cover .client-logo {
+    top: 60px;
+    right: 80px;
+    height: 48px;
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
+}
+
+/* Big white partner logo prominent on the corporate cover hero. */
+.deck-slide.s-corp-cover .hero-client-logo {
+    position: absolute;
+    top: 50%;
+    left: 110px;
+    transform: translateY(-60%);
+    max-height: 180px;
+    max-width: 520px;
+    object-fit: contain;
+    z-index: 4;
+    filter: brightness(0) invert(1);
+    opacity: 0.98;
+}
+
+/* --- Type primitives ---
+   Display titles use 700 weight + ~ -6% letter-spacing per 30x brand
+   rule (matches Linear/Vercel hero copy). Body keeps -1.5 to -2.5%. */
 .deck-slide .h-title {
-    font: 500 74px/1.02 "Inter Display";
-    letter-spacing: -0.04em;
+    font: 700 74px/1.02 "Inter Display";
+    letter-spacing: -0.06em;
     margin: 0;
     text-wrap: balance;
     color: var(--t-fg);
 }
-.deck-slide .h-title .accent { color: #e9ff7b; }
+.deck-slide .h-title .accent { color: var(--t-accent); }
 .deck-slide .h-cover {
-    font: 500 120px/0.96 "Inter Display";
-    letter-spacing: -0.045em;
+    font: 700 120px/0.95 "Inter Display";
+    letter-spacing: -0.065em;
     margin: 0;
     color: var(--t-fg);
 }
@@ -132,7 +167,7 @@
     display: grid; place-items: center;
     color: var(--t-icon-fg);
     background: var(--t-icon-bg);
-    border-radius: 12px;
+    border-radius: 14px;
 }
 .deck-slide.s-cover .meta .icon svg { width: 32px; height: 32px; display: block; }
 .deck-slide.s-cover .meta .k {
@@ -161,7 +196,7 @@
 .deck-slide.s-corp-cover .eyebrow {
     font: 500 20px/1 "Inter Display";
     letter-spacing: 0.14em; text-transform: uppercase;
-    color: #e9ff7b; margin-bottom: 32px;
+    color: var(--t-accent); margin-bottom: 32px;
 }
 .deck-slide.s-corp-cover .h-cover { font-size: 112px; line-height: 0.98; }
 .deck-slide.s-corp-cover .sub {
@@ -302,7 +337,7 @@
 }
 .deck-slide.s-curric .week .n {
     font: 500 32px/1 "Inter Display";
-    letter-spacing: -0.025em; color: #e9ff7b;
+    letter-spacing: -0.025em; color: var(--t-accent);
     margin: 0 0 16px;
 }
 .deck-slide.s-curric .week .t {
@@ -348,7 +383,7 @@
 }
 .deck-slide.s-mentors .person-text .role {
     font: 400 20px/1.25 "Inter Display";
-    letter-spacing: -0.02em; color: #e9ff7b;
+    letter-spacing: -0.02em; color: var(--t-accent);
     margin: 8px 0 16px;
 }
 .deck-slide.s-mentors .person-text .bio {
@@ -381,7 +416,7 @@
 }
 .deck-slide.s-invest .gets li::before {
     content: ""; position: absolute; left: 0; top: 14px;
-    width: 14px; height: 2px; background: #e9ff7b;
+    width: 14px; height: 2px; background: var(--t-accent);
 }
 .deck-slide.s-invest .price-block { margin-top: auto; padding-top: 56px; }
 .deck-slide.s-invest .price-block .lab {
@@ -392,7 +427,7 @@
 .deck-slide.s-invest .price-block .amt { display: flex; align-items: baseline; gap: 18px; }
 .deck-slide.s-invest .price-block .amt .big {
     font: 500 84px/1 "Inter Display";
-    letter-spacing: -0.04em; color: #e9ff7b;
+    letter-spacing: -0.04em; color: var(--t-accent);
 }
 .deck-slide.s-invest .price-block .amt .per {
     font: 400 26px/1 "Inter Display";
@@ -434,7 +469,7 @@
 .deck-slide.s-diagnostic .eyebrow {
     font: 500 14px/1 "Inter Display";
     letter-spacing: 0.14em; text-transform: uppercase;
-    color: #e9ff7b; margin-bottom: 24px;
+    color: var(--t-accent); margin-bottom: 24px;
 }
 .deck-slide.s-diagnostic .head { max-width: 1500px; }
 .deck-slide.s-diagnostic .lead {
@@ -454,7 +489,7 @@
 .deck-slide.s-diagnostic .finding .n {
     font: 500 14px/1 "Inter Display";
     letter-spacing: 0.08em; text-transform: uppercase;
-    color: #e9ff7b; margin-bottom: 18px;
+    color: var(--t-accent); margin-bottom: 18px;
 }
 .deck-slide.s-diagnostic .finding .t {
     font: 500 28px/1.1 "Inter Display";
@@ -523,7 +558,7 @@
 }
 .deck-slide.s-impact .stat .v {
     font: 500 96px/1 "Inter Display";
-    letter-spacing: -0.045em; color: #e9ff7b;
+    letter-spacing: -0.045em; color: var(--t-accent);
     margin-bottom: 18px;
 }
 .deck-slide.s-impact .stat .k {
@@ -558,6 +593,66 @@
 .deck-slide.s-end .globe img { width: 100%; display: block; filter: var(--t-logo-filter); }
 
 /* ============================================================
+   CIERRE — Variante Portada Oficial (con logo de cliente)
+   Hero full-bleed con lockup "30X | partner" centrado.
+   ============================================================ */
+.deck-slide.s-end-portada {
+    position: absolute; inset: 0; overflow: hidden;
+    background: #000;
+}
+.deck-slide.s-end-portada .bg {
+    position: absolute; inset: 0; z-index: 1;
+}
+.deck-slide.s-end-portada .bg img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    display: block;
+}
+.deck-slide.s-end-portada .bg .overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%);
+}
+.deck-slide.s-end-portada .lockup {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    display: flex; align-items: center; gap: 56px;
+    max-width: 80%;
+}
+.deck-slide.s-end-portada .lockup-30x {
+    height: 96px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    opacity: 0.98;
+}
+.deck-slide.s-end-portada .lockup-divider {
+    display: block;
+    width: 1px;
+    height: 96px;
+    background: rgba(255,255,255,0.45);
+}
+.deck-slide.s-end-portada .lockup-partner {
+    max-height: 96px;
+    max-width: 360px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0.98;
+}
+.deck-slide.s-end-portada .caption {
+    position: absolute;
+    bottom: 110px; left: 50%; transform: translateX(-50%);
+    z-index: 3;
+    font: 500 22px/1.4 "Inter Display";
+    letter-spacing: -0.015em;
+    color: rgba(255,255,255,0.78);
+    text-align: center;
+    max-width: 880px;
+    text-wrap: balance;
+}
+
+/* ============================================================
    IG CAROUSEL (1080×1080)
    ============================================================ */
 .deck-slide.s-ig-cover { position: absolute; inset: 0; }
@@ -571,7 +666,7 @@
 .deck-slide.s-ig-cover .body .eyebrow {
     font: 500 20px/1 "Inter Display";
     letter-spacing: 0.14em; text-transform: uppercase;
-    color: #e9ff7b; margin-bottom: 22px;
+    color: var(--t-accent); margin-bottom: 22px;
 }
 .deck-slide.s-ig-cover .body .h {
     font: 500 84px/0.98 "Inter Display";
@@ -611,7 +706,7 @@
 }
 .deck-slide.s-ig-text .num {
     font: 500 32px/1 "Inter Display";
-    letter-spacing: -0.02em; color: #e9ff7b;
+    letter-spacing: -0.02em; color: var(--t-accent);
     margin-bottom: 32px;
 }
 .deck-slide.s-ig-text .h {
@@ -640,7 +735,7 @@
 }
 .deck-slide.s-ig-stat .v {
     font: 500 280px/0.9 "Inter Display";
-    letter-spacing: -0.06em; color: #e9ff7b;
+    letter-spacing: -0.06em; color: var(--t-accent);
     margin: 0;
     font-feature-settings: "tnum" 1;
 }
@@ -673,7 +768,7 @@
 }
 .deck-slide.s-ig-quote .mark {
     font: 500 96px/0.7 "Inter Display";
-    color: #e9ff7b; margin-bottom: 24px;
+    color: var(--t-accent); margin-bottom: 24px;
 }
 .deck-slide.s-ig-quote .q {
     font: 500 48px/1.12 "Inter Display";
@@ -711,7 +806,7 @@
 .deck-slide.s-ig-cta .cta {
     margin-top: 64px; align-self: flex-start;
     padding: 22px 40px;
-    background: #e9ff7b; color: #0a0a0a;
+    background: var(--t-accent); color: var(--t-accent-fg);
     font: 600 28px/1 "Inter Display";
     letter-spacing: -0.015em;
     border-radius: 9999px;
@@ -733,7 +828,7 @@
 .deck-slide.s-story-cover .eyebrow {
     font: 500 22px/1 "Inter Display";
     letter-spacing: 0.14em; text-transform: uppercase;
-    color: #e9ff7b; margin-bottom: 28px;
+    color: var(--t-accent); margin-bottom: 28px;
 }
 .deck-slide.s-story-cover .h {
     font: 500 108px/0.96 "Inter Display";
@@ -749,7 +844,7 @@
 .deck-slide.s-story-cover .cta {
     position: absolute; left: 64px; bottom: 96px; z-index: 3;
     padding: 24px 44px;
-    background: #e9ff7b; color: #0a0a0a;
+    background: var(--t-accent); color: var(--t-accent-fg);
     font: 600 28px/1 "Inter Display";
     letter-spacing: -0.015em;
     border-radius: 9999px;
@@ -869,4 +964,872 @@
 .deck-slide.s-doc-section ul.bullets li::before {
     content: ""; position: absolute; left: 0; top: 9px;
     width: 10px; height: 1.5px; background: var(--t-fg);
+}
+
+/* ============================================================
+   LAYOUT VARIANTS — added 2026-04-24
+   ============================================================ */
+
+/* ── corporate-cover · variant "recognition" ──
+   The Andrés Bilbao Aeroméxico cover, exactly: dark photo full-bleed,
+   partner logo big top-left in white, 30X top-right in white, headline
+   center-left with one accent phrase in lime, body paragraphs below.
+   This is THE corporate cover — the recognition pattern that makes the
+   client feel seen before reading a single 30x slide. */
+.deck-slide.s-corp-recognition {
+    /* Inherit position: absolute; inset: 0 from .deck-slide. Don't
+       override `position` — that makes the slide collapse to 0×0
+       and renders blank inside the SlideStage. */
+    background: #000;
+    color: #fff;
+}
+.deck-slide.s-corp-recognition .bg-img {
+    position: absolute; inset: 0; z-index: 0;
+}
+.deck-slide.s-corp-recognition .bg-img img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    /* Pull the photo down a bit and slightly desaturate so text reads */
+    filter: brightness(0.55) saturate(0.85);
+}
+.deck-slide.s-corp-recognition .bg-img::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,0.78) 0%,
+        rgba(0,0,0,0.55) 45%,
+        rgba(0,0,0,0.20) 75%,
+        rgba(0,0,0,0.45) 100%
+    );
+}
+.deck-slide.s-corp-recognition .partner-mark {
+    position: absolute;
+    top: 64px;
+    left: 100px;
+    height: 56px;
+    max-width: 320px;
+    object-fit: contain;
+    z-index: 4;
+    /* Force partner logo white over dark photo. */
+    filter: brightness(0) invert(1);
+    opacity: 0.98;
+}
+.deck-slide.s-corp-recognition .brand-mark {
+    position: absolute;
+    top: 64px;
+    right: 100px;
+    height: 44px;
+    z-index: 4;
+    /* 30X logo light is already white-on-transparent — no filter. */
+}
+.deck-slide.s-corp-recognition .content {
+    position: absolute;
+    top: 50%;
+    left: 100px;
+    right: 100px;
+    transform: translateY(-50%);
+    z-index: 3;
+    max-width: 1500px;
+}
+.deck-slide.s-corp-recognition .eyebrow {
+    font: 500 16px/1 "Inter Display";
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 28px;
+}
+.deck-slide.s-corp-recognition .headline {
+    font: 500 64px/1.12 "Inter Display";
+    letter-spacing: -0.025em;
+    color: #fff;
+    margin: 0;
+    text-wrap: balance;
+    max-width: 1300px;
+}
+.deck-slide.s-corp-recognition .headline .accent {
+    color: #E9FF7B;
+    /* Slight underline lift to mirror Andrés's reference where the
+       accent phrase reads as the verb of the sentence. */
+}
+.deck-slide.s-corp-recognition .body {
+    margin-top: 48px;
+    display: flex; flex-direction: column; gap: 18px;
+    max-width: 920px;
+}
+.deck-slide.s-corp-recognition .body p {
+    font: 400 20px/1.55 "Inter Display";
+    letter-spacing: -0.01em;
+    color: rgba(255,255,255,0.78);
+    margin: 0;
+}
+.deck-slide.s-corp-recognition .date {
+    position: absolute;
+    bottom: 70px; left: 100px;
+    z-index: 4;
+    font: 500 13px/1 "Inter Display";
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+}
+
+/* ── corporate-cover · variant "split" ──
+   50/50: text left on canvas, image right full-bleed. Editorial,
+   serious, B2B. Great for banking/insurance/consulting clients where
+   the cinematic full-bleed feels too loud. */
+.deck-slide.s-corp-cover-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 960px;
+    background: var(--t-canvas);
+}
+.deck-slide.s-corp-cover-split .left {
+    padding: 160px 100px 100px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 100%;
+}
+.deck-slide.s-corp-cover-split .eyebrow {
+    font: 500 16px/1 "Inter Display";
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--t-fg-3); margin-bottom: 28px;
+}
+.deck-slide.s-corp-cover-split .h-cover {
+    font: 500 88px/0.98 "Inter Display";
+    letter-spacing: -0.04em;
+    color: var(--t-fg);
+    max-width: 720px;
+}
+.deck-slide.s-corp-cover-split .sub {
+    margin-top: 36px;
+    font: 400 26px/1.35 "Inter Display";
+    letter-spacing: -0.015em; color: var(--t-fg-2);
+    max-width: 620px;
+}
+.deck-slide.s-corp-cover-split .date {
+    font: 500 13px/1 "Inter Display";
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--t-fg-3);
+    margin-top: auto;
+}
+.deck-slide.s-corp-cover-split .partner-strip {
+    display: flex; align-items: center; gap: 20px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--t-hairline);
+}
+.deck-slide.s-corp-cover-split .partner-strip .partner-label {
+    font: 500 11px/1 "Inter Display";
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-corp-cover-split .partner-strip img {
+    max-height: 40px; max-width: 240px; object-fit: contain;
+    filter: var(--t-client-logo-filter);
+}
+.deck-slide.s-corp-cover-split .right {
+    position: relative; overflow: hidden;
+    background: var(--t-card-bg);
+}
+.deck-slide.s-corp-cover-split .right img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* ── intro-mentors · variant "grid" ──
+   Centered headline + mentor portraits in a grid below. Use when the
+   names themselves sell the deck — less angles/context, more faces. */
+.deck-slide.s-intro-grid {
+    padding: 140px 100px 100px;
+    display: flex; flex-direction: column; gap: 60px;
+}
+.deck-slide.s-intro-grid .head {
+    text-align: center;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.deck-slide.s-intro-grid .head .eyebrow {
+    font: 500 14px/1 "Inter Display";
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--t-fg-3); margin-bottom: 20px;
+}
+.deck-slide.s-intro-grid .head .h-title {
+    font: 500 72px/1.02 "Inter Display";
+    letter-spacing: -0.035em; color: var(--t-fg);
+    margin: 0; text-wrap: balance;
+}
+.deck-slide.s-intro-grid .head .p-lead {
+    margin-top: 24px;
+    font: 400 28px/1.3 "Inter Display";
+    letter-spacing: -0.02em; color: var(--t-fg-2);
+    max-width: 880px; margin-left: auto; margin-right: auto;
+}
+.deck-slide.s-intro-grid .m-grid {
+    display: grid; gap: 24px;
+    max-width: 1600px; margin: 0 auto;
+    width: 100%;
+}
+.deck-slide.s-intro-grid .m-tile {
+    background: var(--t-card-bg);
+    border: 1px solid var(--t-card-border);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+}
+.deck-slide.s-intro-grid .m-tile .portrait {
+    position: relative;
+    width: 100%; aspect-ratio: 4 / 5;
+    background: var(--t-card-bg);
+    overflow: hidden;
+}
+.deck-slide.s-intro-grid .m-tile .portrait img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+    display: block;
+}
+.deck-slide.s-intro-grid .m-tile .meta {
+    padding: 20px 22px 22px;
+}
+.deck-slide.s-intro-grid .m-tile .name {
+    font: 500 22px/1.15 "Inter Display";
+    letter-spacing: -0.02em; color: var(--t-fg);
+    margin: 0 0 4px;
+}
+.deck-slide.s-intro-grid .m-tile .role {
+    font: 400 14px/1.35 "Inter Display";
+    letter-spacing: -0.01em; color: var(--t-fg-2);
+    margin: 0;
+}
+.deck-slide.s-intro-grid .m-tile .company {
+    margin-top: 12px;
+    display: flex; align-items: center; gap: 8px;
+    font: 500 12px/1 "Inter Display";
+    letter-spacing: -0.005em; color: var(--t-fg-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.deck-slide.s-intro-grid .m-tile .company img {
+    height: 18px; width: auto; max-width: 80px; object-fit: contain;
+    filter: var(--t-client-logo-filter);
+}
+
+/* ── impact · variant "hero-number" ──
+   ONE giant stat centered as the hero + up to 3 supporting stats
+   in a row below. Use when a single number is the pitch. */
+.deck-slide.s-impact-hero {
+    padding: 150px 100px 100px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+}
+.deck-slide.s-impact-hero .eyebrow {
+    font: 500 14px/1 "Inter Display";
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--t-fg-3); margin-bottom: 20px;
+}
+.deck-slide.s-impact-hero .h-title {
+    font: 500 56px/1.05 "Inter Display";
+    letter-spacing: -0.03em; color: var(--t-fg);
+    margin: 0; max-width: 1100px;
+    text-wrap: balance;
+}
+.deck-slide.s-impact-hero .hero-stat {
+    margin-top: 48px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.deck-slide.s-impact-hero .hero-stat .v {
+    font: 600 220px/0.92 "Inter Display";
+    letter-spacing: -0.06em;
+    color: var(--t-accent);
+    font-feature-settings: "tnum";
+}
+.deck-slide.s-impact-hero .hero-stat .k {
+    font: 500 24px/1.2 "Inter Display";
+    letter-spacing: -0.015em; color: var(--t-fg);
+    margin: 0; max-width: 640px;
+}
+.deck-slide.s-impact-hero .context {
+    margin-top: 32px;
+    font: 400 22px/1.4 "Inter Display";
+    letter-spacing: -0.015em; color: var(--t-fg-2);
+    max-width: 840px;
+}
+.deck-slide.s-impact-hero .supporting {
+    margin-top: 72px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    width: 100%; max-width: 1200px;
+    padding-top: 40px;
+    border-top: 1px solid var(--t-hairline);
+}
+.deck-slide.s-impact-hero .supporting .stat { text-align: center; }
+.deck-slide.s-impact-hero .supporting .v {
+    font: 500 64px/1 "Inter Display";
+    letter-spacing: -0.035em; color: var(--t-fg);
+}
+.deck-slide.s-impact-hero .supporting .k {
+    margin-top: 8px;
+    font: 400 14px/1.3 "Inter Display";
+    letter-spacing: -0.005em; color: var(--t-fg-2);
+}
+
+/* ── pricing-cta · variant "package" ──
+   Two package cards side-by-side. Highlighted variant gets a darker
+   bg + ribbon for "Recomendado". */
+.deck-slide.s-invest-pkg {
+    padding: 130px 100px 100px;
+    display: flex; flex-direction: column; gap: 56px;
+}
+.deck-slide.s-invest-pkg .head {
+    text-align: center;
+}
+.deck-slide.s-invest-pkg .head .h-title {
+    font: 500 64px/1.05 "Inter Display";
+    letter-spacing: -0.035em; color: var(--t-fg);
+    margin: 0; max-width: 1100px; margin-left: auto; margin-right: auto;
+    text-wrap: balance;
+}
+.deck-slide.s-invest-pkg .pkg-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    max-width: 1400px; margin: 0 auto;
+    width: 100%;
+}
+.deck-slide.s-invest-pkg .pkg {
+    position: relative;
+    background: var(--t-card-bg);
+    border: 1px solid var(--t-card-border);
+    border-radius: 16px;
+    padding: 40px 36px 44px;
+    display: flex; flex-direction: column;
+}
+.deck-slide.s-invest-pkg .pkg.is-hero {
+    background: var(--t-fg);
+    color: var(--t-canvas);
+    border-color: var(--t-fg);
+}
+.deck-slide.s-invest-pkg .pkg .ribbon {
+    position: absolute; top: -12px; right: 28px;
+    background: var(--t-accent);
+    color: var(--t-accent-fg);
+    font: 600 11px/1 "Inter Display";
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 999px;
+}
+.deck-slide.s-invest-pkg .pkg-name {
+    font: 500 26px/1.1 "Inter Display";
+    letter-spacing: -0.025em;
+    color: inherit;
+}
+.deck-slide.s-invest-pkg .pkg.is-hero .pkg-name {
+    color: var(--t-canvas);
+}
+.deck-slide.s-invest-pkg .pkg-tag {
+    margin-top: 6px;
+    font: 400 14px/1.35 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-invest-pkg .pkg.is-hero .pkg-tag {
+    color: rgba(255,255,255,0.6);
+}
+.deck-slide.s-invest-pkg .pkg-price {
+    margin-top: 28px;
+    display: flex; align-items: baseline; gap: 10px;
+}
+.deck-slide.s-invest-pkg .pkg-price .big {
+    font: 600 52px/1 "Inter Display";
+    letter-spacing: -0.04em;
+}
+.deck-slide.s-invest-pkg .pkg-price .pay {
+    font: 400 13px/1.3 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-invest-pkg .pkg.is-hero .pkg-price .pay {
+    color: rgba(255,255,255,0.55);
+}
+.deck-slide.s-invest-pkg .pkg-features {
+    margin-top: 28px; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.deck-slide.s-invest-pkg .pkg-features li {
+    font: 400 15px/1.4 "Inter Display";
+    letter-spacing: -0.005em;
+    padding-left: 22px; position: relative;
+}
+.deck-slide.s-invest-pkg .pkg-features li::before {
+    content: ""; position: absolute; left: 0; top: 9px;
+    width: 12px; height: 1.5px; background: currentColor; opacity: 0.55;
+}
+.deck-slide.s-invest-pkg .pkg-contact {
+    margin-top: 8px;
+    text-align: center;
+    font: 400 13px/1.4 "Inter Display";
+    color: var(--t-fg-3);
+    letter-spacing: -0.005em;
+}
+.deck-slide.s-invest-pkg .pkg-contact .cn {
+    font-weight: 600; color: var(--t-fg-2);
+}
+
+/* ============================================================
+   DOC-PAGE — magazine hero band + flowing Word-doc body
+   ============================================================ */
+.deck-slide.s-doc-page {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--t-canvas);
+}
+
+/* Hero band — top ~30% of the A4 page */
+.deck-slide.s-doc-page .hero {
+    position: relative;
+    height: 280px;
+    overflow: hidden;
+    background: #0a0a0a;
+}
+.deck-slide.s-doc-page .hero-bg {
+    position: absolute; inset: 0;
+}
+.deck-slide.s-doc-page .hero-bg img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.55) saturate(0.85);
+}
+.deck-slide.s-doc-page .hero-bg::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0,0,0,0.50) 0%,
+        rgba(0,0,0,0.20) 40%,
+        rgba(0,0,0,0.75) 100%
+    );
+}
+.deck-slide.s-doc-page .hero-content {
+    position: absolute; inset: 0;
+    padding: 28px 36px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    color: #fff;
+}
+.deck-slide.s-doc-page .hero-top {
+    display: flex; align-items: center; justify-content: space-between;
+}
+.deck-slide.s-doc-page .lockup {
+    display: flex; align-items: center; gap: 14px;
+}
+.deck-slide.s-doc-page .lockup-30x {
+    height: 18px;
+    /* The light 30X logo is white-on-transparent — no filter needed
+       since the hero is dark. */
+}
+.deck-slide.s-doc-page .lockup-divider {
+    color: rgba(255,255,255,0.45);
+    font: 300 18px/1 "Inter Display";
+}
+.deck-slide.s-doc-page .lockup-partner {
+    height: 22px;
+    max-width: 140px;
+    object-fit: contain;
+    /* Force partner logo white over the dark hero. */
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
+}
+.deck-slide.s-doc-page .page-num {
+    font: 500 9.5px/1 "Inter Display";
+    letter-spacing: 0.16em;
+    color: rgba(255,255,255,0.65);
+}
+.deck-slide.s-doc-page .hero-bottom {
+    /* heading goes here */
+}
+.deck-slide.s-doc-page .hero-label {
+    font: 500 10px/1 "Inter Display";
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 8px;
+}
+.deck-slide.s-doc-page .hero-heading {
+    font: 700 30px/1.12 "Inter Display";
+    letter-spacing: -0.05em;
+    color: #fff;
+    margin: 0;
+    max-width: 620px;
+    text-wrap: balance;
+}
+
+/* Body — flowing blocks below the hero */
+.deck-slide.s-doc-page .body {
+    padding: 28px 48px 36px;
+    flex: 1;
+    overflow: hidden;
+}
+.deck-slide.s-doc-page .blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.deck-slide.s-doc-page .b-h1 {
+    font: 700 16px/1.22 "Inter Display";
+    letter-spacing: -0.04em;
+    color: var(--t-fg);
+    margin: 4px 0 -2px;
+}
+.deck-slide.s-doc-page .b-h1:first-child { margin-top: 0; }
+.deck-slide.s-doc-page .b-h2 {
+    font: 600 12.5px/1.3 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg);
+    margin: 4px 0 -4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-doc-page .b-p {
+    font: 400 11px/1.55 "Inter Display";
+    letter-spacing: -0.003em;
+    color: var(--t-fg-2);
+    margin: 0;
+}
+.deck-slide.s-doc-page .b-ul,
+.deck-slide.s-doc-page .b-ol {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.deck-slide.s-doc-page .b-ul li,
+.deck-slide.s-doc-page .b-ol li {
+    font: 400 11.5px/1.5 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg-2);
+}
+.deck-slide.s-doc-page .b-kv {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 30% 1fr;
+    gap: 4px 12px;
+    border-top: 1px solid var(--t-hairline);
+    border-bottom: 1px solid var(--t-hairline);
+    padding: 10px 0;
+}
+.deck-slide.s-doc-page .b-kv .kv-row {
+    display: contents;
+}
+.deck-slide.s-doc-page .b-kv dt {
+    font: 600 10.5px/1.4 "Inter Display";
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-doc-page .b-kv dd {
+    font: 400 11.5px/1.5 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg);
+    margin: 0;
+}
+.deck-slide.s-doc-page .b-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-family: "Inter Display";
+}
+.deck-slide.s-doc-page .b-table th {
+    text-align: left;
+    padding: 6px 8px;
+    font: 600 10px/1.3 "Inter Display";
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t-fg-3);
+    border-bottom: 1px solid var(--t-fg);
+}
+.deck-slide.s-doc-page .b-table td {
+    padding: 6px 8px;
+    font: 400 11px/1.4 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg-2);
+    border-bottom: 1px solid var(--t-hairline);
+    vertical-align: top;
+}
+.deck-slide.s-doc-page .b-callout {
+    font: 400 11px/1.55 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg);
+    border-left: 2px solid var(--t-accent);
+    padding: 6px 0 6px 12px;
+}
+.deck-slide.s-doc-page .b-hr {
+    border: 0;
+    border-top: 1px solid var(--t-hairline);
+    margin: 4px 0;
+}
+
+/* ============================================================
+   DOC — McKinsey-grade dense layouts (Andrés Bilbao reference)
+   ============================================================ */
+
+/* All doc layouts share the same A4 paper feel — same header rhythm
+   as s-doc-section. CSS variables resolve to light-mode by default. */
+
+.deck-slide.s-doc-table,
+.deck-slide.s-doc-stats-hero,
+.deck-slide.s-doc-wall,
+.deck-slide.s-doc-spotlight {
+    padding: 56px 56px 64px;
+    display: flex;
+    flex-direction: column;
+}
+
+.deck-slide.s-doc-table .secheading,
+.deck-slide.s-doc-stats-hero .secheading,
+.deck-slide.s-doc-wall .secheading,
+.deck-slide.s-doc-spotlight .secheading {
+    font: 600 32px/1.18 "Inter Display";
+    letter-spacing: -0.025em;
+    color: var(--t-fg);
+    margin: 8px 0 0;
+}
+.deck-slide.s-doc-stats-hero .secheading .accent,
+.deck-slide.s-doc-wall .secheading .accent {
+    color: var(--t-accent);
+}
+
+/* ── doc-comparison-table — the "Lo que cada uno pone sobre la mesa" ── */
+.deck-slide.s-doc-table .table-wrap {
+    margin-top: 18px;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--t-card-border);
+    background: var(--t-card-bg);
+}
+.deck-slide.s-doc-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.deck-slide.s-doc-table thead tr {
+    background: var(--t-fg);
+    color: var(--t-canvas);
+}
+.deck-slide.s-doc-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font: 600 10.5px/1.2 "Inter Display";
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.deck-slide.s-doc-table th[scope="row"] {
+    background: var(--t-card-bg);
+    color: var(--t-fg);
+    font: 600 11px/1.3 "Inter Display";
+    letter-spacing: -0.005em;
+    text-transform: none;
+    width: 18%;
+    vertical-align: top;
+    border-right: 1px solid var(--t-card-border);
+}
+.deck-slide.s-doc-table td {
+    padding: 10px 12px;
+    vertical-align: top;
+    font: 400 9.5px/1.45 "Inter Display";
+    letter-spacing: -0.003em;
+    color: var(--t-fg-2);
+    border-top: 1px solid var(--t-card-border);
+    border-right: 1px solid var(--t-card-border);
+}
+.deck-slide.s-doc-table tr td:last-child,
+.deck-slide.s-doc-table tr th:last-child { border-right: 0; }
+.deck-slide.s-doc-table .cell-line {
+    display: grid;
+    grid-template-columns: 10px 1fr;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+.deck-slide.s-doc-table .cell-line:last-child { margin-bottom: 0; }
+.deck-slide.s-doc-table .cell-line .dash {
+    color: var(--t-fg-3);
+    font-weight: 600;
+}
+
+/* ── doc-stats-hero — big numbers + descriptive footer + headshots ── */
+.deck-slide.s-doc-stats-hero { background: var(--t-canvas); }
+.deck-slide.s-doc-stats-hero .secheading { max-width: 620px; margin-bottom: 6px; }
+.deck-slide.s-doc-stats-hero .hero-stats {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    border-top: 1px solid var(--t-hairline);
+    padding-top: 24px;
+}
+.deck-slide.s-doc-stats-hero .hero-stat .v {
+    font: 600 64px/1 "Inter Display";
+    letter-spacing: -0.045em;
+    color: var(--t-fg);
+}
+.deck-slide.s-doc-stats-hero .hero-stat .k {
+    margin-top: 8px;
+    font: 400 11px/1.4 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg-2);
+    max-width: 200px;
+}
+.deck-slide.s-doc-stats-hero .mentor-row {
+    margin-top: auto;
+    padding-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    border-top: 1px solid var(--t-hairline);
+}
+.deck-slide.s-doc-stats-hero .mentor-tile .portrait {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--t-card-bg);
+}
+.deck-slide.s-doc-stats-hero .mentor-tile .portrait img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+}
+.deck-slide.s-doc-stats-hero .mentor-tile .nm {
+    margin-top: 7px;
+    font: 600 10.5px/1.2 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-fg);
+}
+.deck-slide.s-doc-stats-hero .mentor-tile .rl {
+    margin-top: 2px;
+    font: 400 9px/1.35 "Inter Display";
+    color: var(--t-fg-3);
+}
+
+/* ── doc-mentor-wall — stats + portraits grid + brand strip ── */
+.deck-slide.s-doc-wall { background: var(--t-canvas); }
+.deck-slide.s-doc-wall .wall-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1.1fr;
+    gap: 28px;
+    margin-top: 18px;
+    flex: 1;
+}
+.deck-slide.s-doc-wall .left { display: flex; flex-direction: column; }
+.deck-slide.s-doc-wall .secheading { font-size: 26px; line-height: 1.2; max-width: 360px; }
+.deck-slide.s-doc-wall .wall-stats { margin-top: 24px; display: flex; flex-direction: column; gap: 14px; }
+.deck-slide.s-doc-wall .wall-stats .stat .v {
+    font: 600 36px/1 "Inter Display";
+    letter-spacing: -0.04em;
+    color: var(--t-fg);
+}
+.deck-slide.s-doc-wall .wall-stats .stat .k {
+    margin-top: 4px;
+    font: 400 10.5px/1.4 "Inter Display";
+    color: var(--t-fg-2);
+    max-width: 280px;
+}
+.deck-slide.s-doc-wall .countries {
+    margin-top: 18px;
+    font: 600 10.5px/1.4 "Inter Display";
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-doc-wall .ctx {
+    margin-top: 12px;
+    font: 400 11px/1.5 "Inter Display";
+    color: var(--t-fg-2);
+    max-width: 320px;
+}
+.deck-slide.s-doc-wall .brand-strip {
+    margin-top: auto;
+    padding-top: 18px;
+    border-top: 1px solid var(--t-hairline);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 18px;
+}
+.deck-slide.s-doc-wall .brand-strip img {
+    height: 18px;
+    max-width: 90px;
+    object-fit: contain;
+    filter: var(--t-client-logo-filter);
+    opacity: 0.85;
+}
+.deck-slide.s-doc-wall .brand-strip .brand-fallback {
+    font: 600 11px/1 "Inter Display";
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--t-fg-3);
+}
+.deck-slide.s-doc-wall .right { overflow: hidden; }
+.deck-slide.s-doc-wall .mentor-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+.deck-slide.s-doc-wall .m-tile {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--t-card-bg);
+}
+.deck-slide.s-doc-wall .m-tile img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+}
+
+/* ── doc-mentor-spotlight — single mentor with bio ── */
+.deck-slide.s-doc-spotlight { background: var(--t-canvas); }
+.deck-slide.s-doc-spotlight .spotlight-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr);
+    gap: 24px;
+    margin-top: 18px;
+    flex: 1;
+}
+.deck-slide.s-doc-spotlight .portrait {
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--t-card-bg);
+}
+.deck-slide.s-doc-spotlight .portrait img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+}
+.deck-slide.s-doc-spotlight .bio { display: flex; flex-direction: column; }
+.deck-slide.s-doc-spotlight .secheading { font-size: 32px; }
+.deck-slide.s-doc-spotlight .role {
+    margin-top: 4px;
+    font: 400 12px/1.4 "Inter Display";
+    color: var(--t-fg-2);
+}
+.deck-slide.s-doc-spotlight .badges {
+    margin-top: 14px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+}
+.deck-slide.s-doc-spotlight .badge {
+    font: 600 9.5px/1 "Inter Display";
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--t-pill-bg);
+    color: var(--t-pill-fg);
+    border: 1px solid var(--t-pill-border);
+}
+.deck-slide.s-doc-spotlight .sections {
+    margin-top: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+.deck-slide.s-doc-spotlight .bio-section .t {
+    font: 600 12px/1.2 "Inter Display";
+    letter-spacing: -0.005em;
+    color: var(--t-accent);
+    margin: 0 0 3px;
+}
+.deck-slide.s-doc-spotlight .bio-section .d {
+    font: 400 10.5px/1.5 "Inter Display";
+    color: var(--t-fg-2);
+    margin: 0;
+}
+.deck-slide.s-doc-spotlight .credentials {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--t-hairline);
+    font: 400 9.5px/1.4 "Inter Display";
+    color: var(--t-fg-3);
+    letter-spacing: -0.005em;
 }

@@ -34,16 +34,44 @@ const STAGE_VARS_DARK = `
     --t-pill-fg: #E9FF7B;
     --t-pill-border: #E9FF7B;
     --t-logo-filter: none;
+    --t-client-logo-filter: brightness(0) invert(1);
     --t-icon-fg: #E9FF7B;
     --t-icon-bg: transparent;
+    --t-accent: #E9FF7B;
+    --t-accent-fg: #0a0a0a;
 `;
 
-function pageCss(width: number, height: number): string {
+const STAGE_VARS_LIGHT = `
+    --t-canvas: #ffffff;
+    --t-fg: #0a0a0a;
+    --t-fg-2: rgba(10,10,10,0.78);
+    --t-fg-3: rgba(10,10,10,0.55);
+    --t-fg-4: rgba(10,10,10,0.4);
+    --t-card-bg: #fafafa;
+    --t-card-border: rgba(0,0,0,0.08);
+    --t-hairline: rgba(0,0,0,0.1);
+    --t-overlay-top: rgba(0,0,0,0.15);
+    --t-overlay-mid: rgba(0,0,0,0.05);
+    --t-overlay-bottom: rgba(0,0,0,0.65);
+    --t-pill-bg: rgba(0,0,0,0.04);
+    --t-pill-fg: #0a0a0a;
+    --t-pill-border: rgba(0,0,0,0.1);
+    --t-logo-filter: brightness(0) invert(0);
+    --t-client-logo-filter: none;
+    --t-icon-fg: #0a0a0a;
+    --t-icon-bg: rgba(0,0,0,0.04);
+    --t-accent: #0a0a0a;
+    --t-accent-fg: #ffffff;
+`;
+
+function pageCss(width: number, height: number, theme: "dark" | "light"): string {
+    const vars = theme === "light" ? STAGE_VARS_LIGHT : STAGE_VARS_DARK;
+    const bodyBg = theme === "light" ? "#fff" : "#000";
     return `
         @page { size: ${width}px ${height}px; margin: 0; }
         html, body {
             margin: 0; padding: 0;
-            background: #000;
+            background: ${bodyBg};
             font-family: "Inter Display", Inter, -apple-system, BlinkMacSystemFont, sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -57,7 +85,7 @@ function pageCss(width: number, height: number): string {
             overflow: hidden;
             page-break-after: always;
             break-after: page;
-            ${STAGE_VARS_DARK}
+            ${vars}
             background: var(--t-canvas);
             color: var(--t-fg);
         }
@@ -125,12 +153,13 @@ export async function renderDeckHtml(deck: Deck, absoluteBase: string): Promise<
         })
         .join("\n");
 
-    const css = pageCss(width, height) + "\n" + readDeckCss();
+    const css = pageCss(width, height, deck.theme ?? "light") + "\n" + readDeckCss();
 
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
+    <base href="${absoluteBase}/" />
     <title>${escapeHtml(deck.deckTitle ?? "30X Design")}</title>
     <style>${css}</style>
 </head>

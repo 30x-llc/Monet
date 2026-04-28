@@ -9,6 +9,108 @@ import { FORMATS } from "@/lib/slide-types";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
+import { BriefingDropZone } from "./briefing-drop-zone";
+import type { SuperPromptFormat } from "@/lib/super-prompt";
+
+/**
+ * Shared handlers hook for the briefing drop zone — used by every
+ * format that supports file upload + super-prompt (proposal, doc, ...).
+ * Reads files as text, accepts paste from clipboard, copies a
+ * format-aware super-prompt to clipboard.
+ */
+function useBriefingHandlers(args: {
+    clientName: string;
+    projectName: string;
+    format: SuperPromptFormat;
+    setBriefing: (s: string) => void;
+    setBriefingFile: (s: string | null) => void;
+    setParsing?: (b: boolean) => void;
+    setParseError?: (s: string | null) => void;
+}) {
+    const {
+        clientName,
+        projectName,
+        format,
+        setBriefing,
+        setBriefingFile,
+        setParsing,
+        setParseError,
+    } = args;
+
+    const onFile = useCallback(
+        async (file: File) => {
+            // Two-step upload — bypasses the 4.5MB serverless body limit:
+            //   1. Client uploads file directly to Vercel Blob using a
+            //      short-lived token (no function in the middle).
+            //   2. Send the resulting URL to /api/parse-briefing which
+            //      fetches from Blob, parses, returns text, deletes Blob.
+            //
+            // Result: drops of 200MB PPTX, 50MB PDF — all work.
+            setParseError?.(null);
+            setParsing?.(true);
+            try {
+                const { upload } = await import("@vercel/blob/client");
+                const blob = await upload(file.name, file, {
+                    access: "public",
+                    handleUploadUrl: "/api/parse-briefing/upload",
+                });
+
+                const res = await fetch("/api/parse-briefing", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        url: blob.url,
+                        fileName: file.name,
+                        mimeType: file.type,
+                    }),
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    setParseError?.(data.error || "No pude parsear el archivo.");
+                    return;
+                }
+                setBriefing(data.text);
+                setBriefingFile(`${data.fileName} · ${data.kind}`);
+            } catch (err) {
+                setParseError?.(String(err));
+            } finally {
+                setParsing?.(false);
+            }
+        },
+        [setBriefing, setBriefingFile, setParsing, setParseError],
+    );
+
+    const onPaste = useCallback(async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text.trim().length > 50) {
+                setBriefing(text);
+                setBriefingFile("(pegado del portapapeles)");
+            }
+        } catch {
+            /* user denied clipboard read; ignore */
+        }
+    }, [setBriefing, setBriefingFile]);
+
+    const onCopySuperPrompt = useCallback(async () => {
+        const { buildSuperPrompt } = await import("@/lib/super-prompt");
+        const prompt = buildSuperPrompt({
+            clientName: clientName || projectName,
+            format,
+        });
+        try {
+            await navigator.clipboard.writeText(prompt);
+        } catch {
+            alert(
+                "No pude copiar al portapapeles. Selecciona manualmente:\n\n" +
+                    prompt.slice(0, 300) +
+                    "...",
+            );
+        }
+    }, [clientName, projectName, format]);
+
+    return { onFile, onPaste, onCopySuperPrompt };
+}
 
 type Theme = "dark" | "light";
 type PrototypeKind = "app" | "landing" | "component";
@@ -24,6 +126,14 @@ export interface CreateArgs {
     prototypeKind?: PrototypeKind;
     docKind?: DocKind;
     freePrompt?: string;
+    /** Markdown / plain-text briefing the salesperson generated with
+     *  an LLM via the super-prompt and uploaded here. Piped into Exa
+     *  research notes + generator prompt. */
+    briefing?: string;
+    /** Additional notes the salesperson typed in the form — replaces
+     *  the older two-box "Contexto inicial" + "Algo más que deba saber"
+     *  pattern with a single optional context field. */
+    notes?: string;
 }
 
 export interface HomeSeed {
@@ -52,14 +162,23 @@ interface HomeViewProps {
 
 type TabId = "prototype" | "proposal" | "carousel-ig" | "story-ig" | "doc" | "template" | "other";
 
-const TAB_DEFS: { id: TabId; label: string; icon: ReactNode }[] = [
-    { id: "prototype", label: "Prototipo", icon: <IconPrototype /> },
+interface TabDef {
+    id: TabId;
+    label: string;
+    icon: ReactNode;
+    /** When true, the tab is visible to build expectation but not
+     *  selectable. Hover shows "Pronto" badge. Click is a no-op. */
+    comingSoon?: boolean;
+}
+
+const TAB_DEFS: TabDef[] = [
     { id: "proposal", label: "Propuesta", icon: <IconSlide /> },
-    { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel /> },
-    { id: "story-ig", label: "Historia", icon: <IconStory /> },
     { id: "doc", label: "Documento", icon: <IconDoc /> },
     { id: "template", label: "Plantilla", icon: <IconTemplate /> },
-    { id: "other", label: "Otro", icon: <IconSpark /> },
+    { id: "prototype", label: "Prototipo", icon: <IconPrototype /> },
+    { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel />, comingSoon: true },
+    { id: "story-ig", label: "Historia", icon: <IconStory />, comingSoon: true },
+    { id: "other", label: "Otro", icon: <IconSpark />, comingSoon: true },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -98,9 +217,6 @@ export function HomeView({
                     <div className="flex items-center gap-2">
                         <Logo30x variant="dark" className="h-3.5" />
                         <span className="text-[11px] font-medium text-[#737373]">Design</span>
-                        <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-[0.06em] uppercase text-[#525252] bg-black/[0.04]">
-                            Research Preview
-                        </span>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <SearchInput value={query} onChange={setQuery} />
@@ -188,9 +304,12 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
                     <TabButton
                         key={t.id}
                         active={tab === t.id}
-                        onClick={() => onTabChange(t.id)}
+                        onClick={() => {
+                            if (!t.comingSoon) onTabChange(t.id);
+                        }}
                         label={t.label}
                         icon={t.icon}
+                        comingSoon={t.comingSoon}
                     />
                 ))}
             </div>
@@ -208,7 +327,7 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
                     {tab === "prototype" ? (
                         <PrototypeForm onOpenIntake={onOpenIntake} />
                     ) : tab === "proposal" ? (
-                        <ProposalForm onOpenIntake={onOpenIntake} />
+                        <ProposalForm onCreate={onCreate} />
                     ) : tab === "carousel-ig" ? (
                         <ContentForm
                             format="carousel-ig"
@@ -222,7 +341,7 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
                             topicPlaceholder="Ej: Apertura cohort Sales Machine"
                         />
                     ) : tab === "doc" ? (
-                        <DocForm onOpenIntake={onOpenIntake} />
+                        <DocForm onCreate={onCreate} />
                     ) : tab === "template" ? (
                         <TemplateGrid onOpenTemplate={onOpenTemplate} />
                     ) : (
@@ -239,24 +358,35 @@ function TabButton({
     onClick,
     label,
     icon,
+    comingSoon,
 }: {
     active: boolean;
     onClick: () => void;
     label: string;
     icon: ReactNode;
+    comingSoon?: boolean;
 }) {
     return (
         <button
             onClick={onClick}
-            className={`relative h-9 px-3 flex items-center gap-1.5 text-[12.5px] tracking-[-0.005em] transition-[color,background-color] duration-150 rounded-t-lg whitespace-nowrap ${
-                active
-                    ? "bg-white text-[#0a0a0a] font-semibold border border-black/[0.06] border-b-transparent"
-                    : "text-[#737373] hover:text-[#0a0a0a] font-medium"
+            disabled={comingSoon}
+            title={comingSoon ? "Pronto" : undefined}
+            className={`relative h-9 px-3 flex items-center gap-1.5 text-[12.5px] tracking-[-0.005em] transition-[color,background-color,opacity] duration-150 rounded-t-lg whitespace-nowrap ${
+                comingSoon
+                    ? "text-[#a3a3a3] cursor-not-allowed opacity-60 font-medium"
+                    : active
+                      ? "bg-white text-[#0a0a0a] font-semibold border border-black/[0.06] border-b-transparent"
+                      : "text-[#737373] hover:text-[#0a0a0a] font-medium"
             }`}
             style={{ transitionTimingFunction: "var(--ease-out)" }}
         >
             <span className="w-3.5 h-3.5 flex items-center justify-center text-current">{icon}</span>
             {label}
+            {comingSoon ? (
+                <span className="ml-0.5 px-1 py-0.5 rounded text-[8.5px] font-bold tracking-[0.06em] uppercase text-[#0a0a0a] bg-[#E9FF7B] leading-none">
+                    Pronto
+                </span>
+            ) : null}
             {active ? (
                 // Hide the 1px border line where the active tab meets the card
                 <span
@@ -310,12 +440,32 @@ function PrototypeForm({
 }
 
 function ProposalForm({
-    onOpenIntake,
+    onCreate,
 }: {
-    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+    onCreate: (args: CreateArgs) => void;
 }) {
-    const [name, setName] = useState("");
-    const canStart = name.trim().length > 1;
+    const [projectName, setProjectName] = useState("");
+    const [clientName, setClientName] = useState("");
+    const [briefing, setBriefing] = useState<string>("");
+    const [briefingFile, setBriefingFile] = useState<string | null>(null);
+    const [notes, setNotes] = useState("");
+    const [parsing, setParsing] = useState(false);
+    const [parseError, setParseError] = useState<string | null>(null);
+
+    const canStart =
+        projectName.trim().length > 1 &&
+        clientName.trim().length > 1 &&
+        !parsing;
+
+    const { onFile, onPaste, onCopySuperPrompt } = useBriefingHandlers({
+        clientName,
+        projectName,
+        format: "proposal",
+        setBriefing,
+        setBriefingFile,
+        setParsing,
+        setParseError,
+    });
 
     return (
         <FormSurface
@@ -324,10 +474,45 @@ function ProposalForm({
         >
             <Field label="Nombre del proyecto">
                 <TextInput
-                    value={name}
-                    onChange={setName}
-                    placeholder="Ej: Propuesta Colsubsidio Q2 · Speaker Dylan · Partnership Bavaria…"
+                    value={projectName}
+                    onChange={setProjectName}
+                    placeholder="Ej: Propuesta Aeroméxico Q2 · Speaker Dylan · Partnership Bavaria…"
                     autoFocus
+                />
+            </Field>
+
+            <Field label="Cliente / empresa">
+                <TextInput
+                    value={clientName}
+                    onChange={setClientName}
+                    placeholder="Ej: Aeroméxico · Bancolombia · Action Black"
+                />
+            </Field>
+
+            <BriefingDropZone
+                briefing={briefing}
+                briefingFile={briefingFile}
+                clientName={clientName}
+                format="proposal"
+                parsing={parsing}
+                parseError={parseError}
+                onFile={onFile}
+                onPaste={onPaste}
+                onClear={() => {
+                    setBriefing("");
+                    setBriefingFile(null);
+                    setParseError(null);
+                }}
+                onCopySuperPrompt={onCopySuperPrompt}
+            />
+
+            <Field label="Notas adicionales — opcional">
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Algo del call que el brief no cubre, restricciones, frase del cliente, deadline..."
+                    className="w-full px-3 py-2 rounded-lg border border-black/[0.09] bg-white text-[13px] tracking-[-0.005em] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-2 focus:ring-black/[0.04] resize-none"
                 />
             </Field>
 
@@ -339,12 +524,24 @@ function ProposalForm({
                     accent: true,
                     disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake("proposal", { clientName: name.trim() }),
+                        onCreate({
+                            format: "proposal",
+                            clientName: clientName.trim(),
+                            programId: "",
+                            corporateMode: true,
+                            theme: "light",
+                            topic: projectName.trim(),
+                            briefing: briefing.trim() || undefined,
+                            notes: notes.trim() || undefined,
+                        }),
                 }}
             />
         </FormSurface>
     );
 }
+
+// BriefingDropZone moved to ./briefing-drop-zone.tsx — reused across
+// Propuesta, Documento, etc.
 
 function ContentForm({
     format,
@@ -381,24 +578,79 @@ function ContentForm({
 }
 
 function DocForm({
-    onOpenIntake,
+    onCreate,
 }: {
-    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+    onCreate: (args: CreateArgs) => void;
 }) {
-    const [name, setName] = useState("");
-    const canStart = name.trim().length > 1;
+    const [projectName, setProjectName] = useState("");
+    const [clientName, setClientName] = useState("");
+    const [briefing, setBriefing] = useState<string>("");
+    const [briefingFile, setBriefingFile] = useState<string | null>(null);
+    const [notes, setNotes] = useState("");
+    const [parsing, setParsing] = useState(false);
+    const [parseError, setParseError] = useState<string | null>(null);
+
+    const canStart =
+        projectName.trim().length > 1 &&
+        clientName.trim().length > 1 &&
+        !parsing;
+
+    const { onFile, onPaste, onCopySuperPrompt } = useBriefingHandlers({
+        clientName,
+        projectName,
+        format: "doc",
+        setBriefing,
+        setBriefingFile,
+        setParsing,
+        setParseError,
+    });
 
     return (
         <FormSurface
             title="Nuevo documento"
-            subtitle="A4 para propuestas, contratos, briefs y one-pagers."
+            subtitle="A4 para contratos, briefs, one-pagers y propuestas cortas."
         >
             <Field label="Nombre del proyecto">
                 <TextInput
-                    value={name}
-                    onChange={setName}
-                    placeholder="Ej: Contrato 30X — Bancolombia"
+                    value={projectName}
+                    onChange={setProjectName}
+                    placeholder="Ej: Contrato 30X — Aeroméxico · Brief Davivienda"
                     autoFocus
+                />
+            </Field>
+
+            <Field label="Cliente / contraparte">
+                <TextInput
+                    value={clientName}
+                    onChange={setClientName}
+                    placeholder="Ej: Aeroméxico · Bancolombia · Action Black"
+                />
+            </Field>
+
+            <BriefingDropZone
+                briefing={briefing}
+                briefingFile={briefingFile}
+                clientName={clientName}
+                format="doc"
+                parsing={parsing}
+                parseError={parseError}
+                onFile={onFile}
+                onPaste={onPaste}
+                onClear={() => {
+                    setBriefing("");
+                    setBriefingFile(null);
+                    setParseError(null);
+                }}
+                onCopySuperPrompt={onCopySuperPrompt}
+            />
+
+            <Field label="Notas adicionales — opcional">
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Plazo, condiciones especiales, frase del cliente, restricciones legales..."
+                    className="w-full px-3 py-2 rounded-lg border border-black/[0.09] bg-white text-[13px] tracking-[-0.005em] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-2 focus:ring-black/[0.04] resize-none"
                 />
             </Field>
 
@@ -410,7 +662,16 @@ function DocForm({
                     accent: true,
                     disabled: !canStart,
                     onClick: () =>
-                        onOpenIntake("doc", { clientName: name.trim() }),
+                        onCreate({
+                            format: "doc",
+                            clientName: clientName.trim(),
+                            programId: "",
+                            corporateMode: false,
+                            theme: "light",
+                            topic: projectName.trim(),
+                            briefing: briefing.trim() || undefined,
+                            notes: notes.trim() || undefined,
+                        }),
                 }}
             />
         </FormSurface>

@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Deck } from "@/lib/slide-types";
-import { exportDeckAsPdf, exportDeckToCanva, exportDeckAsHtml, exportDeckAsZip } from "@/lib/export/exporters";
+import { exportDeckAsPdf, exportDeckAsHtml, exportDeckAsZip } from "@/lib/export/exporters";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
+import { CanvaExportPanel } from "./canva-export-panel";
 
 interface ExportMenuProps {
     deck: Deck;
@@ -26,6 +27,7 @@ export function ExportMenu({
 }: ExportMenuProps) {
     const [open, setOpen] = useState(false);
     const [state, setState] = useState<ExportState>({ kind: "idle" });
+    const [canvaOpen, setCanvaOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -106,10 +108,13 @@ export function ExportMenu({
                             onClick={() => { setOpen(false); onExportPptx(); }}
                         />
                         <MenuItem
-                            icon={<ExternalIcon />}
-                            label="Enviar a Canva…"
-                            hint="Descarga PDF y abre Canva"
-                            onClick={() => runClientExport("Canva", exportDeckToCanva)}
+                            icon={<CanvaBadge />}
+                            label="Abrir en Canva…"
+                            hint="PDF + import"
+                            onClick={() => {
+                                setOpen(false);
+                                setCanvaOpen(true);
+                            }}
                         />
                         <MenuItem
                             icon={<HtmlIcon />}
@@ -124,7 +129,29 @@ export function ExportMenu({
                     </MenuSection>
                 </div>
             )}
+
+            {canvaOpen && (
+                <CanvaExportPanel deck={deck} onClose={() => setCanvaOpen(false)} />
+            )}
         </div>
+    );
+}
+
+function CanvaBadge() {
+    return (
+        <svg width="15" height="15" viewBox="0 0 100 100" aria-hidden>
+            <defs>
+                <linearGradient id="cg-menu" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#00c4cc" />
+                    <stop offset="100%" stopColor="#7d2ae8" />
+                </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="50" fill="url(#cg-menu)" />
+            <path
+                d="M34.5 44.5c0-8 5-13 12-13 6 0 10 4 11 10h-7c-.5-2-2-4-4-4-3 0-5 3-5 7s2 7 5 7c2 0 3.5-1.5 4-4h7c-1 6-5 10-11 10-7 0-12-5-12-13z"
+                fill="#fff"
+            />
+        </svg>
     );
 }
 

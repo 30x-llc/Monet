@@ -65,7 +65,7 @@ function getSlideItems(slide: Slide): string[] {
   if ("stats" in slide && slide.stats) return slide.stats.map((s: { label: string; value: string }) => `${s.value} · ${s.label}`);
   if ("bullets" in slide && Array.isArray(slide.bullets)) return slide.bullets as string[];
   if ("checklist" in slide && slide.checklist) return slide.checklist as string[];
-  if ("mentors" in slide && Array.isArray(slide.mentors)) return slide.mentors.map((m: { name: string }) => m.name);
+  if ("mentors" in slide && Array.isArray(slide.mentors)) return slide.mentors.map((m: { name?: string }) => m.name ?? "");
   return [];
 }
 

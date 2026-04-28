@@ -18,6 +18,7 @@ REGLAS:
      "revolucionario", "disruptivo", "ecosistema", "AI-powered", "10x"
    - Nunca mayúsculas en frases completas
    - Nunca italic, nunca "Word. Word. Word." staccato
+   - PROHIBIDO em-dash (—) y en-dash (–) en CUALQUIER texto. Usa coma, punto, dos puntos o paréntesis.
 4. Si el usuario pide agregar un slide, insertalo en la posición lógica.
 5. Si el usuario pide eliminar un slide, eliminalo pero mantén entre 5-9 slides.
 6. Si el usuario pide cambiar el tipo de un slide, adapta los campos al nuevo tipo.

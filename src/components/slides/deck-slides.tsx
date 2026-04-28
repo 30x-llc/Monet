@@ -22,10 +22,16 @@ import type {
     StoryTextSlide,
     DocCoverSlide,
     DocSectionSlide,
+    DocPageSlide,
+    DocBlock,
+    DocComparisonTableSlide,
+    DocStatsHeroSlide,
+    DocMentorWallSlide,
+    DocMentorSpotlightSlide,
     PrototypeFrameSlide,
     Slide,
 } from "@/lib/slide-types";
-import { getMentorImage, BRAND_ASSETS, getCompanyLogo } from "@/lib/assets";
+import { getMentorImage, BRAND_ASSETS, getCompanyLogo, getImmersivePhoto } from "@/lib/assets";
 
 const LOGO_LIGHT = BRAND_ASSETS.logoLight;
 const LOGO_ACCENT = BRAND_ASSETS.logoAccent;
@@ -143,7 +149,18 @@ function LogoMarks({ clientLogoUrl }: { clientLogoUrl?: string }) {
     return (
         <>
             <img className="logo-mark" src={LOGO_LIGHT} alt="30X" />
-            {clientLogoUrl ? <img className="client-logo" src={clientLogoUrl} alt="Cliente" /> : null}
+            {clientLogoUrl ? (
+                <img
+                    className="client-logo"
+                    src={clientLogoUrl}
+                    alt="Cliente"
+                    onError={(e) => {
+                        // Hide a broken partner logo rather than showing
+                        // the default "broken image" icon in the top-right.
+                        e.currentTarget.style.display = "none";
+                    }}
+                />
+            ) : null}
         </>
     );
 }
@@ -181,13 +198,121 @@ export function CoverHero({ slide, clientLogoUrl }: { slide: CoverHeroSlide; cli
 }
 
 export function CorporateCover({ slide, clientLogoUrl }: { slide: CorporateCoverSlide; clientLogoUrl?: string }) {
+    const variant = slide.variant ?? "recognition";
+    if (variant === "split") return <CorporateCoverSplit slide={slide} clientLogoUrl={clientLogoUrl} />;
+    if (variant === "bleed") return <CorporateCoverBleed slide={slide} clientLogoUrl={clientLogoUrl} />;
+    return <CorporateCoverRecognition slide={slide} clientLogoUrl={clientLogoUrl} />;
+}
+
+/**
+ * Recognition cover — the canonical Andrés Bilbao corporate proposal
+ * pattern. "30X reconoce a [X] como [POSITIONING] y quiere [PROPOSITION]."
+ *
+ * Layout: full-bleed dark photo + partner logo big top-left + 30X
+ * top-right + headline center-left with one accent phrase + 1–3 body
+ * paragraphs below. The whole slide reads like an opening letter.
+ */
+function CorporateCoverRecognition({
+    slide,
+    clientLogoUrl,
+}: {
+    slide: CorporateCoverSlide;
+    clientLogoUrl?: string;
+}) {
+    const bg = slide.backgroundImage || PORTADA;
+    const accent = slide.headlineAccent?.trim();
+    const paragraphs = (slide.bodyParagraphs ?? []).filter(Boolean);
+
+    // Split the headline so we can wrap the accent substring in a
+    // styled span while preserving the rest of the text. If the accent
+    // isn't found in the headline we just render the headline as-is.
+    let headlineNodes: ReactNode = slide.headline;
+    if (accent && slide.headline.includes(accent)) {
+        const idx = slide.headline.indexOf(accent);
+        const before = slide.headline.slice(0, idx);
+        const after = slide.headline.slice(idx + accent.length);
+        headlineNodes = (
+            <>
+                {before}
+                <span className="accent">{accent}</span>
+                {after}
+            </>
+        );
+    }
+
+    return (
+        <section className="deck-slide s-corp-recognition">
+            <div className="bg-img">
+                <img
+                    src={bg}
+                    alt=""
+                    onError={(e) => {
+                        const img = e.currentTarget;
+                        if (img.src !== PORTADA) img.src = PORTADA;
+                    }}
+                />
+            </div>
+            {/* Custom corner marks instead of the shared LogoMarks so we
+                can size the partner logo big like Andrés's reference. */}
+            {clientLogoUrl ? (
+                <img
+                    className="partner-mark"
+                    src={clientLogoUrl}
+                    alt="Partner"
+                    onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                    }}
+                />
+            ) : null}
+            <img className="brand-mark" src={LOGO_LIGHT} alt="30X" />
+            <div className="content">
+                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
+                <h1 className="headline">{headlineNodes}</h1>
+                {paragraphs.length > 0 ? (
+                    <div className="body">
+                        {paragraphs.map((p, i) => (
+                            <p key={i}>{p}</p>
+                        ))}
+                    </div>
+                ) : slide.subtitle ? (
+                    <div className="body">
+                        <p>{slide.subtitle}</p>
+                    </div>
+                ) : null}
+            </div>
+            {slide.date ? <div className="date">{slide.date}</div> : null}
+        </section>
+    );
+}
+
+function CorporateCoverBleed({ slide, clientLogoUrl }: { slide: CorporateCoverSlide; clientLogoUrl?: string }) {
     const bg = slide.backgroundImage || PORTADA;
     return (
         <section className="deck-slide s-corp-cover">
             <div className="bg-img">
-                <img src={bg} alt="" />
+                <img
+                    src={bg}
+                    alt=""
+                    onError={(e) => {
+                        // Hero URLs from web_search sometimes expire or 404.
+                        // Fall back to the 30x portada so the cover never
+                        // renders as a broken image icon.
+                        const img = e.currentTarget;
+                        if (img.src !== PORTADA) img.src = PORTADA;
+                    }}
+                />
             </div>
             <LogoMarks clientLogoUrl={clientLogoUrl} />
+            {clientLogoUrl ? (
+                <img
+                    className="hero-client-logo"
+                    src={clientLogoUrl}
+                    alt="Partner"
+                    onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                    }}
+                />
+            ) : null}
             <div className="title-wrap">
                 {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
                 <h1 className="h-cover">{slide.headline}</h1>
@@ -198,7 +323,50 @@ export function CorporateCover({ slide, clientLogoUrl }: { slide: CorporateCover
     );
 }
 
+function CorporateCoverSplit({ slide, clientLogoUrl }: { slide: CorporateCoverSlide; clientLogoUrl?: string }) {
+    const bg = slide.backgroundImage || PORTADA;
+    return (
+        <section className="deck-slide s-corp-cover-split">
+            <LogoMarks clientLogoUrl={clientLogoUrl} />
+            <div className="left">
+                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
+                <h1 className="h-cover">{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
+                {slide.date ? <div className="date">{slide.date}</div> : null}
+                {clientLogoUrl ? (
+                    <div className="partner-strip">
+                        <span className="partner-label">Para</span>
+                        <img
+                            src={clientLogoUrl}
+                            alt="Partner"
+                            onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                            }}
+                        />
+                    </div>
+                ) : null}
+            </div>
+            <div className="right">
+                <img
+                    src={bg}
+                    alt=""
+                    onError={(e) => {
+                        const img = e.currentTarget;
+                        if (img.src !== PORTADA) img.src = PORTADA;
+                    }}
+                />
+            </div>
+        </section>
+    );
+}
+
 export function IntroMentors({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; clientLogoUrl?: string }) {
+    const variant = slide.variant ?? "split";
+    if (variant === "grid") return <IntroMentorsGrid slide={slide} clientLogoUrl={clientLogoUrl} />;
+    return <IntroMentorsSplit slide={slide} clientLogoUrl={clientLogoUrl} />;
+}
+
+function IntroMentorsSplit({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; clientLogoUrl?: string }) {
     const mentors = Array.isArray(slide.mentors) ? slide.mentors : [];
     const angles = Array.isArray(slide.angles) ? slide.angles : [];
     const singleCol = mentors.length <= 2;
@@ -238,6 +406,45 @@ export function IntroMentors({ slide, clientLogoUrl }: { slide: IntroMentorsSlid
                                 ) : null}
                                 <h3 className="name">{m.name}</h3>
                                 <p className="role">{m.role}</p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function IntroMentorsGrid({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; clientLogoUrl?: string }) {
+    const mentors = Array.isArray(slide.mentors) ? slide.mentors : [];
+    // 6 max in a 3x2 grid; fall back to 4 in 2x2 if fewer provided.
+    const visible = mentors.slice(0, 6);
+    const cols = visible.length <= 4 ? 2 : 3;
+    return (
+        <section className="deck-slide s-intro-grid">
+            <LogoMarks clientLogoUrl={clientLogoUrl} />
+            <div className="head">
+                {slide.pill ? <div className="eyebrow">{slide.pill}</div> : null}
+                <h2 className="h-title">{slide.title}</h2>
+                {slide.description ? <p className="lead p-lead">{slide.description}</p> : null}
+            </div>
+            <div className="m-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                {visible.map((m, i) => {
+                    const companyLogo = m.companyLogo || getCompanyLogo(m.company);
+                    return (
+                        <div key={i} className="m-tile">
+                            <div className="portrait">
+                                <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                            </div>
+                            <div className="meta">
+                                <h3 className="name">{m.name}</h3>
+                                <p className="role">{m.role}</p>
+                                {m.company ? (
+                                    <div className="company">
+                                        {companyLogo ? <img src={companyLogo} alt="" /> : null}
+                                        <span>{m.company}</span>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     );
@@ -386,6 +593,12 @@ export function Methodology({ slide, clientLogoUrl }: { slide: MethodologySlide;
 }
 
 export function Impact({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLogoUrl?: string }) {
+    const variant = slide.variant ?? "stats-row";
+    if (variant === "hero-number") return <ImpactHeroNumber slide={slide} clientLogoUrl={clientLogoUrl} />;
+    return <ImpactStatsRow slide={slide} clientLogoUrl={clientLogoUrl} />;
+}
+
+function ImpactStatsRow({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLogoUrl?: string }) {
     return (
         <section className="deck-slide s-impact">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
@@ -405,7 +618,44 @@ export function Impact({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLog
     );
 }
 
+function ImpactHeroNumber({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLogoUrl?: string }) {
+    const stats = Array.isArray(slide.stats) ? slide.stats : [];
+    const [hero, ...supporting] = stats;
+    return (
+        <section className="deck-slide s-impact-hero">
+            <LogoMarks clientLogoUrl={clientLogoUrl} />
+            {slide.subtitle ? <div className="eyebrow">{slide.subtitle}</div> : null}
+            <h2 className="h-title">{slide.headline}</h2>
+            {hero ? (
+                <div className="hero-stat">
+                    <div className="v">{hero.value}</div>
+                    <p className="k">{hero.label}</p>
+                </div>
+            ) : null}
+            {slide.heroContext ? <p className="context">{slide.heroContext}</p> : null}
+            {supporting.length > 0 ? (
+                <div className="supporting">
+                    {supporting.slice(0, 3).map((s, i) => (
+                        <div key={i} className="stat">
+                            <div className="v">{s.value}</div>
+                            <p className="k">{s.label}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
 export function PricingCta({ slide, clientLogoUrl }: { slide: PricingCtaSlide; clientLogoUrl?: string }) {
+    const variant = slide.variant ?? "split";
+    if (variant === "package" && slide.packages && slide.packages.length > 0) {
+        return <PricingCtaPackage slide={slide} clientLogoUrl={clientLogoUrl} />;
+    }
+    return <PricingCtaSplit slide={slide} clientLogoUrl={clientLogoUrl} />;
+}
+
+function PricingCtaSplit({ slide, clientLogoUrl }: { slide: PricingCtaSlide; clientLogoUrl?: string }) {
     return (
         <section className="deck-slide s-invest">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
@@ -446,7 +696,66 @@ export function PricingCta({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
     );
 }
 
+function PricingCtaPackage({ slide, clientLogoUrl }: { slide: PricingCtaSlide; clientLogoUrl?: string }) {
+    const packages = (slide.packages ?? []).slice(0, 2);
+    return (
+        <section className="deck-slide s-invest-pkg">
+            <LogoMarks clientLogoUrl={clientLogoUrl} />
+            <div className="head">
+                <h2 className="h-title">{slide.headline}</h2>
+            </div>
+            <div className="pkg-grid">
+                {packages.map((pkg, i) => (
+                    <div key={i} className={`pkg${pkg.highlighted ? " is-hero" : ""}`}>
+                        {pkg.highlighted ? <div className="ribbon">Recomendado</div> : null}
+                        <div className="pkg-name">{pkg.name}</div>
+                        {pkg.tagline ? <div className="pkg-tag">{pkg.tagline}</div> : null}
+                        <div className="pkg-price">
+                            <span className="big">{pkg.price}</span>
+                            {pkg.priceNote ? <span className="pay">{pkg.priceNote}</span> : null}
+                        </div>
+                        <ul className="pkg-features">
+                            {pkg.features.slice(0, 6).map((f, fi) => (
+                                <li key={fi}>{f}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+            {slide.contact ? (
+                <div className="pkg-contact">
+                    <span className="cn">{slide.contact.name}</span>
+                    <span className="cr">· {slide.contact.role}</span>
+                    <span className="cm">· {slide.contact.details}</span>
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
 export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; clientLogoUrl?: string }) {
+    // Closing slide for proposals: full-bleed Portada Oficial 30x background
+    // with a centered "30X | <partner-logo>" lockup. Falls back to the legacy
+    // globe + headline layout when there is no partner logo.
+    if (clientLogoUrl) {
+        return (
+            <section className="deck-slide s-end-portada">
+                <div className="bg">
+                    <img src={PORTADA} alt="" />
+                    <div className="overlay" />
+                </div>
+                <div className="lockup">
+                    <img className="lockup-30x" src={LOGO_LIGHT} alt="30X" />
+                    <span className="lockup-divider" aria-hidden />
+                    <img className="lockup-partner" src={clientLogoUrl} alt="" />
+                </div>
+                {slide.headline ? (
+                    <div className="caption">{slide.headline}</div>
+                ) : null}
+            </section>
+        );
+    }
+
     return (
         <section className="deck-slide s-end">
             <div className="globe">
@@ -664,6 +973,369 @@ export function DocSection({ slide, pageNumber }: { slide: DocSectionSlide; page
                     ))}
                 </ul>
             ) : null}
+        </section>
+    );
+}
+
+/**
+ * DocPage — flexible A4 page with hero band on top + dense flowing
+ * content below. Word-doc / contract feel for the body, magazine-cover
+ * feel for the header. Each page has:
+ *   - Hero band (top ~30%): immersive photo bg + dark gradient + lockup
+ *     "30X | <partner-logo>" + section label + section heading + page #
+ *   - Body: vertical stack of blocks (paragraphs, lists, tables, etc).
+ *
+ * The first block in `blocks` is expected to be a `heading` and is
+ * surfaced into the hero band. Remaining blocks render in the body.
+ */
+export function DocPage({
+    slide,
+    pageNumber,
+    clientLogoUrl,
+}: {
+    slide: DocPageSlide;
+    pageNumber?: number;
+    clientLogoUrl?: string;
+}) {
+    const blocks = Array.isArray(slide.blocks) ? slide.blocks : [];
+    // Pull the first heading block into the hero — that's the section title.
+    const firstHeadingIdx = blocks.findIndex((b) => b.kind === "heading");
+    const heroHeading =
+        firstHeadingIdx >= 0
+            ? (blocks[firstHeadingIdx] as Extract<DocBlock, { kind: "heading" }>).text
+            : slide.pageLabel ?? "";
+    const bodyBlocks = blocks.filter((_, i) => i !== firstHeadingIdx);
+
+    // Pick a deterministic immersive photo so re-renders stay stable.
+    const heroBg = getImmersivePhoto(heroHeading || `page-${pageNumber}`);
+
+    return (
+        <section className="deck-slide s-doc s-doc-page">
+            <div className="hero">
+                <div className="hero-bg">
+                    <img src={heroBg} alt="" />
+                </div>
+                <div className="hero-content">
+                    <div className="hero-top">
+                        <div className="lockup">
+                            <img className="lockup-30x" src={BRAND_ASSETS.logoLight} alt="30X" />
+                            {clientLogoUrl ? (
+                                <>
+                                    <span className="lockup-divider" aria-hidden="true">|</span>
+                                    <img
+                                        className="lockup-partner"
+                                        src={clientLogoUrl}
+                                        alt="Partner"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = "none";
+                                        }}
+                                    />
+                                </>
+                            ) : null}
+                        </div>
+                        {pageNumber ? (
+                            <div className="page-num">PÁGINA {pageNumber}</div>
+                        ) : null}
+                    </div>
+                    <div className="hero-bottom">
+                        {slide.pageLabel ? (
+                            <div className="hero-label">{slide.pageLabel}</div>
+                        ) : null}
+                        {heroHeading ? (
+                            <h2 className="hero-heading">{heroHeading}</h2>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+            <div className="body">
+                <div className="blocks">
+                    {bodyBlocks.map((b, i) => (
+                        <DocBlockRenderer key={i} block={b} />
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function DocBlockRenderer({ block }: { block: DocBlock }) {
+    switch (block.kind) {
+        case "heading":
+            return block.level === 2 ? (
+                <h3 className="b-h2">{block.text}</h3>
+            ) : (
+                <h2 className="b-h1">{block.text}</h2>
+            );
+        case "paragraph":
+            return <p className="b-p">{block.text}</p>;
+        case "bullets":
+            return (
+                <ul className="b-ul">
+                    {(block.items ?? []).map((it, i) => (
+                        <li key={i}>{it}</li>
+                    ))}
+                </ul>
+            );
+        case "numbered":
+            return (
+                <ol className="b-ol">
+                    {(block.items ?? []).map((it, i) => (
+                        <li key={i}>{it}</li>
+                    ))}
+                </ol>
+            );
+        case "kv":
+            return (
+                <dl className="b-kv">
+                    {(block.rows ?? []).map((r, i) => (
+                        <div key={i} className="kv-row">
+                            <dt>{r.label}</dt>
+                            <dd>{r.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            );
+        case "table": {
+            const cols = block.columns ?? [];
+            const rows = block.rows ?? [];
+            return (
+                <table className="b-table">
+                    <thead>
+                        <tr>
+                            {cols.map((c, i) => (
+                                <th key={i}>{c}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((r, i) => (
+                            <tr key={i}>
+                                {(r ?? []).map((cell, j) => (
+                                    <td key={j}>{cell}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            );
+        }
+        case "callout":
+            return <div className="b-callout">{block.text}</div>;
+        case "divider":
+            return <hr className="b-hr" />;
+        default:
+            return null;
+    }
+}
+
+// ============================================================
+// DOC — McKinsey-grade dense layouts (Andrés Bilbao reference)
+// ============================================================
+
+export function DocComparisonTable({
+    slide,
+    pageNumber,
+}: {
+    slide: DocComparisonTableSlide;
+    pageNumber?: number;
+}) {
+    const cols = slide.columns ?? [];
+    const rows = slide.rows ?? [];
+    return (
+        <section className="deck-slide s-doc s-doc-table">
+            <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
+            {slide.sectionNumber ? (
+                <div className="secnum">Sección {slide.sectionNumber}</div>
+            ) : null}
+            <h2 className="secheading">{slide.heading}</h2>
+            {slide.subheading ? <p className="p">{slide.subheading}</p> : null}
+            <div className="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            {cols.map((c, i) => (
+                                <th key={i}>{c}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((r, i) => (
+                            <tr key={i}>
+                                {r.program ? <th scope="row">{r.program}</th> : null}
+                                {(r.cells ?? []).map((cell, j) => (
+                                    <td key={j}>
+                                        {cell.split(" · ").map((line, k) => (
+                                            <div key={k} className="cell-line">
+                                                <span className="dash">—</span>
+                                                <span>{line}</span>
+                                            </div>
+                                        ))}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    );
+}
+
+export function DocStatsHero({
+    slide,
+    pageNumber,
+}: {
+    slide: DocStatsHeroSlide;
+    pageNumber?: number;
+}) {
+    const stats = slide.stats ?? [];
+    const mentors = slide.mentors ?? [];
+    return (
+        <section className="deck-slide s-doc s-doc-stats-hero">
+            <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
+            <h2 className="secheading">
+                {slide.heading}
+                {slide.subheading ? (
+                    <>
+                        {" "}
+                        <span className="accent">{slide.subheading}</span>
+                    </>
+                ) : null}
+            </h2>
+            <div className="hero-stats">
+                {stats.slice(0, 3).map((s, i) => (
+                    <div key={i} className="hero-stat">
+                        <div className="v">{s.value}</div>
+                        <p className="k">{s.label}</p>
+                    </div>
+                ))}
+            </div>
+            {mentors.length > 0 ? (
+                <div className="mentor-row">
+                    {mentors.slice(0, 5).map((m, i) => (
+                        <div key={i} className="mentor-tile">
+                            <div className="portrait">
+                                <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                            </div>
+                            <div className="nm">{m.name}</div>
+                            <div className="rl">{m.role}</div>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+        </section>
+    );
+}
+
+export function DocMentorWall({
+    slide,
+    pageNumber,
+}: {
+    slide: DocMentorWallSlide;
+    pageNumber?: number;
+}) {
+    const stats = slide.stats ?? [];
+    const mentors = slide.mentors ?? [];
+    const brandLogos = slide.brandLogos ?? [];
+    const countries = slide.countries ?? [];
+    return (
+        <section className="deck-slide s-doc s-doc-wall">
+            <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
+            <div className="wall-grid">
+                <div className="left">
+                    <h2 className="secheading">
+                        <span className="accent">30X</span> {slide.heading}
+                    </h2>
+                    <div className="wall-stats">
+                        {stats.slice(0, 3).map((s, i) => (
+                            <div key={i} className="stat">
+                                <div className="v">{s.value}</div>
+                                <p className="k">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                    {countries.length > 0 ? (
+                        <div className="countries">
+                            {countries.join(" · ")}
+                        </div>
+                    ) : null}
+                    {slide.context ? <p className="ctx">{slide.context}</p> : null}
+                    {brandLogos.length > 0 ? (
+                        <div className="brand-strip">
+                            {brandLogos.map((b, i) => {
+                                const url = getCompanyLogo(b);
+                                return url ? (
+                                    <img key={i} src={url} alt={b} />
+                                ) : (
+                                    <span key={i} className="brand-fallback">
+                                        {b}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    ) : null}
+                </div>
+                <div className="right">
+                    <div className="mentor-grid">
+                        {mentors.slice(0, 15).map((m, i) => (
+                            <div key={i} className="m-tile">
+                                <img
+                                    src={getMentorImage(m.imageKey)}
+                                    alt={m.name ?? ""}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+export function DocMentorSpotlight({
+    slide,
+    pageNumber,
+}: {
+    slide: DocMentorSpotlightSlide;
+    pageNumber?: number;
+}) {
+    const sections = slide.sections ?? [];
+    const badges = slide.badges ?? [];
+    return (
+        <section className="deck-slide s-doc s-doc-spotlight">
+            <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
+            <div className="spotlight-grid">
+                <div className="portrait">
+                    <img
+                        src={getMentorImage(slide.mentor.imageKey)}
+                        alt={slide.mentor.name}
+                    />
+                </div>
+                <div className="bio">
+                    <h2 className="secheading">{slide.mentor.name}</h2>
+                    <div className="role">{slide.mentor.role}</div>
+                    {badges.length > 0 ? (
+                        <div className="badges">
+                            {badges.map((b, i) => (
+                                <span key={i} className="badge">
+                                    {b}
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
+                    <div className="sections">
+                        {sections.map((s, i) => (
+                            <div key={i} className="bio-section">
+                                <h3 className="t">{s.title}</h3>
+                                <p className="d">{s.body}</p>
+                            </div>
+                        ))}
+                    </div>
+                    {slide.credentials ? (
+                        <div className="credentials">{slide.credentials}</div>
+                    ) : null}
+                </div>
+            </div>
         </section>
     );
 }
@@ -1139,6 +1811,16 @@ export function renderSlide(
             return <DocCover slide={slide} />;
         case "doc-section":
             return <DocSection slide={slide} pageNumber={pageIndex} />;
+        case "doc-page":
+            return <DocPage slide={slide} pageNumber={pageIndex} clientLogoUrl={clientLogoUrl} />;
+        case "doc-comparison-table":
+            return <DocComparisonTable slide={slide} pageNumber={pageIndex} />;
+        case "doc-stats-hero":
+            return <DocStatsHero slide={slide} pageNumber={pageIndex} />;
+        case "doc-mentor-wall":
+            return <DocMentorWall slide={slide} pageNumber={pageIndex} />;
+        case "doc-mentor-spotlight":
+            return <DocMentorSpotlight slide={slide} pageNumber={pageIndex} />;
         case "prototype-frame":
             return <PrototypeFrame slide={slide} />;
         case "content":

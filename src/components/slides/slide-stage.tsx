@@ -6,18 +6,21 @@ import { FORMATS, type ProjectFormat } from "@/lib/slide-types";
 interface SlideStageProps {
     children: React.ReactNode;
     format?: ProjectFormat;
+    theme?: "dark" | "light";
     className?: string;
 }
 
 /**
  * Renders slide content at the native canvas size for the given format
- * and scales to fit its parent. Slides always render with the client's
- * design — they are deliverables, not dashboard chrome, so the editor
- * theme toggle must never reach them.
+ * and scales to fit its parent. The slide theme (dark/light) is what the
+ * CLIENT asked for — it's stored on the deck and the dashboard chrome
+ * toggle never touches it. Juan Diego asked for light as the default for
+ * every proposal from April 2026 on; we honor deck.theme if set, else light.
  */
 export function SlideStage({
     children,
     format = "proposal",
+    theme = "light",
     className,
 }: SlideStageProps) {
     const wrapRef = useRef<HTMLDivElement>(null);
@@ -41,6 +44,9 @@ export function SlideStage({
         return () => ro.disconnect();
     }, [W, H]);
 
+    const vars = theme === "light" ? LIGHT_VARS : DARK_VARS;
+    const stageBg = theme === "light" ? "#ffffff" : "#000000";
+
     return (
         <div
             ref={wrapRef}
@@ -50,13 +56,13 @@ export function SlideStage({
                 width: "100%",
                 height: "100%",
                 overflow: "hidden",
-                background: "#000000",
+                background: stageBg,
             }}
         >
             <div
-                className="deck-stage theme-dark"
+                className={`deck-stage theme-${theme}`}
                 style={{
-                    ...SLIDE_VARS,
+                    ...vars,
                     width: W,
                     height: H,
                     transform: `scale(${scale})`,
@@ -71,10 +77,8 @@ export function SlideStage({
     );
 }
 
-// Client design tokens — frozen. Never derive these from the dashboard
-// theme; slides are deliverables and must look identical regardless of
-// editor preferences.
-const SLIDE_VARS = {
+// Dark theme — kept for clients who explicitly ask for it.
+const DARK_VARS = {
     "--t-canvas": "#000000",
     "--t-fg": "#ffffff",
     "--t-fg-2": "rgba(255,255,255,0.82)",
@@ -90,6 +94,37 @@ const SLIDE_VARS = {
     "--t-pill-fg": "#E9FF7B",
     "--t-pill-border": "#E9FF7B",
     "--t-logo-filter": "none",
+    "--t-client-logo-filter": "brightness(0) invert(1)",
     "--t-icon-fg": "#E9FF7B",
     "--t-icon-bg": "transparent",
+    "--t-accent": "#E9FF7B",
+    "--t-accent-fg": "#0a0a0a",
+} as React.CSSProperties;
+
+// Light theme — Apple/Linear editorial. The new default for every deck.
+const LIGHT_VARS = {
+    "--t-canvas": "#ffffff",
+    "--t-fg": "#0a0a0a",
+    "--t-fg-2": "rgba(10,10,10,0.78)",
+    "--t-fg-3": "rgba(10,10,10,0.55)",
+    "--t-fg-4": "rgba(10,10,10,0.4)",
+    "--t-card-bg": "#fafafa",
+    "--t-card-border": "rgba(0,0,0,0.08)",
+    "--t-hairline": "rgba(0,0,0,0.1)",
+    "--t-overlay-top": "rgba(0,0,0,0.15)",
+    "--t-overlay-mid": "rgba(0,0,0,0.05)",
+    "--t-overlay-bottom": "rgba(0,0,0,0.65)",
+    "--t-pill-bg": "rgba(0,0,0,0.04)",
+    "--t-pill-fg": "#0a0a0a",
+    "--t-pill-border": "rgba(0,0,0,0.1)",
+    // Logo filter: the 30x "light" logo is white-on-transparent; in light
+    // mode we invert it to render black-on-white.
+    "--t-logo-filter": "brightness(0) invert(0)",
+    // Client logo: in light mode keep the original colors; in dark mode
+    // force it white so every partner logo sits cohesively on dark slides.
+    "--t-client-logo-filter": "none",
+    "--t-icon-fg": "#0a0a0a",
+    "--t-icon-bg": "rgba(0,0,0,0.04)",
+    "--t-accent": "#0a0a0a",
+    "--t-accent-fg": "#ffffff",
 } as React.CSSProperties;

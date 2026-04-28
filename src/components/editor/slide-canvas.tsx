@@ -13,6 +13,7 @@ interface SlideCanvasProps {
     onNext: () => void;
     clientLogoUrl?: string;
     format?: ProjectFormat;
+    theme?: "dark" | "light";
 }
 
 export function SlideCanvas({
@@ -23,6 +24,7 @@ export function SlideCanvas({
     onNext,
     clientLogoUrl,
     format = "proposal",
+    theme = "light",
 }: SlideCanvasProps) {
     const spec = FORMATS[format];
     const aspect = `${spec.width} / ${spec.height}`;
@@ -41,7 +43,7 @@ export function SlideCanvas({
                     height: format === "story-ig" || format === "doc" ? "calc(100vh - 220px)" : "auto",
                 }}
             >
-                <SlideStage format={format}>
+                <SlideStage format={format} theme={theme}>
                     <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
                 </SlideStage>
             </div>
