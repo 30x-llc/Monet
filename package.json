@@ -14,6 +14,7 @@
     "@sparticuz/chromium": "^147.0.2",
     "@untitledui/icons": "^0.0.22",
     "@vercel/blob": "^2.3.3",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "^2.1.1",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
