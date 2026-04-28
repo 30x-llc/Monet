@@ -658,8 +658,8 @@
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     z-index: 3;
-    display: flex; align-items: center; gap: 20px;
-    max-width: 60%;
+    display: flex; align-items: center; gap: 36px;
+    max-width: 70%;
 }
 .deck-slide.s-end-portada .lockup-30x {
     height: 56px;
@@ -669,9 +669,9 @@
 }
 .deck-slide.s-end-portada .lockup-divider {
     display: block;
-    width: 1px;
+    width: 2px;
     height: 56px;
-    background: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.55);
 }
 /*
    Partner logo: explicit height matches 30X height pixel-for-pixel.
