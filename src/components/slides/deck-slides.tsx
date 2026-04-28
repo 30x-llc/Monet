@@ -764,22 +764,19 @@ export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; c
                     <img className="lockup-30x" src={LOGO_LIGHT} alt="30X" />
                     <span className="lockup-divider" aria-hidden />
                     {/*
-                       Render the partner logo as a CSS background instead
-                       of <img>. Many brand SVGs ship with viewBox but no
-                       intrinsic width/height, which collapses an <img> to
-                       0×0 even when CSS sets `height`. Background-image
-                       with a fixed-size container respects the box size
-                       regardless of the SVG's intrinsic dimensions.
-
-                       Cross-origin URLs go through /api/logo-proxy to
-                       sidestep Chrome's Opaque Response Blocking (ORB),
-                       which silently drops third-party SVGs.
+                       Use <img> with a fixed height so wide wordmarks
+                       (Aeroméxico is 6:1) render at the same visual
+                       height as 30X. width:auto lets aspect drive the
+                       width. SVGs missing intrinsic dimensions get
+                       overridden by the curated /assets/logos/30x-members
+                       set upstream, so all logos that reach this point
+                       carry width/height. Cross-origin URLs go through
+                       /api/logo-proxy to sidestep Chrome's ORB.
                     */}
-                    <div
+                    <img
                         className="lockup-partner"
-                        role="img"
-                        aria-label="Logo del aliado"
-                        style={{ backgroundImage: `url(${JSON.stringify(proxyExternal(clientLogoUrl))})` }}
+                        src={proxyExternal(clientLogoUrl)}
+                        alt="Logo del aliado"
                     />
                 </div>
             </section>

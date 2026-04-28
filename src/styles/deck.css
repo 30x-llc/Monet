@@ -325,45 +325,52 @@
 .deck-slide.s-curric .head { max-width: 1400px; }
 .deck-slide.s-curric .lead { margin-top: 42px; max-width: 1480px; }
 .deck-slide.s-curric .weeks {
-    margin-top: auto; padding-top: 100px;
+    margin-top: auto; padding-top: 60px;
     display: grid; grid-template-columns: repeat(4, 1fr);
     column-gap: 20px; row-gap: 20px;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
 }
 .deck-slide.s-curric.rows-2 .weeks { grid-template-rows: repeat(2, 1fr); }
 .deck-slide.s-curric .week {
     background: var(--t-card-bg);
     border: 1px solid var(--t-card-border);
-    padding: 32px 28px;
+    padding: 24px 22px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
 .deck-slide.s-curric .week .n {
-    font: 500 32px/1 "Inter Display";
+    font: 500 24px/1 "Inter Display";
     letter-spacing: -0.025em; color: var(--t-accent);
-    margin: 0 0 16px;
+    margin: 0 0 10px;
+    flex-shrink: 0;
 }
 .deck-slide.s-curric .week .t {
-    font: 500 28px/1.1 "Inter Display";
-    letter-spacing: -0.02em; margin: 0 0 10px;
+    font: 600 20px/1.15 "Inter Display";
+    letter-spacing: -0.025em; margin: 0 0 8px;
     color: var(--t-fg); text-wrap: balance;
-    /* Cap title at 2 lines so a long name does not eat description space. */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    flex-shrink: 0;
 }
+/*
+   Description: 6-module 4×2 grids on a 1080-tall canvas leave only
+   ~150px of vertical room per card AFTER the headline + sub. With
+   the row-height enforced as `repeat(2, 1fr)` we cannot let any single
+   card grow taller than its share. 16px / 1.4 line-height gives us
+   ~5 lines of body in a 24px-padded card before clamping with "...".
+*/
 .deck-slide.s-curric .week .d {
-    font: 400 22px/1.35 "Inter Display";
-    letter-spacing: -0.015em; color: var(--t-fg-2);
+    font: 400 16px/1.4 "Inter Display";
+    letter-spacing: -0.005em; color: var(--t-fg-2);
     margin: 0;
-    /* Hard-clamp long descriptions so the card never overflows its
-       grid row. The model occasionally produces 35+ word strings even
-       with prompt rules — this guarantees the slide stays inside its
-       canvas. The user can rephrase via the chat to keep more text. */
     display: -webkit-box;
-    -webkit-line-clamp: 6;
+    -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
     overflow: hidden;
     flex: 1;
@@ -667,22 +674,16 @@
     background: rgba(255,255,255,0.45);
 }
 /*
-   Partner logo is a CSS background, not an <img>, so the box size is
-   fully controlled by us regardless of whether the source SVG has
-   intrinsic width/height. height + width define the box, contain keeps
-   the aspect ratio, and the brightness/invert filter is replaced by
-   `--mask-image` magic when we want a single-color version.
-   For the closing-slide lockup we just want the logo displayed as-is
-   — the curated set is already white-on-transparent, and the live
-   research often picks white SVGs too. We do not filter here so the
-   user sees the real logo.
+   Partner logo: explicit height matches 30X height pixel-for-pixel.
+   width:auto lets aspect dictate width so a 6:1 wordmark renders at
+   ~340px and a square icon at ~56px, both at 56px tall. max-width
+   caps very wide wordmarks so they don't dominate the slide.
 */
 .deck-slide.s-end-portada .lockup-partner {
     height: 56px;
-    width: 220px;
-    background-position: left center;
-    background-repeat: no-repeat;
-    background-size: contain;
+    width: auto;
+    max-width: 480px;
+    object-fit: contain;
     opacity: 0.98;
 }
 
