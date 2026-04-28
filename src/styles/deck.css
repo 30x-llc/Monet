@@ -2306,3 +2306,111 @@
     color: #98A2B3;
     margin-top: 8px;
 }
+
+/* ============================================================
+   SLIDE THUMBNAIL RAIL — Canva-style bottom navigator
+   Lives outside the .deck-slide tree so it uses chrome tokens,
+   not slide tokens. Each thumbnail is a real, scaled-down render
+   of the slide via SlideStage.
+   ============================================================ */
+.proto-rail {
+    flex-shrink: 0;
+    border-top: 1px solid var(--chrome-border);
+    background: var(--chrome-bg);
+    padding: 14px 16px 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.proto-rail::-webkit-scrollbar {
+    height: 6px;
+}
+.proto-rail::-webkit-scrollbar-track {
+    background: transparent;
+}
+.proto-rail::-webkit-scrollbar-thumb {
+    background: var(--chrome-divider);
+    border-radius: 999px;
+}
+.proto-rail-inner {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 12px;
+    min-width: max-content;
+    padding-bottom: 4px;
+}
+
+.proto-rail-thumb {
+    position: relative;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: transform 150ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.proto-rail-thumb:hover {
+    transform: translateY(-1px);
+}
+.proto-rail-thumb-canvas {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #FFFFFF;
+    border: 2px solid transparent;
+    box-shadow:
+        0 1px 2px rgba(16, 24, 40, 0.08),
+        0 4px 12px -4px rgba(16, 24, 40, 0.10);
+    transition: border-color 150ms, box-shadow 150ms, transform 150ms;
+}
+.proto-rail-thumb:hover .proto-rail-thumb-canvas {
+    box-shadow:
+        0 2px 4px rgba(16, 24, 40, 0.10),
+        0 8px 18px -4px rgba(16, 24, 40, 0.16);
+}
+.proto-rail-thumb.is-active .proto-rail-thumb-canvas {
+    border-color: var(--chrome-accent, #E9FF7B);
+    box-shadow:
+        0 0 0 3px rgba(233, 255, 123, 0.30),
+        0 4px 14px -4px rgba(16, 24, 40, 0.20);
+}
+.proto-rail-thumb-num {
+    font: 500 11px/1 "Inter Display", "Inter", sans-serif;
+    color: var(--chrome-fg-4, #98A2B3);
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+}
+.proto-rail-thumb.is-active .proto-rail-thumb-num {
+    color: var(--chrome-fg, #0a0a0a);
+    font-weight: 600;
+}
+
+/* Disable interactivity inside thumbnail (links, hover effects) */
+.proto-rail-thumb-canvas .deck-stage,
+.proto-rail-thumb-canvas .deck-slide,
+.proto-rail-thumb-canvas a,
+.proto-rail-thumb-canvas button {
+    pointer-events: none !important;
+}
+
+/* "+" button at the end of the rail */
+.proto-rail-add {
+    background: var(--chrome-bg-2, rgba(0, 0, 0, 0.04));
+    border: 1.5px dashed var(--chrome-border, rgba(0, 0, 0, 0.12));
+    color: var(--chrome-fg-3, #667085);
+    border-radius: 8px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    align-self: flex-start;
+    margin-top: 0;
+    aspect-ratio: 16 / 9;
+    transition: background 150ms, border-color 150ms, color 150ms;
+}
+.proto-rail-add:hover {
+    background: var(--chrome-hover-bg, rgba(0, 0, 0, 0.06));
+    border-color: var(--chrome-accent, #E9FF7B);
+    color: var(--chrome-fg, #0a0a0a);
+}

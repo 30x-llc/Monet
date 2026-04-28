@@ -6,11 +6,13 @@ import { SlideCanvas } from "./slide-canvas";
 import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { HandoffModal } from "./handoff-modal";
+import { SlideThumbnailRail } from "./slide-thumbnail-rail";
 
 const CHROME_THEME_KEY = "30x.chromeTheme";
 
 interface EditorLayoutProps {
     deck: Deck;
+    onDeckChange: (deck: Deck) => void;
     onIterate: (instruction: string) => Promise<{ ok: boolean; summary?: string; error?: string }>;
     onNewDeck: () => void;
     isIterating: boolean;
@@ -18,6 +20,7 @@ interface EditorLayoutProps {
 
 export function EditorLayout({
     deck,
+    onDeckChange,
     onIterate,
     onNewDeck,
     isIterating,
@@ -222,6 +225,24 @@ export function EditorLayout({
                     theme={slideTheme}
                 />
             </div>
+
+            <SlideThumbnailRail
+                slides={deck.slides}
+                selectedIndex={selectedIndex}
+                onSelect={setSelectedIndex}
+                onAdd={() => {
+                    const current = deck.slides[selectedIndex];
+                    if (!current) return;
+                    const cloned = JSON.parse(JSON.stringify(current));
+                    const newSlides = [...deck.slides];
+                    newSlides.splice(selectedIndex + 1, 0, cloned);
+                    onDeckChange({ ...deck, slides: newSlides });
+                    setSelectedIndex(selectedIndex + 1);
+                }}
+                clientLogoUrl={deck.clientLogoUrl}
+                format={deck.format ?? "proposal"}
+                theme={slideTheme}
+            />
 
             {handoffOpen && (
                 <HandoffModal deck={deck} onClose={() => setHandoffOpen(false)} />

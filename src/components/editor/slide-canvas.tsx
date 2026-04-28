@@ -51,11 +51,11 @@ export function SlideCanvas({
             {canPrev && (
                 <button
                     onClick={onPrev}
-                    aria-label="Previous slide"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center text-white/40 hover:bg-white/10 hover:text-white/80 transition-[background,color] duration-200"
+                    aria-label="Slide anterior"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 shadow-lg ring-1 ring-black/5 flex items-center justify-center text-[#0a0a0a] hover:bg-white hover:scale-105 active:scale-95 transition-[transform,background,box-shadow] duration-150"
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
                 >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                         <path
                             d="M10 12L6 8L10 4"
                             stroke="currentColor"
@@ -70,11 +70,11 @@ export function SlideCanvas({
             {canNext && (
                 <button
                     onClick={onNext}
-                    aria-label="Next slide"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center text-white/40 hover:bg-white/10 hover:text-white/80 transition-[background,color] duration-200"
+                    aria-label="Slide siguiente"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 shadow-lg ring-1 ring-black/5 flex items-center justify-center text-[#0a0a0a] hover:bg-white hover:scale-105 active:scale-95 transition-[transform,background,box-shadow] duration-150"
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
                 >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                         <path
                             d="M6 4L10 8L6 12"
                             stroke="currentColor"
@@ -85,16 +85,6 @@ export function SlideCanvas({
                     </svg>
                 </button>
             )}
-
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-2">
-                <span className="text-[11px] font-medium text-white/60 tabular-nums">
-                    {slideIndex + 1}
-                </span>
-                <span className="text-[11px] text-white/20">/</span>
-                <span className="text-[11px] text-white/35 tabular-nums">
-                    {totalSlides}
-                </span>
-            </div>
         </div>
     );
 }
