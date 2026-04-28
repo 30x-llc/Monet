@@ -481,6 +481,7 @@ export default function Home() {
         return (
             <EditorLayout
                 deck={deck}
+                onDeckChange={handleDeckChange}
                 onIterate={handleIterate}
                 onNewDeck={handleNewDeck}
                 isIterating={isIterating}
