@@ -29,6 +29,7 @@ import type {
     DocMentorWallSlide,
     DocMentorSpotlightSlide,
     PrototypeFrameSlide,
+    SidebarIconKey,
     Slide,
 } from "@/lib/slide-types";
 import { getMentorImage, BRAND_ASSETS, getCompanyLogo, getImmersivePhoto } from "@/lib/assets";
@@ -1340,414 +1341,314 @@ export function DocMentorSpotlight({
     );
 }
 
-// ============================================================
-// PROTOTYPE FRAME (1440x900 mock app UI)
-// ============================================================
-
+// Untitled UI dashboard mock for the prototype-frame slide.
+// Renders a faithful approximation of the Untitled UI sidebar app pattern:
+// 280px white sidebar with icons + nav items + account card, top header,
+// 3 KPI cards with delta % + sparkline, and a data table with avatars +
+// status badges. All visual tokens (#FAFAFA bg, #EAECF0 borders, lime
+// accent #E9FF7B, Inter Display) match the 30X design system.
 export function PrototypeFrame({ slide }: { slide: PrototypeFrameSlide }) {
     const appName = slide.appName ?? "30X App";
     const headline = slide.headline ?? "Nuevo prototipo";
-    const nav = slide.nav?.length
-        ? slide.nav
-        : ["Overview", "Pipeline", "Insights", "Team"];
-    const sidebar = slide.sidebar;
+    const sidebar = slide.sidebar?.length
+        ? slide.sidebar
+        : [
+              { label: "Overview", icon: "home" as const, active: true },
+              { label: "Pipeline", icon: "pipeline" as const },
+              { label: "Empresas", icon: "team" as const },
+              { label: "Reportes", icon: "reports" as const },
+              { label: "Settings", icon: "settings" as const },
+          ];
+    const stats = slide.stats?.slice(0, 3) ?? [];
+    const rows = slide.listRows?.slice(0, 6) ?? [];
+    const filters = slide.filters?.length ? slide.filters : ["Todos", "Activos", "Cerrados", "Q2 2026"];
+    const account = slide.account ?? {
+        name: "Sales Ops 30X",
+        email: "ops@30x.com",
+        initials: "30",
+    };
 
     return (
-        <section
-            className="deck-slide"
-            style={{
-                position: "absolute",
-                inset: 0,
-                background: "#0a0a0a",
-                color: "#F0F0F0",
-                fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-                letterSpacing: "-0.01em",
-            }}
-        >
-            {/* Browser chrome */}
-            <div
-                style={{
-                    position: "absolute",
-                    top: 24,
-                    left: 48,
-                    right: 48,
-                    bottom: 24,
-                    background: "#111111",
-                    borderRadius: 16,
-                    border: "1px solid #232323",
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                }}
-            >
-                {/* Window bar */}
-                <div
-                    style={{
-                        height: 40,
-                        background: "#0D0D0D",
-                        borderBottom: "1px solid #1A1A1A",
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "0 16px",
-                        gap: 6,
-                    }}
-                >
-                    <span style={dotStyle("#FF5F57")} />
-                    <span style={dotStyle("#FEBC2E")} />
-                    <span style={dotStyle("#28C840")} />
-                    <div
-                        style={{
-                            marginLeft: 24,
-                            height: 22,
-                            padding: "0 12px",
-                            background: "#1A1A1A",
-                            borderRadius: 6,
-                            color: "#999",
-                            fontSize: 11,
-                            display: "flex",
-                            alignItems: "center",
-                            letterSpacing: "-0.01em",
-                        }}
-                    >
-                        30x.design / {appName.toLowerCase().replace(/\s+/g, "-")}
-                    </div>
-                </div>
-
-                {/* App top nav */}
-                <div
-                    style={{
-                        height: 56,
-                        borderBottom: "1px solid #1A1A1A",
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "0 32px",
-                        gap: 32,
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            fontWeight: 700,
-                            fontSize: 15,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 6,
-                                background: "#E9FF7B",
-                                display: "grid",
-                                placeItems: "center",
-                                color: "#0a0a0a",
-                                fontSize: 11,
-                                fontWeight: 800,
-                                letterSpacing: "-0.04em",
-                            }}
-                        >
-                            30X
+        <section className="deck-slide s-proto-ui">
+            {/* App chrome — light, Untitled UI style */}
+            <div className="proto-chrome">
+                {/* Sidebar */}
+                <aside className="proto-sidebar">
+                    <div className="proto-sidebar-top">
+                        <div className="proto-workspace">
+                            <div className="proto-workspace-logo">30X</div>
+                            <div className="proto-workspace-text">
+                                <div className="proto-workspace-name">{appName}</div>
+                                <div className="proto-workspace-plan">30X Workspace</div>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="proto-workspace-chevron">
+                                <path d="M4 6l4 4 4-4" stroke="#667085" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
                         </div>
-                        <span>{appName}</span>
+                        <div className="proto-search">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="7" stroke="#667085" strokeWidth="1.7" />
+                                <path d="M20 20l-3.5-3.5" stroke="#667085" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                            <input className="proto-search-input" placeholder="Buscar" readOnly />
+                            <span className="proto-search-key">⌘K</span>
+                        </div>
                     </div>
-                    <div style={{ display: "flex", gap: 24 }}>
-                        {nav.map((n, i) => (
-                            <span
-                                key={i}
-                                style={{
-                                    fontSize: 13,
-                                    color: i === 0 ? "#F0F0F0" : "#777",
-                                    fontWeight: i === 0 ? 600 : 500,
-                                    borderBottom: i === 0 ? "2px solid #E9FF7B" : "none",
-                                    paddingBottom: 18,
-                                    marginBottom: -18,
-                                }}
-                            >
-                                {n}
-                            </span>
+
+                    <nav className="proto-nav">
+                        {sidebar.map((item, i) => (
+                            <a key={i} className={`proto-nav-item${item.active ? " is-active" : ""}`}>
+                                <SidebarIcon name={item.icon ?? "dashboard"} />
+                                <span className="proto-nav-label">{item.label}</span>
+                                {item.badge ? <span className="proto-nav-badge">{item.badge}</span> : null}
+                            </a>
                         ))}
-                    </div>
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-                        <div
-                            style={{
-                                height: 28,
-                                padding: "0 10px",
-                                background: "#1A1A1A",
-                                borderRadius: 6,
-                                color: "#999",
-                                fontSize: 11,
-                                display: "flex",
-                                alignItems: "center",
-                            }}
-                        >
-                            ⌘ K
-                        </div>
-                        <div
-                            style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: "50%",
-                                background: "#0a0a0a",
-                                border: "1px solid #232323",
-                                color: "#F0F0F0",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                display: "grid",
-                                placeItems: "center",
-                            }}
-                        >
-                            JD
-                        </div>
-                    </div>
-                </div>
+                    </nav>
 
-                {/* Body */}
-                <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-                    {sidebar && sidebar.length > 0 ? (
-                        <aside
-                            style={{
-                                width: 220,
-                                borderRight: "1px solid #1A1A1A",
-                                padding: "20px 12px",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 2,
-                            }}
-                        >
-                            {sidebar.map((s, i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        height: 34,
-                                        padding: "0 12px",
-                                        borderRadius: 8,
-                                        background: s.active ? "#1A1A1A" : "transparent",
-                                        color: s.active ? "#F0F0F0" : "#999",
-                                        fontSize: 13,
-                                        fontWeight: s.active ? 600 : 500,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 10,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            width: 6,
-                                            height: 6,
-                                            borderRadius: 2,
-                                            background: s.active ? "#E9FF7B" : "#333",
-                                        }}
-                                    />
-                                    {s.label}
-                                </div>
+                    <div className="proto-account">
+                        <div className="proto-avatar">{account.initials}</div>
+                        <div className="proto-account-text">
+                            <div className="proto-account-name">{account.name}</div>
+                            <div className="proto-account-email">{account.email}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="3" r="1" fill="#667085" />
+                            <circle cx="8" cy="8" r="1" fill="#667085" />
+                            <circle cx="8" cy="13" r="1" fill="#667085" />
+                        </svg>
+                    </div>
+                </aside>
+
+                {/* Main */}
+                <main className="proto-main">
+                    {/* Header */}
+                    <header className="proto-header">
+                        <div className="proto-header-left">
+                            <div className="proto-breadcrumb">
+                                <span>Dashboard</span>
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                    <path d="M6 4l4 4-4 4" stroke="#98A2B3" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                                <span className="proto-breadcrumb-current">{appName}</span>
+                            </div>
+                            <h1 className="proto-page-title">{headline}</h1>
+                            {slide.description ? (
+                                <p className="proto-page-sub">{slide.description}</p>
+                            ) : null}
+                        </div>
+                        <div className="proto-header-actions">
+                            {slide.secondaryCta ? (
+                                <button className="proto-btn proto-btn-secondary">{slide.secondaryCta}</button>
+                            ) : (
+                                <button className="proto-btn proto-btn-secondary">Filtrar</button>
+                            )}
+                            {slide.primaryCta ? (
+                                <button className="proto-btn proto-btn-primary">
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                        <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    </svg>
+                                    {slide.primaryCta}
+                                </button>
+                            ) : null}
+                        </div>
+                    </header>
+
+                    {/* KPI cards */}
+                    {stats.length > 0 ? (
+                        <div className="proto-kpis">
+                            {stats.map((s, i) => (
+                                <KpiCard key={i} stat={s} />
                             ))}
-                        </aside>
+                        </div>
                     ) : null}
 
-                    <div style={{ flex: 1, padding: "40px 48px", overflow: "hidden" }}>
-                        {/* Headline */}
-                        <div
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "4px 10px",
-                                background: "rgba(233,255,123,0.1)",
-                                border: "1px solid rgba(233,255,123,0.3)",
-                                borderRadius: 999,
-                                color: "#E9FF7B",
-                                fontSize: 11,
-                                fontWeight: 600,
-                                letterSpacing: "0.02em",
-                                textTransform: "uppercase",
-                                marginBottom: 18,
-                            }}
-                        >
-                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#E9FF7B" }} />
-                            {slide.kind === "landing" ? "Landing" : slide.kind === "component" ? "Componente" : "Prototipo"}
+                    {/* Filters + table card */}
+                    <div className="proto-card">
+                        <div className="proto-card-head">
+                            <div>
+                                <div className="proto-card-title">Pipeline activo</div>
+                                <div className="proto-card-sub">{rows.length} oportunidades</div>
+                            </div>
+                            <div className="proto-filters">
+                                {filters.map((f, i) => (
+                                    <button key={f} className={`proto-chip${i === 0 ? " is-active" : ""}`}>{f}</button>
+                                ))}
+                            </div>
                         </div>
-                        <h1
-                            style={{
-                                fontSize: 44,
-                                fontWeight: 600,
-                                lineHeight: 1.05,
-                                letterSpacing: "-0.035em",
-                                color: "#F0F0F0",
-                                margin: 0,
-                                marginBottom: 12,
-                                maxWidth: 820,
-                            }}
-                        >
-                            {headline}
-                        </h1>
-                        {slide.description ? (
-                            <p
-                                style={{
-                                    fontSize: 16,
-                                    lineHeight: 1.55,
-                                    color: "#999",
-                                    margin: 0,
-                                    marginBottom: 28,
-                                    maxWidth: 640,
-                                    letterSpacing: "-0.005em",
-                                }}
-                            >
-                                {slide.description}
-                            </p>
-                        ) : null}
 
-                        {slide.primaryCta ? (
-                            <div
-                                style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    height: 40,
-                                    padding: "0 18px",
-                                    background: "#E9FF7B",
-                                    color: "#0a0a0a",
-                                    borderRadius: 10,
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    letterSpacing: "-0.01em",
-                                    marginBottom: 32,
-                                }}
-                            >
-                                {slide.primaryCta}
-                                <span style={{ fontSize: 15 }}>→</span>
+                        <div className="proto-table">
+                            <div className="proto-table-head">
+                                <div>Empresa</div>
+                                <div>Monto</div>
+                                <div>Estado</div>
+                                <div>Notas</div>
                             </div>
-                        ) : null}
-
-                        {/* Stats row */}
-                        {slide.stats && slide.stats.length > 0 ? (
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: `repeat(${Math.min(slide.stats.length, 3)}, 1fr)`,
-                                    gap: 12,
-                                    marginBottom: 24,
-                                }}
-                            >
-                                {slide.stats.slice(0, 3).map((s, i) => (
-                                    <div
-                                        key={i}
-                                        style={{
-                                            background: "#141414",
-                                            border: "1px solid #232323",
-                                            borderRadius: 14,
-                                            padding: "18px 20px",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: 28,
-                                                fontWeight: 700,
-                                                color: "#F0F0F0",
-                                                letterSpacing: "-0.03em",
-                                                lineHeight: 1,
-                                                marginBottom: 6,
-                                            }}
-                                        >
-                                            {s.value}
-                                        </div>
-                                        <div style={{ fontSize: 12, color: "#777", letterSpacing: "-0.005em" }}>
-                                            {s.label}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : null}
-
-                        {/* List / table card */}
-                        {slide.listRows && slide.listRows.length > 0 ? (
-                            <div
-                                style={{
-                                    background: "#141414",
-                                    border: "1px solid #232323",
-                                    borderRadius: 14,
-                                    overflow: "hidden",
-                                }}
-                            >
-                                {slide.listRows.map((row, i) => (
-                                    <div
-                                        key={i}
-                                        style={{
-                                            height: 48,
-                                            padding: "0 18px",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 12,
-                                            borderTop: i === 0 ? "none" : "1px solid #1A1A1A",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                width: 6,
-                                                height: 6,
-                                                borderRadius: "50%",
-                                                background: "#E9FF7B",
-                                            }}
-                                        />
-                                        <span
-                                            style={{
-                                                fontSize: 13,
-                                                color: "#F0F0F0",
-                                                fontWeight: 500,
-                                                letterSpacing: "-0.005em",
-                                                flex: 1,
-                                            }}
-                                        >
-                                            {row.title}
-                                        </span>
-                                        {row.meta ? (
-                                            <span style={{ fontSize: 12, color: "#777" }}>{row.meta}</span>
-                                        ) : null}
-                                        {row.badge ? (
-                                            <span
-                                                style={{
-                                                    fontSize: 10,
-                                                    fontWeight: 700,
-                                                    letterSpacing: "0.06em",
-                                                    textTransform: "uppercase",
-                                                    padding: "3px 8px",
-                                                    background: "rgba(233,255,123,0.1)",
-                                                    border: "1px solid rgba(233,255,123,0.3)",
-                                                    color: "#E9FF7B",
-                                                    borderRadius: 6,
-                                                }}
+                            {rows.length > 0 ? (
+                                rows.map((row, i) => (
+                                    <div key={i} className="proto-table-row">
+                                        <div className="proto-cell-company">
+                                            <div
+                                                className="proto-row-avatar"
+                                                style={{ background: avatarBg(row.title) }}
                                             >
-                                                {row.badge}
-                                            </span>
-                                        ) : null}
+                                                {(row.avatarLabel ?? initialsOf(row.title))}
+                                            </div>
+                                            <div>
+                                                <div className="proto-cell-title">{row.title}</div>
+                                                {row.subtitle ? (
+                                                    <div className="proto-cell-sub">{row.subtitle}</div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <div className="proto-cell-prog">{row.meta ?? ""}</div>
+                                        <div>
+                                            <Badge tone={row.badgeTone ?? toneFromLabel(row.badge)}>
+                                                {row.badge ?? "Activo"}
+                                            </Badge>
+                                        </div>
+                                        <div className="proto-cell-notes">{rowNotes(i)}</div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : null}
+                                ))
+                            ) : (
+                                <div className="proto-table-empty">No hay oportunidades cargadas todavía.</div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </main>
             </div>
 
-            {/* Footer caption */}
-            {slide.subtitle ? (
-                <div
-                    style={{
-                        position: "absolute",
-                        bottom: 4,
-                        left: 0,
-                        right: 0,
-                        textAlign: "center",
-                        color: "#555",
-                        fontSize: 11,
-                        letterSpacing: "-0.005em",
-                    }}
-                >
-                    {slide.subtitle}
-                </div>
-            ) : null}
+            {slide.subtitle ? <div className="proto-footnote">{slide.subtitle}</div> : null}
         </section>
     );
 }
+
+function KpiCard({
+    stat,
+}: {
+    stat: NonNullable<PrototypeFrameSlide["stats"]>[number];
+}) {
+    const trend = stat.trend ?? (stat.delta?.startsWith("-") ? "down" : stat.delta ? "up" : "flat");
+    const trendColor = trend === "up" ? "#067647" : trend === "down" ? "#B42318" : "#475467";
+    const sparkline = stat.sparkline ?? [12, 18, 15, 22, 20, 26, 28];
+    return (
+        <div className="proto-kpi">
+            <div className="proto-kpi-label">{stat.label}</div>
+            <div className="proto-kpi-row">
+                <div className="proto-kpi-value">{stat.value}</div>
+                <Sparkline values={sparkline} stroke={trendColor} />
+            </div>
+            {stat.delta ? (
+                <div className="proto-kpi-delta" style={{ color: trendColor }}>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        {trend === "down" ? (
+                            <path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        ) : (
+                            <path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        )}
+                    </svg>
+                    <span>{stat.delta}</span>
+                    <span className="proto-kpi-delta-meta">vs mes anterior</span>
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function Sparkline({ values, stroke }: { values: number[]; stroke: string }) {
+    const w = 96;
+    const h = 32;
+    if (values.length < 2) return null;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const step = w / (values.length - 1);
+    const points = values
+        .map((v, i) => `${i * step},${h - ((v - min) / span) * (h - 4) - 2}`)
+        .join(" ");
+    return (
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="proto-spark">
+            <polyline points={points} fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function Badge({
+    children,
+    tone,
+}: {
+    children: React.ReactNode;
+    tone: "success" | "warning" | "error" | "neutral" | "info";
+}) {
+    return <span className={`proto-badge proto-badge-${tone}`}>
+        <span className="proto-badge-dot" />
+        {children}
+    </span>;
+}
+
+function toneFromLabel(label?: string): "success" | "warning" | "error" | "neutral" | "info" {
+    if (!label) return "neutral";
+    const l = label.toLowerCase();
+    if (l.includes("activo") || l.includes("active") || l.includes("ganado") || l.includes("ok")) return "success";
+    if (l.includes("pausa") || l.includes("pending") || l.includes("revisión") || l.includes("revision")) return "warning";
+    if (l.includes("cerrado") || l.includes("perdido") || l.includes("closed") || l.includes("error")) return "error";
+    if (l.includes("nuevo") || l.includes("info") || l.includes("borrador")) return "info";
+    return "neutral";
+}
+
+function initialsOf(name: string): string {
+    return name
+        .split(/\s+/)
+        .map((w) => w[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+}
+
+function avatarBg(seed: string): string {
+    const palette = ["#7F56D9", "#0BA5EC", "#0E9384", "#DC6803", "#B42318", "#7A5AF8", "#175CD3", "#5925DC"];
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
+}
+
+function rowNotes(i: number): string {
+    const samples = [
+        "Cohorte mayo 2026, 24 ejecutivos",
+        "Propuesta enviada, decisión 18 abril",
+        "Discovery agendado con CTO",
+        "Sesión presencial Bogotá, 8 horas",
+        "Negociación de pricing en curso",
+        "12 cupos confirmados, abril 30",
+        "Propuesta en revisión legal",
+    ];
+    return samples[i % samples.length];
+}
+
+function SidebarIcon({ name }: { name: SidebarIconKey }) {
+    const path = SIDEBAR_ICON_PATHS[name] ?? SIDEBAR_ICON_PATHS.dashboard;
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="proto-nav-icon">
+            <path d={path} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+const SIDEBAR_ICON_PATHS: Record<SidebarIconKey, string> = {
+    home: "M4 10l8-7 8 7v9a2 2 0 01-2 2h-3v-6h-6v6H6a2 2 0 01-2-2v-9z",
+    dashboard: "M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z",
+    pipeline: "M3 6h12M3 12h18M3 18h9",
+    team: "M16 11a4 4 0 100-8 4 4 0 000 8zM6 21a6 6 0 1112 0",
+    reports: "M3 21h18M5 21V8l5-3 5 3 5-3v16",
+    settings: "M12 9a3 3 0 100 6 3 3 0 000-6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 01-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3 1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8 1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z",
+    billing: "M3 7h18v4H3zM3 11v8a2 2 0 002 2h14a2 2 0 002-2v-8M7 16h4",
+    messages: "M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
+    calendar: "M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z",
+    search: "M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35",
+    documents: "M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6",
+    integrations: "M9 3h6v6H9zM3 15h6v6H3zM15 15h6v6h-6zM12 9v6M9 18h6",
+};
+
 
 function dotStyle(color: string): React.CSSProperties {
     return {

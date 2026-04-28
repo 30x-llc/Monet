@@ -1833,3 +1833,476 @@
     color: var(--t-fg-3);
     letter-spacing: -0.005em;
 }
+
+/* ============================================================
+   PROTOTYPE FRAME — Untitled UI dashboard pattern
+   1920x1080 stage, scaled and styled to match Untitled UI's
+   sidebar app shell with KPIs, filters, and a data table.
+   Tokens follow Untitled UI primary palette: gray-50 bg,
+   gray-200 borders, brand-600 emphasis (we use 30x lime as
+   the accent so it ladders to brand without colliding).
+   ============================================================ */
+.deck-slide.s-proto-ui {
+    position: absolute; inset: 0;
+    background: #FAFAFA;
+    color: #101828;
+    font-family: "Inter Display", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.deck-slide.s-proto-ui .proto-chrome {
+    position: relative;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    background: #FFFFFF;
+    border: 1px solid #EAECF0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+        0 1px 3px rgba(16,24,40,0.05),
+        0 24px 48px -12px rgba(16,24,40,0.10);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.deck-slide.s-proto-ui .proto-sidebar {
+    border-right: 1px solid #EAECF0;
+    background: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 20px;
+}
+.deck-slide.s-proto-ui .proto-sidebar-top {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.deck-slide.s-proto-ui .proto-workspace {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px;
+}
+.deck-slide.s-proto-ui .proto-workspace-logo {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: #0a0a0a;
+    color: #E9FF7B;
+    display: grid; place-items: center;
+    font: 700 11px/1 "Inter Display";
+    letter-spacing: -0.02em;
+}
+.deck-slide.s-proto-ui .proto-workspace-text {
+    flex: 1;
+    min-width: 0;
+}
+.deck-slide.s-proto-ui .proto-workspace-name {
+    font: 600 13px/1.2 "Inter Display";
+    letter-spacing: -0.015em;
+    color: #101828;
+}
+.deck-slide.s-proto-ui .proto-workspace-plan {
+    font: 500 11px/1.2 "Inter Display";
+    color: #667085;
+    margin-top: 2px;
+}
+.deck-slide.s-proto-ui .proto-workspace-chevron {
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #D0D5DD;
+    border-radius: 8px;
+    background: #FFFFFF;
+}
+.deck-slide.s-proto-ui .proto-search-input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    font: 400 13px/1 "Inter Display";
+    color: #101828;
+    background: transparent;
+}
+.deck-slide.s-proto-ui .proto-search-input::placeholder {
+    color: #98A2B3;
+}
+.deck-slide.s-proto-ui .proto-search-key {
+    font: 500 11px/1 "Inter Display";
+    color: #98A2B3;
+    padding: 2px 6px;
+    border: 1px solid #EAECF0;
+    border-radius: 4px;
+}
+
+/* Nav items */
+.deck-slide.s-proto-ui .proto-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+.deck-slide.s-proto-ui .proto-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #475467;
+    font: 500 13px/1.2 "Inter Display";
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: background 150ms;
+}
+.deck-slide.s-proto-ui .proto-nav-item:hover {
+    background: #F9FAFB;
+}
+.deck-slide.s-proto-ui .proto-nav-item.is-active {
+    background: #F9FAFB;
+    color: #101828;
+    font-weight: 600;
+}
+.deck-slide.s-proto-ui .proto-nav-item.is-active .proto-nav-icon {
+    color: #344054;
+}
+.deck-slide.s-proto-ui .proto-nav-icon {
+    color: #98A2B3;
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-nav-label {
+    flex: 1;
+}
+.deck-slide.s-proto-ui .proto-nav-badge {
+    font: 600 10px/1 "Inter Display";
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #F2F4F7;
+    color: #344054;
+}
+
+/* Account card */
+.deck-slide.s-proto-ui .proto-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #F9FAFB;
+    border: 1px solid #EAECF0;
+}
+.deck-slide.s-proto-ui .proto-avatar {
+    width: 32px; height: 32px;
+    border-radius: 999px;
+    background: #7F56D9;
+    color: #FFFFFF;
+    display: grid; place-items: center;
+    font: 600 11px/1 "Inter Display";
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-account-text {
+    flex: 1;
+    min-width: 0;
+}
+.deck-slide.s-proto-ui .proto-account-name {
+    font: 600 12.5px/1.2 "Inter Display";
+    letter-spacing: -0.01em;
+    color: #101828;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.deck-slide.s-proto-ui .proto-account-email {
+    font: 400 11.5px/1.2 "Inter Display";
+    color: #667085;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Main column ──────────────────────────────────────────── */
+.deck-slide.s-proto-ui .proto-main {
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow: hidden;
+}
+.deck-slide.s-proto-ui .proto-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+.deck-slide.s-proto-ui .proto-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 12px/1 "Inter Display";
+    color: #98A2B3;
+}
+.deck-slide.s-proto-ui .proto-breadcrumb-current {
+    color: #475467;
+}
+.deck-slide.s-proto-ui .proto-page-title {
+    font: 700 28px/1.15 "Inter Display";
+    letter-spacing: -0.04em;
+    color: #101828;
+    margin: 8px 0 0;
+}
+.deck-slide.s-proto-ui .proto-page-sub {
+    font: 400 14px/1.5 "Inter Display";
+    color: #475467;
+    margin: 6px 0 0;
+    max-width: 640px;
+}
+.deck-slide.s-proto-ui .proto-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+.deck-slide.s-proto-ui .proto-btn {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 13px/1 "Inter Display";
+    letter-spacing: -0.01em;
+}
+.deck-slide.s-proto-ui .proto-btn-secondary {
+    background: #FFFFFF;
+    border: 1px solid #D0D5DD;
+    color: #344054;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.05);
+}
+.deck-slide.s-proto-ui .proto-btn-primary {
+    background: #E9FF7B;
+    color: #0a0a0a;
+    border: 1px solid #D6EC5E;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.05);
+}
+
+/* KPI cards */
+.deck-slide.s-proto-ui .proto-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.deck-slide.s-proto-ui .proto-kpi {
+    background: #FFFFFF;
+    border: 1px solid #EAECF0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+}
+.deck-slide.s-proto-ui .proto-kpi-label {
+    font: 500 12.5px/1.2 "Inter Display";
+    color: #475467;
+    letter-spacing: -0.005em;
+}
+.deck-slide.s-proto-ui .proto-kpi-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.deck-slide.s-proto-ui .proto-kpi-value {
+    font: 700 30px/1 "Inter Display";
+    letter-spacing: -0.045em;
+    color: #101828;
+    font-variant-numeric: tabular-nums;
+}
+.deck-slide.s-proto-ui .proto-spark {
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-kpi-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 600 12px/1 "Inter Display";
+    letter-spacing: -0.005em;
+    margin-top: 4px;
+}
+.deck-slide.s-proto-ui .proto-kpi-delta-meta {
+    color: #667085;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+/* Card containing the table */
+.deck-slide.s-proto-ui .proto-card {
+    background: #FFFFFF;
+    border: 1px solid #EAECF0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.deck-slide.s-proto-ui .proto-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #EAECF0;
+    gap: 16px;
+}
+.deck-slide.s-proto-ui .proto-card-title {
+    font: 600 15px/1.2 "Inter Display";
+    letter-spacing: -0.015em;
+    color: #101828;
+}
+.deck-slide.s-proto-ui .proto-card-sub {
+    font: 400 12.5px/1.2 "Inter Display";
+    color: #667085;
+    margin-top: 2px;
+}
+.deck-slide.s-proto-ui .proto-filters {
+    display: flex;
+    gap: 6px;
+    padding: 2px;
+    background: #F9FAFB;
+    border: 1px solid #EAECF0;
+    border-radius: 8px;
+}
+.deck-slide.s-proto-ui .proto-chip {
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 0;
+    background: transparent;
+    font: 500 12.5px/1 "Inter Display";
+    color: #475467;
+    cursor: pointer;
+}
+.deck-slide.s-proto-ui .proto-chip.is-active {
+    background: #FFFFFF;
+    color: #101828;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.06);
+    font-weight: 600;
+}
+
+/* Table */
+.deck-slide.s-proto-ui .proto-table {
+    display: flex;
+    flex-direction: column;
+}
+.deck-slide.s-proto-ui .proto-table-head,
+.deck-slide.s-proto-ui .proto-table-row {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 0.8fr 1.5fr;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+}
+.deck-slide.s-proto-ui .proto-table-head {
+    background: #F9FAFB;
+    border-bottom: 1px solid #EAECF0;
+    font: 600 11.5px/1 "Inter Display";
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #475467;
+}
+.deck-slide.s-proto-ui .proto-table-row {
+    border-bottom: 1px solid #EAECF0;
+    font: 400 13px/1.4 "Inter Display";
+    color: #475467;
+}
+.deck-slide.s-proto-ui .proto-table-row:last-child {
+    border-bottom: 0;
+}
+.deck-slide.s-proto-ui .proto-cell-company {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.deck-slide.s-proto-ui .proto-row-avatar {
+    width: 36px; height: 36px;
+    border-radius: 999px;
+    color: #FFFFFF;
+    display: grid; place-items: center;
+    font: 600 12px/1 "Inter Display";
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-cell-title {
+    font: 600 13.5px/1.2 "Inter Display";
+    color: #101828;
+    letter-spacing: -0.01em;
+}
+.deck-slide.s-proto-ui .proto-cell-sub {
+    font: 400 12px/1.3 "Inter Display";
+    color: #667085;
+    margin-top: 2px;
+}
+.deck-slide.s-proto-ui .proto-cell-prog {
+    font: 500 13px/1.3 "Inter Display";
+    color: #344054;
+}
+.deck-slide.s-proto-ui .proto-cell-notes {
+    font: 400 12.5px/1.4 "Inter Display";
+    color: #667085;
+}
+.deck-slide.s-proto-ui .proto-table-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: #98A2B3;
+    font: 500 13px/1.4 "Inter Display";
+}
+
+/* Status badges (Untitled UI pattern: dot + label, soft bg, ring) */
+.deck-slide.s-proto-ui .proto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px 2px 8px;
+    border-radius: 999px;
+    font: 600 11.5px/1.6 "Inter Display";
+    letter-spacing: -0.005em;
+    border: 1px solid;
+}
+.deck-slide.s-proto-ui .proto-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    flex-shrink: 0;
+}
+.deck-slide.s-proto-ui .proto-badge-success {
+    background: #ECFDF3; color: #067647; border-color: #ABEFC6;
+}
+.deck-slide.s-proto-ui .proto-badge-warning {
+    background: #FFFAEB; color: #B54708; border-color: #FEDF89;
+}
+.deck-slide.s-proto-ui .proto-badge-error {
+    background: #FEF3F2; color: #B42318; border-color: #FECDCA;
+}
+.deck-slide.s-proto-ui .proto-badge-info {
+    background: #EFF8FF; color: #175CD3; border-color: #B2DDFF;
+}
+.deck-slide.s-proto-ui .proto-badge-neutral {
+    background: #F2F4F7; color: #344054; border-color: #EAECF0;
+}
+
+.deck-slide.s-proto-ui .proto-footnote {
+    text-align: center;
+    font: 400 11px/1 "Inter Display";
+    color: #98A2B3;
+    margin-top: 8px;
+}
