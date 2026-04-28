@@ -49,7 +49,34 @@ export function EditorLayout({
     const slideTheme = deck.theme || "light";
     const selectedSlide = deck.slides[selectedIndex];
 
-    // ── Arrow-key navigation ─────────────────────────────────────────
+    // ── Slide CRUD ────────────────────────────────────────────────────
+    const handleDeleteSlide = useCallback(
+        (index: number) => {
+            if (deck.slides.length <= 1) return;
+            const newSlides = deck.slides.filter((_, i) => i !== index);
+            onDeckChange({ ...deck, slides: newSlides });
+            setSelectedIndex((prev) => {
+                if (prev > index) return prev - 1;
+                if (prev === index) return Math.min(prev, newSlides.length - 1);
+                return prev;
+            });
+        },
+        [deck, onDeckChange],
+    );
+
+    const handleReorderSlide = useCallback(
+        (from: number, to: number) => {
+            if (from === to || from < 0 || to < 0) return;
+            const newSlides = [...deck.slides];
+            const [moved] = newSlides.splice(from, 1);
+            newSlides.splice(to, 0, moved);
+            onDeckChange({ ...deck, slides: newSlides });
+            setSelectedIndex(to);
+        },
+        [deck, onDeckChange],
+    );
+
+    // ── Arrow-key nav + Backspace/Delete ─────────────────────────────
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             const target = e.target as HTMLElement | null;
@@ -59,11 +86,14 @@ export function EditorLayout({
                 setSelectedIndex((i) => Math.max(0, i - 1));
             } else if (e.key === "ArrowRight") {
                 setSelectedIndex((i) => Math.min(deck.slides.length - 1, i + 1));
+            } else if ((e.key === "Backspace" || e.key === "Delete") && deck.slides.length > 1) {
+                e.preventDefault();
+                handleDeleteSlide(selectedIndex);
             }
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [deck.slides.length]);
+    }, [deck.slides.length, selectedIndex, handleDeleteSlide]);
 
     // ── PDF pre-render: re-runs whenever the deck mutates ─────────────
     // Debounced 1.2s so a flurry of iterate edits batch into one render.
@@ -239,6 +269,8 @@ export function EditorLayout({
                     onDeckChange({ ...deck, slides: newSlides });
                     setSelectedIndex(selectedIndex + 1);
                 }}
+                onDelete={handleDeleteSlide}
+                onReorder={handleReorderSlide}
                 clientLogoUrl={deck.clientLogoUrl}
                 format={deck.format ?? "proposal"}
                 theme={slideTheme}

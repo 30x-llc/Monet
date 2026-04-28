@@ -2344,15 +2344,59 @@
     background: transparent;
     border: 0;
     padding: 0;
-    cursor: pointer;
+    cursor: grab;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    transition: transform 150ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+    transition: transform 150ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)), opacity 150ms;
+    user-select: none;
+}
+.proto-rail-thumb:active {
+    cursor: grabbing;
 }
 .proto-rail-thumb:hover {
     transform: translateY(-1px);
+}
+.proto-rail-thumb.is-dragging {
+    opacity: 0.4;
+}
+.proto-rail-thumb.is-drop-target .proto-rail-thumb-canvas {
+    box-shadow:
+        -3px 0 0 0 var(--chrome-accent, #E9FF7B),
+        0 4px 14px -4px rgba(16, 24, 40, 0.20);
+}
+
+/* Delete X button — top-right corner of each thumbnail. */
+.proto-rail-thumb-del {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #0a0a0a;
+    color: #fff;
+    border: 2px solid var(--chrome-bg, #fff);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 120ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),
+        transform 120ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),
+        background 120ms;
+    z-index: 4;
+    padding: 0;
+}
+.proto-rail-thumb:hover .proto-rail-thumb-del,
+.proto-rail-thumb.is-active .proto-rail-thumb-del,
+.proto-rail-thumb-del:focus-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+.proto-rail-thumb-del:hover {
+    background: #b42318;
 }
 .proto-rail-thumb-canvas {
     position: relative;
