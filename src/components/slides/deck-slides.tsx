@@ -39,6 +39,17 @@ const LOGO_ACCENT = BRAND_ASSETS.logoAccent;
 const GLOBE = BRAND_ASSETS.globe;
 const PORTADA = BRAND_ASSETS.portada;
 
+/**
+ * Route external image URLs through our same-origin /api/logo-proxy
+ * so Chrome's Opaque Response Blocking does not drop the image. Local
+ * paths (starting with `/`) and data URIs pass through unchanged.
+ */
+function proxyExternal(url: string): string {
+    if (!url) return url;
+    if (url.startsWith("/") || url.startsWith("data:")) return url;
+    return `/api/logo-proxy?url=${encodeURIComponent(url)}`;
+}
+
 // -------- Icons (Heroicons-ish strokes matching the reference) --------
 
 function IconClock() {
@@ -739,6 +750,10 @@ export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; c
     // with a centered "30X | <partner-logo>" lockup. Falls back to the legacy
     // globe + headline layout when there is no partner logo.
     if (clientLogoUrl) {
+        // Closing slide is logo-only by design. No headline, no subtitle,
+        // no caption — just the 30X | partner lockup centered on the
+        // Portada Oficial background. Per Juan Diego: "centrado, centrado,
+        // centrado", small logos, tight gap between the three elements.
         return (
             <section className="deck-slide s-end-portada">
                 <div className="bg">
@@ -748,11 +763,25 @@ export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; c
                 <div className="lockup">
                     <img className="lockup-30x" src={LOGO_LIGHT} alt="30X" />
                     <span className="lockup-divider" aria-hidden />
-                    <img className="lockup-partner" src={clientLogoUrl} alt="" />
+                    {/*
+                       Render the partner logo as a CSS background instead
+                       of <img>. Many brand SVGs ship with viewBox but no
+                       intrinsic width/height, which collapses an <img> to
+                       0×0 even when CSS sets `height`. Background-image
+                       with a fixed-size container respects the box size
+                       regardless of the SVG's intrinsic dimensions.
+
+                       Cross-origin URLs go through /api/logo-proxy to
+                       sidestep Chrome's Opaque Response Blocking (ORB),
+                       which silently drops third-party SVGs.
+                    */}
+                    <div
+                        className="lockup-partner"
+                        role="img"
+                        aria-label="Logo del aliado"
+                        style={{ backgroundImage: `url(${JSON.stringify(proxyExternal(clientLogoUrl))})` }}
+                    />
                 </div>
-                {slide.headline ? (
-                    <div className="caption">{slide.headline}</div>
-                ) : null}
             </section>
         );
     }

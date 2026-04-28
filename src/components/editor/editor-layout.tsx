@@ -7,6 +7,7 @@ import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { HandoffModal } from "./handoff-modal";
 import { SlideThumbnailRail } from "./slide-thumbnail-rail";
+import { findLocalPartnerLogo } from "@/lib/research/local-logos";
 
 const CHROME_THEME_KEY = "30x.chromeTheme";
 
@@ -47,6 +48,14 @@ export function EditorLayout({
     };
 
     const slideTheme = deck.theme || "light";
+
+    // Override clientLogoUrl with the curated 30X member logo when one
+    // exists for this company. This covers older decks generated before
+    // the curated-logos chain landed and replaces broken or generic
+    // research-picked logos with Juan Diego's master white-on-transparent
+    // partner wordmarks.
+    const effectiveClientLogoUrl =
+        findLocalPartnerLogo(deck.companyName, slideTheme) ?? deck.clientLogoUrl;
     const selectedSlide = deck.slides[selectedIndex];
 
     // ── Slide CRUD ────────────────────────────────────────────────────
@@ -250,7 +259,7 @@ export function EditorLayout({
                             Math.min(deck.slides.length - 1, selectedIndex + 1),
                         )
                     }
-                    clientLogoUrl={deck.clientLogoUrl}
+                    clientLogoUrl={effectiveClientLogoUrl}
                     format={deck.format}
                     theme={slideTheme}
                 />
