@@ -11,6 +11,7 @@ import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
 import { BriefingDropZone } from "./briefing-drop-zone";
 import type { SuperPromptFormat } from "@/lib/super-prompt";
+import { AnimatePresence, motion } from "motion/react";
 
 /**
  * Shared handlers hook for the briefing drop zone — used by every
@@ -152,7 +153,6 @@ interface HomeViewProps {
     onOpenTemplate: (id: string) => void;
     onCreateNew: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
-    onCreateApp: (prompt: string) => void;
     userEmail?: string;
     userName?: string;
 }
@@ -193,7 +193,6 @@ export function HomeView({
     onOpenTemplate,
     onCreateNew,
     onOpenIntake,
-    onCreateApp,
     userEmail = "jdelaossa1800@gmail.com",
     userName = "Juan Diego",
 }: HomeViewProps) {
@@ -251,7 +250,6 @@ export function HomeView({
                         onCreate={(args) => onCreateNew(args)}
                         onOpenIntake={onOpenIntake}
                         onOpenTemplate={onOpenTemplate}
-                        onCreateApp={onCreateApp}
                     />
 
                     <p className="mt-3 text-center text-[11px] text-[#a3a3a3] tracking-[-0.005em]">
@@ -296,7 +294,6 @@ interface TabCardProps {
     onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
     onOpenTemplate: (id: string) => void;
-    onCreateApp: (prompt: string) => void;
 }
 
 function TabCard({
@@ -305,7 +302,6 @@ function TabCard({
     onCreate,
     onOpenIntake,
     onOpenTemplate,
-    onCreateApp,
 }: TabCardProps) {
     return (
         <div className="max-w-[720px] mx-auto">
@@ -336,7 +332,7 @@ function TabCard({
             >
                 <div className="p-6">
                     {tab === "prototype" ? (
-                        <PrototypeForm onCreateApp={onCreateApp} />
+                        <PrototypeForm />
                     ) : tab === "proposal" ? (
                         <ProposalForm onCreate={onCreate} />
                     ) : tab === "carousel-ig" ? (
@@ -413,81 +409,189 @@ function TabButton({
 // Per-format forms
 // ──────────────────────────────────────────────────────────────
 
-const APP_PROMPT_EXAMPLES = [
-    "Sales dashboard para Aeroméxico, dark mode, con 4 KPIs (revenue, deals cerrados, churn, LTV), pipeline de oportunidades y trend chart de revenue mensual.",
-    "Landing page para Speaker Series con Andrés Bilbao — hero con foto, agenda, sponsors (Bavaria, Davivienda) y CTA para reservar.",
-    "Pricing page de Sales Machine con 3 planes (Starter, Growth, Enterprise), comparativo de features y testimonios de C-levels.",
-    "Onboarding wizard de 4 pasos para nuevo miembro 30X — perfil, intereses, programas que le interesan, agendar primera mentoría.",
-];
+const DESIGN_SYSTEM_REPO_URL =
+    "https://github.com/juandelaossa-30x/juan-diego-30x-design";
+const DESIGN_SYSTEM_COMMAND = `git clone ${DESIGN_SYSTEM_REPO_URL}.git && cd juan-diego-30x-design`;
 
-function PrototypeForm({
-    onCreateApp,
-}: {
-    onCreateApp: (prompt: string) => void;
-}) {
-    const [prompt, setPrompt] = useState("");
-    const canStart = prompt.trim().length > 8;
+type LaunchPhase = "idle" | "typing" | "done";
 
-    const onSubmit = useCallback(() => {
-        if (!canStart) return;
-        onCreateApp(prompt.trim());
-    }, [prompt, canStart, onCreateApp]);
+function PrototypeForm() {
+    const [phase, setPhase] = useState<LaunchPhase>("idle");
+    const [typed, setTyped] = useState("");
 
-    const onKeyDown = useCallback(
-        (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                onSubmit();
+    const onCopy = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(DESIGN_SYSTEM_COMMAND);
+        } catch {
+            /* clipboard denied; user can still see + select the command */
+        }
+        setTyped("");
+        setPhase("typing");
+        let i = 0;
+        const tick = window.setInterval(() => {
+            i += 1;
+            setTyped(DESIGN_SYSTEM_COMMAND.slice(0, i));
+            if (i >= DESIGN_SYSTEM_COMMAND.length) {
+                window.clearInterval(tick);
+                setPhase("done");
+                window.setTimeout(() => {
+                    setPhase("idle");
+                    setTyped("");
+                }, 5000);
             }
-        },
-        [onSubmit],
-    );
+        }, 17);
+    }, []);
 
     return (
         <FormSurface
-            title="¿Qué vamos a diseñar?"
-            subtitle="Describe la app, dashboard, landing o lo que quieras. Aparece en pantalla en segundos con el sistema 30X."
+            title="30X Design System"
+            subtitle="Cópialo en tu CLI favorita — Claude Code, Codex, Cursor — y diseña con todos los componentes, skills y tokens del sistema 30X."
         >
-            <Field label="Tu idea">
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    rows={4}
-                    placeholder="Ej: Sales dashboard para Aeroméxico, dark mode, con 4 KPIs principales y pipeline de oportunidades…"
-                    className="w-full resize-none bg-white border border-black/[0.09] rounded-lg px-3.5 py-2.5 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] tracking-[-0.005em] leading-[1.5] transition-[border-color,box-shadow] duration-150"
+            <Field label="Repositorio">
+                <a
+                    href={DESIGN_SYSTEM_REPO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2.5 h-12 px-3 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 transition-[border-color] duration-150"
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
-                    autoFocus
-                />
+                >
+                    <img
+                        src="/30x-logo-square.svg"
+                        alt="30X"
+                        className="w-8 h-8 rounded-lg shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-[#0a0a0a] tracking-[-0.005em] leading-[1.2]">
+                            30X Design System
+                        </div>
+                        <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2] mt-0.5 truncate">
+                            Untitled UI · 27 skills · Inter · tokens · componentes
+                        </div>
+                    </div>
+                    <span
+                        aria-hidden="true"
+                        className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors duration-150"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                            <path
+                                d="M5 11L11 5M11 5H6.5M11 5V9.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </a>
             </Field>
 
-            <div className="flex flex-wrap gap-1.5">
-                {APP_PROMPT_EXAMPLES.map((ex, i) => (
-                    <button
-                        key={i}
-                        type="button"
-                        onClick={() => setPrompt(ex)}
-                        className="text-[11px] px-2 py-1 rounded-md border border-black/[0.06] bg-white text-[#525252] hover:text-[#0a0a0a] hover:border-black/[0.2] hover:bg-black/[0.01] transition-[border-color,color,background-color] duration-150 tracking-[-0.005em] truncate max-w-[260px]"
-                        style={{ transitionTimingFunction: "var(--ease-out)" }}
-                        title={ex}
-                    >
-                        {ex.split(" ").slice(0, 5).join(" ")}…
-                    </button>
-                ))}
-            </div>
-
-            <DesignSystemField />
-
-            <CreateRow
-                primary={{
-                    label: "Empezar",
-                    accent: true,
-                    disabled: !canStart,
-                    onClick: onSubmit,
+            <button
+                type="button"
+                onClick={onCopy}
+                disabled={phase !== "idle"}
+                className="group relative w-full h-12 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 hover:brightness-[0.97] active:brightness-90 disabled:opacity-70 disabled:cursor-not-allowed transition-[filter,opacity,box-shadow] duration-200 overflow-hidden"
+                style={{
+                    transitionTimingFunction: "var(--ease-out)",
+                    boxShadow:
+                        "0 1px 0 rgba(0,0,0,0.04), 0 8px 22px -6px rgba(204,224,80,0.55)",
                 }}
-            />
-            <p className="text-[10.5px] text-[#a3a3a3] tracking-[-0.005em] -mt-1">
-                ⌘ + Enter para enviar · generación toma ~25-50s con Opus 4.7
+            >
+                {phase === "done" ? (
+                    <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M3.5 8L7 11.5L13 5"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </svg>
+                ) : (
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                        className="transition-transform duration-200 group-hover:translate-y-[-1px]"
+                        style={{
+                            transitionTimingFunction: "var(--ease-out)",
+                        }}
+                    >
+                        <rect
+                            x="5"
+                            y="5"
+                            width="8"
+                            height="9"
+                            rx="1.6"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                        />
+                        <path
+                            d="M3 11V3.6C3 2.72 3.72 2 4.6 2H10"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                        />
+                    </svg>
+                )}
+                {phase === "idle"
+                    ? "Copiar comando"
+                    : phase === "typing"
+                      ? "Copiando…"
+                      : "Copiado — pega en tu terminal"}
+            </button>
+
+            <AnimatePresence initial={false}>
+                {phase !== "idle" ? (
+                    <motion.div
+                        key="terminal"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ overflow: "hidden" }}
+                    >
+                        <div className="rounded-lg border border-black/[0.85] bg-[#0a0a0a] overflow-hidden shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]">
+                            <div className="flex items-center gap-1.5 h-7 px-3 border-b border-white/[0.06] bg-white/[0.02]">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+                                <span className="ml-2 text-[10.5px] text-[#737373] font-mono tracking-tight">
+                                    30x-design-system — bash
+                                </span>
+                            </div>
+                            <pre className="px-3.5 py-3 text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
+                                <span className="text-[#a3e635] select-none">
+                                    ${" "}
+                                </span>
+                                {typed}
+                                {phase === "typing" ? (
+                                    <span
+                                        aria-hidden="true"
+                                        className="inline-block w-[7px] h-[12px] bg-[#e5e5e5] align-[-1px] ml-0.5"
+                                        style={{
+                                            animation:
+                                                "deck-cursor-blink 1s steps(2) infinite",
+                                        }}
+                                    />
+                                ) : null}
+                            </pre>
+                        </div>
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
+
+            <p className="text-[11px] text-[#a3a3a3] tracking-[-0.005em] leading-[1.45]">
+                Pega el comando en tu terminal y abre tu CLI de IA preferida (Claude
+                Code, Codex, Cursor). El sistema completo queda disponible para
+                diseñar lo que necesites — sales dashboards, landings, lo que sea.
             </p>
         </FormSurface>
     );

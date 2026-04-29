@@ -13,19 +13,8 @@ import { GuidedIntake, type IntakeResult } from "@/components/app/guided-intake"
 import { ResearchReview } from "@/components/app/research-review";
 import { saveDeck, getRecentDecks, getDeckById, deleteDeck, type StoredDeck } from "@/lib/deck-storage";
 import { getTemplateById } from "@/lib/templates";
-import { AppView as AppDesignView } from "@/components/app/app-view";
-import type { AppDoc, AppMessage } from "@/lib/app-types";
-import { saveApp } from "@/lib/app-storage";
 
-type AppView =
-    | "home"
-    | "intake"
-    | "researching"
-    | "research-review"
-    | "generating"
-    | "editor"
-    | "app-generating"
-    | "app";
+type AppView = "home" | "intake" | "researching" | "research-review" | "generating" | "editor";
 
 // Staged generation context — we carry it between the research step
 // (which calls /api/research) and the generate step (which calls
@@ -97,10 +86,6 @@ export default function Home() {
     } | undefined>(undefined);
     const [generationError, setGenerationError] = useState<string | null>(null);
     const [pendingGen, setPendingGen] = useState<PendingGeneration | null>(null);
-    const [currentApp, setCurrentApp] = useState<AppDoc | null>(null);
-    const [currentAppId, setCurrentAppId] = useState<string | null>(null);
-    const [appGenPrompt, setAppGenPrompt] = useState<string>("");
-    const [appGenError, setAppGenError] = useState<string | null>(null);
 
     useEffect(() => {
         setRecentDecks(getRecentDecks(50));
@@ -472,60 +457,6 @@ export default function Home() {
         setCurrentDeckId(null);
     }, []);
 
-    const handleCreateApp = useCallback(async (prompt: string) => {
-        setAppGenPrompt(prompt);
-        setAppGenError(null);
-        setView("app-generating");
-        try {
-            const res = await fetchWithTimeout(
-                "/api/generate-app",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt }),
-                },
-                90_000,
-            );
-            const data = await res.json().catch(() => ({
-                ok: false,
-                error: `HTTP ${res.status} sin JSON`,
-            }));
-            if (!data.ok || !data.html) {
-                throw new Error(data.error || "Generación falló");
-            }
-            const now = new Date().toISOString();
-            const userMsg: AppMessage = {
-                role: "user",
-                content: prompt,
-                timestamp: now,
-            };
-            const assistantMsg: AppMessage = {
-                role: "assistant",
-                content: data.summary || "Listo.",
-                timestamp: now,
-            };
-            const newApp: AppDoc = {
-                title: data.title || "Diseño nuevo",
-                html: data.html,
-                messages: [userMsg, assistantMsg],
-            };
-            const id = saveApp(newApp);
-            setCurrentApp(newApp);
-            setCurrentAppId(id);
-            setView("app");
-        } catch (e) {
-            setAppGenError(e instanceof Error ? e.message : String(e));
-        }
-    }, []);
-
-    const handleBackFromApp = useCallback(() => {
-        setCurrentApp(null);
-        setCurrentAppId(null);
-        setAppGenPrompt("");
-        setAppGenError(null);
-        setView("home");
-    }, []);
-
     const handleOpenIntake = useCallback(
         (
             format: ProjectFormat,
@@ -677,87 +608,6 @@ export default function Home() {
         );
     }
 
-    // ── App generating ──
-    if (view === "app-generating") {
-        const hasError = appGenError !== null;
-        return (
-            <div className="flex h-screen bg-white items-center justify-center">
-                <div className="w-full max-w-[640px] px-6 text-center">
-                    <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border mb-6 ${
-                            hasError
-                                ? "bg-red-50 border-red-200"
-                                : "bg-black/[0.04] border-black/[0.06]"
-                        }`}
-                    >
-                        <div
-                            className={`w-1.5 h-1.5 rounded-full ${
-                                hasError ? "bg-red-500" : "bg-[#E9FF7B] animate-pulse"
-                            }`}
-                        />
-                        <span
-                            className={`text-[11px] font-medium tracking-[-0.005em] ${
-                                hasError ? "text-red-700" : "text-[#0a0a0a]"
-                            }`}
-                        >
-                            {hasError
-                                ? "La generación falló"
-                                : "Diseñando con Claude Opus 4.7"}
-                        </span>
-                    </div>
-                    <h2 className="text-[28px] font-semibold text-[#0a0a0a] tracking-[-0.03em] mb-2">
-                        {hasError ? "Algo salió mal" : "Construyendo tu diseño"}
-                    </h2>
-                    <p className="text-[13px] text-[#737373] mb-6">
-                        {hasError
-                            ? "Revisa el detalle abajo. Puedes volver al home y reintentar."
-                            : "Aplicando el sistema 30X — colores, typography, badges, layout asimétrico…"}
-                    </p>
-                    {appGenPrompt ? (
-                        <div className="rounded-xl bg-[#fafafa] border border-black/[0.06] p-4 mb-4 text-[12.5px] text-[#525252] text-left tracking-[-0.005em] leading-[1.5]">
-                            <div className="text-[10.5px] uppercase tracking-[0.06em] text-[#a3a3a3] font-semibold mb-1.5">
-                                Tu idea
-                            </div>
-                            {appGenPrompt}
-                        </div>
-                    ) : null}
-                    {hasError ? (
-                        <div className="rounded-xl bg-red-50 border border-red-200 p-4 mb-4 text-[12px] text-red-800 text-left whitespace-pre-wrap break-words">
-                            {appGenError}
-                        </div>
-                    ) : null}
-                    <div className="mt-6 flex items-center justify-center gap-2">
-                        <button
-                            onClick={handleBackFromApp}
-                            className="h-9 px-4 rounded-md text-[12px] font-semibold text-[#0a0a0a] border border-black/15 bg-white hover:bg-black/[0.04] transition-colors"
-                        >
-                            {hasError ? "Volver al home" : "Cancelar"}
-                        </button>
-                        {hasError ? (
-                            <button
-                                onClick={() => handleCreateApp(appGenPrompt)}
-                                className="h-9 px-4 rounded-md text-[12px] font-semibold bg-[#E9FF7B] text-[#0a0a0a] hover:brightness-95 transition-[filter]"
-                            >
-                                Reintentar
-                            </button>
-                        ) : null}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // ── App view (chat + live preview) ──
-    if (view === "app" && currentApp && currentAppId) {
-        return (
-            <AppDesignView
-                initialApp={currentApp}
-                appId={currentAppId}
-                onBack={handleBackFromApp}
-            />
-        );
-    }
-
     // ── Home ──
     return (
         <HomeView
@@ -767,7 +617,6 @@ export default function Home() {
             onOpenTemplate={handleOpenTemplate}
             onCreateNew={handleCreateDirect}
             onOpenIntake={handleOpenIntake}
-            onCreateApp={handleCreateApp}
         />
     );
 }
