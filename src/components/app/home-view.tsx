@@ -414,8 +414,15 @@ type LaunchPhase = "idle" | "typing" | "done";
 function PrototypeForm() {
     const [phase, setPhase] = useState<LaunchPhase>("idle");
     const [typed, setTyped] = useState("");
+    const [opening, setOpening] = useState(false);
 
-    const onLaunch = useCallback(async () => {
+    const onOpenStudio = useCallback(() => {
+        setOpening(true);
+        window.setTimeout(() => setOpening(false), 1800);
+    }, []);
+
+    const onCopyMacCommand = useCallback(async () => {
+        if (phase !== "idle") return;
         try {
             await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
         } catch {
@@ -436,12 +443,12 @@ function PrototypeForm() {
                 }, 5000);
             }
         }, 17);
-    }, []);
+    }, [phase]);
 
     return (
         <FormSurface
             title="Tu studio"
-            subtitle="Claude Code abre tu sistema 30X — animaciones, responsive, listo para deploy en Vercel."
+            subtitle="Listo en tu navegador en ~30s. Claude Code precargado y corriendo, sin instalar nada."
         >
             <Field label="Repositorio">
                 <a
@@ -481,33 +488,126 @@ function PrototypeForm() {
                 </a>
             </Field>
 
-            <button
-                type="button"
-                onClick={onLaunch}
-                disabled={phase !== "idle"}
-                className="group relative w-full h-12 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 hover:brightness-[0.97] active:brightness-90 disabled:opacity-70 disabled:cursor-not-allowed transition-[filter,opacity,box-shadow] duration-200 overflow-hidden"
+            <a
+                href={PROTOTYPE_CODESPACES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onOpenStudio}
+                className="group relative w-full h-12 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 hover:brightness-[0.97] active:brightness-90 transition-[filter,box-shadow] duration-200 overflow-hidden"
                 style={{
                     transitionTimingFunction: "var(--ease-out)",
                     boxShadow:
                         "0 1px 0 rgba(0,0,0,0.04), 0 8px 22px -6px rgba(204,224,80,0.55)",
                 }}
             >
+                {opening ? (
+                    <span
+                        aria-hidden="true"
+                        className="w-3.5 h-3.5 rounded-full border-[1.6px] border-[#0a0a0a]/25 border-t-[#0a0a0a] animate-spin"
+                    />
+                ) : (
+                    <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        className="transition-transform duration-200 group-hover:translate-x-0.5"
+                        style={{ transitionTimingFunction: "var(--ease-out)" }}
+                    >
+                        <path d="M4 3.5L13 8L4 12.5V3.5Z" />
+                    </svg>
+                )}
+                {opening ? "Abriendo studio…" : "Abrir studio"}
+            </a>
+
+            <div className="flex items-center justify-center gap-1.5 text-[10.5px] text-[#a3a3a3] tracking-[-0.005em] -mt-1">
                 <svg
                     width="11"
                     height="11"
                     viewBox="0 0 16 16"
                     fill="currentColor"
                     aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:translate-x-0.5"
-                    style={{ transitionTimingFunction: "var(--ease-out)" }}
+                    className="text-[#737373]"
                 >
-                    <path d="M4 3.5L13 8L4 12.5V3.5Z" />
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
                 </svg>
-                {phase === "idle"
-                    ? "Lanzar Claude Code"
-                    : phase === "typing"
-                      ? "Lanzando…"
-                      : "Comando copiado"}
+                <span>GitHub Codespaces · Claude Code precargado · ~30s</span>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+                <span className="h-px flex-1 bg-black/[0.06]" />
+                <span className="text-[10px] text-[#a3a3a3] tracking-[0.06em] uppercase font-medium">
+                    o en tu Mac
+                </span>
+                <span className="h-px flex-1 bg-black/[0.06]" />
+            </div>
+
+            <button
+                type="button"
+                onClick={onCopyMacCommand}
+                disabled={phase !== "idle"}
+                className="group flex items-center justify-between gap-3 w-full h-10 px-3.5 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 hover:bg-black/[0.02] disabled:opacity-70 disabled:cursor-not-allowed transition-[border-color,background-color,opacity] duration-150 text-left"
+                style={{ transitionTimingFunction: "var(--ease-out)" }}
+            >
+                <span className="flex items-center gap-2">
+                    <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        aria-hidden="true"
+                        className="text-[#737373]"
+                    >
+                        <path d="M11.6 8.55c-.02-1.84 1.5-2.72 1.57-2.77-.86-1.25-2.19-1.42-2.66-1.44-1.13-.11-2.21.66-2.78.66-.58 0-1.46-.65-2.41-.63-1.24.02-2.39.72-3.03 1.83-1.29 2.24-.33 5.55.93 7.37.61.89 1.34 1.89 2.29 1.85.92-.04 1.27-.6 2.39-.6 1.11 0 1.43.6 2.4.58.99-.02 1.62-.91 2.23-1.8.7-1.04.99-2.04 1.01-2.09-.02-.01-1.94-.74-1.96-2.96zM9.74 3.16c.51-.62.86-1.49.76-2.34-.74.03-1.63.49-2.16 1.11-.47.55-.89 1.43-.78 2.27.83.06 1.67-.42 2.18-1.04z" />
+                    </svg>
+                    <span className="text-[12.5px] font-medium text-[#0a0a0a] tracking-[-0.005em]">
+                        Lanzar en tu Mac
+                    </span>
+                </span>
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#525252] tracking-[-0.005em]">
+                    {phase === "done" ? (
+                        <>
+                            <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                className="text-[#0a0a0a]"
+                            >
+                                <path
+                                    d="M3.5 8L7 11.5L13 5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                            Copiado
+                        </>
+                    ) : phase === "typing" ? (
+                        "Copiando…"
+                    ) : (
+                        <>
+                            Copiar comando
+                            <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors"
+                            >
+                                <path
+                                    d="M5 8H11M11 8L8 5M11 8L8 11"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </>
+                    )}
+                </span>
             </button>
 
             <AnimatePresence initial={false}>
@@ -582,48 +682,6 @@ function PrototypeForm() {
                     </motion.div>
                 ) : null}
             </AnimatePresence>
-
-            <div className="flex items-center gap-2 pt-1">
-                <span className="h-px flex-1 bg-black/[0.06]" />
-                <span className="text-[10px] text-[#a3a3a3] tracking-[0.06em] uppercase font-medium">
-                    o
-                </span>
-                <span className="h-px flex-1 bg-black/[0.06]" />
-            </div>
-
-            <a
-                href={PROTOTYPE_CODESPACES_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center justify-center gap-2 h-10 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 hover:bg-black/[0.02] transition-[border-color,background-color] duration-150 text-[12.5px] font-medium text-[#0a0a0a] tracking-[-0.005em]"
-                style={{ transitionTimingFunction: "var(--ease-out)" }}
-            >
-                <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    aria-hidden="true"
-                >
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-                </svg>
-                Abrir en GitHub Codespaces
-                <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors"
-                >
-                    <path
-                        d="M5 11L11 5M11 5H6.5M11 5V9.5"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </svg>
-            </a>
         </FormSurface>
     );
 }
