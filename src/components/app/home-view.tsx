@@ -405,7 +405,7 @@ function TabButton({
 const PROTOTYPE_REPO_SLUG = "juandelaossa-30x/juan-diego-30x-design";
 const PROTOTYPE_REPO_URL = `https://github.com/${PROTOTYPE_REPO_SLUG}`;
 const PROTOTYPE_WEB_IDE_URL = `https://github.dev/${PROTOTYPE_REPO_SLUG}`;
-const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude`;
+const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude --dangerously-skip-permissions`;
 
 type LaunchState = "idle" | "launching" | "done";
 
