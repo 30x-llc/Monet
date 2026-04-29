@@ -11,7 +11,6 @@ import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
 import { BriefingDropZone } from "./briefing-drop-zone";
 import type { SuperPromptFormat } from "@/lib/super-prompt";
-import { AnimatePresence, motion } from "motion/react";
 
 /**
  * Shared handlers hook for the briefing drop zone — used by every
@@ -153,6 +152,7 @@ interface HomeViewProps {
     onOpenTemplate: (id: string) => void;
     onCreateNew: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
+    onCreateApp: (prompt: string) => void;
     userEmail?: string;
     userName?: string;
 }
@@ -193,6 +193,7 @@ export function HomeView({
     onOpenTemplate,
     onCreateNew,
     onOpenIntake,
+    onCreateApp,
     userEmail = "jdelaossa1800@gmail.com",
     userName = "Juan Diego",
 }: HomeViewProps) {
@@ -250,6 +251,7 @@ export function HomeView({
                         onCreate={(args) => onCreateNew(args)}
                         onOpenIntake={onOpenIntake}
                         onOpenTemplate={onOpenTemplate}
+                        onCreateApp={onCreateApp}
                     />
 
                     <p className="mt-3 text-center text-[11px] text-[#a3a3a3] tracking-[-0.005em]">
@@ -294,9 +296,17 @@ interface TabCardProps {
     onCreate: (args: CreateArgs) => void;
     onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
     onOpenTemplate: (id: string) => void;
+    onCreateApp: (prompt: string) => void;
 }
 
-function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: TabCardProps) {
+function TabCard({
+    tab,
+    onTabChange,
+    onCreate,
+    onOpenIntake,
+    onOpenTemplate,
+    onCreateApp,
+}: TabCardProps) {
     return (
         <div className="max-w-[720px] mx-auto">
             {/* Tab strip */}
@@ -326,7 +336,7 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
             >
                 <div className="p-6">
                     {tab === "prototype" ? (
-                        <PrototypeForm />
+                        <PrototypeForm onCreateApp={onCreateApp} />
                     ) : tab === "proposal" ? (
                         <ProposalForm onCreate={onCreate} />
                     ) : tab === "carousel-ig" ? (
@@ -403,285 +413,82 @@ function TabButton({
 // Per-format forms
 // ──────────────────────────────────────────────────────────────
 
-const PROTOTYPE_REPO_URL =
-    "https://github.com/juandelaossa-30x/juan-diego-30x-design";
-const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude`;
-const PROTOTYPE_CODESPACES_URL =
-    "https://github.com/codespaces/new?repo=juandelaossa-30x/juan-diego-30x-design";
+const APP_PROMPT_EXAMPLES = [
+    "Sales dashboard para Aeroméxico, dark mode, con 4 KPIs (revenue, deals cerrados, churn, LTV), pipeline de oportunidades y trend chart de revenue mensual.",
+    "Landing page para Speaker Series con Andrés Bilbao — hero con foto, agenda, sponsors (Bavaria, Davivienda) y CTA para reservar.",
+    "Pricing page de Sales Machine con 3 planes (Starter, Growth, Enterprise), comparativo de features y testimonios de C-levels.",
+    "Onboarding wizard de 4 pasos para nuevo miembro 30X — perfil, intereses, programas que le interesan, agendar primera mentoría.",
+];
 
-type LaunchPhase = "idle" | "typing" | "done";
+function PrototypeForm({
+    onCreateApp,
+}: {
+    onCreateApp: (prompt: string) => void;
+}) {
+    const [prompt, setPrompt] = useState("");
+    const canStart = prompt.trim().length > 8;
 
-function PrototypeForm() {
-    const [phase, setPhase] = useState<LaunchPhase>("idle");
-    const [typed, setTyped] = useState("");
-    const [opening, setOpening] = useState(false);
+    const onSubmit = useCallback(() => {
+        if (!canStart) return;
+        onCreateApp(prompt.trim());
+    }, [prompt, canStart, onCreateApp]);
 
-    const onOpenStudio = useCallback(() => {
-        setOpening(true);
-        window.setTimeout(() => setOpening(false), 1800);
-    }, []);
-
-    const onCopyMacCommand = useCallback(async () => {
-        if (phase !== "idle") return;
-        try {
-            await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
-        } catch {
-            /* clipboard denied; user can still see the command */
-        }
-        setTyped("");
-        setPhase("typing");
-        let i = 0;
-        const tick = window.setInterval(() => {
-            i += 1;
-            setTyped(PROTOTYPE_COMMAND.slice(0, i));
-            if (i >= PROTOTYPE_COMMAND.length) {
-                window.clearInterval(tick);
-                setPhase("done");
-                window.setTimeout(() => {
-                    setPhase("idle");
-                    setTyped("");
-                }, 5000);
+    const onKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                onSubmit();
             }
-        }, 17);
-    }, [phase]);
+        },
+        [onSubmit],
+    );
 
     return (
         <FormSurface
-            title="Tu studio"
-            subtitle="Listo en tu navegador en ~30s. Claude Code precargado y corriendo, sin instalar nada."
+            title="¿Qué vamos a diseñar?"
+            subtitle="Describe la app, dashboard, landing o lo que quieras. Aparece en pantalla en segundos con el sistema 30X."
         >
-            <Field label="Repositorio">
-                <a
-                    href={PROTOTYPE_REPO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-2.5 h-12 px-3 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 transition-[border-color] duration-150"
+            <Field label="Tu idea">
+                <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    rows={4}
+                    placeholder="Ej: Sales dashboard para Aeroméxico, dark mode, con 4 KPIs principales y pipeline de oportunidades…"
+                    className="w-full resize-none bg-white border border-black/[0.09] rounded-lg px-3.5 py-2.5 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] tracking-[-0.005em] leading-[1.5] transition-[border-color,box-shadow] duration-150"
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
-                >
-                    <img
-                        src="/30x-logo-square.svg"
-                        alt="30X"
-                        className="w-8 h-8 rounded-lg shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-semibold text-[#0a0a0a] tracking-[-0.005em] leading-[1.2]">
-                            juan-diego-30x-design
-                        </div>
-                        <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2] mt-0.5 truncate">
-                            Untitled UI · shadcn · Emil Kowalski · impeccable · 27 skills
-                        </div>
-                    </div>
-                    <span
-                        aria-hidden="true"
-                        className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors duration-150"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                            <path
-                                d="M5 11L11 5M11 5H6.5M11 5V9.5"
-                                stroke="currentColor"
-                                strokeWidth="1.6"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </span>
-                </a>
+                    autoFocus
+                />
             </Field>
 
-            <a
-                href={PROTOTYPE_CODESPACES_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onOpenStudio}
-                className="group relative w-full h-12 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 hover:brightness-[0.97] active:brightness-90 transition-[filter,box-shadow] duration-200 overflow-hidden"
-                style={{
-                    transitionTimingFunction: "var(--ease-out)",
-                    boxShadow:
-                        "0 1px 0 rgba(0,0,0,0.04), 0 8px 22px -6px rgba(204,224,80,0.55)",
-                }}
-            >
-                {opening ? (
-                    <span
-                        aria-hidden="true"
-                        className="w-3.5 h-3.5 rounded-full border-[1.6px] border-[#0a0a0a]/25 border-t-[#0a0a0a] animate-spin"
-                    />
-                ) : (
-                    <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        aria-hidden="true"
-                        className="transition-transform duration-200 group-hover:translate-x-0.5"
+            <div className="flex flex-wrap gap-1.5">
+                {APP_PROMPT_EXAMPLES.map((ex, i) => (
+                    <button
+                        key={i}
+                        type="button"
+                        onClick={() => setPrompt(ex)}
+                        className="text-[11px] px-2 py-1 rounded-md border border-black/[0.06] bg-white text-[#525252] hover:text-[#0a0a0a] hover:border-black/[0.2] hover:bg-black/[0.01] transition-[border-color,color,background-color] duration-150 tracking-[-0.005em] truncate max-w-[260px]"
                         style={{ transitionTimingFunction: "var(--ease-out)" }}
+                        title={ex}
                     >
-                        <path d="M4 3.5L13 8L4 12.5V3.5Z" />
-                    </svg>
-                )}
-                {opening ? "Abriendo studio…" : "Abrir studio"}
-            </a>
-
-            <div className="flex items-center justify-center gap-1.5 text-[10.5px] text-[#a3a3a3] tracking-[-0.005em] -mt-1">
-                <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    aria-hidden="true"
-                    className="text-[#737373]"
-                >
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-                </svg>
-                <span>GitHub Codespaces · Claude Code precargado · ~30s</span>
+                        {ex.split(" ").slice(0, 5).join(" ")}…
+                    </button>
+                ))}
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-                <span className="h-px flex-1 bg-black/[0.06]" />
-                <span className="text-[10px] text-[#a3a3a3] tracking-[0.06em] uppercase font-medium">
-                    o en tu Mac
-                </span>
-                <span className="h-px flex-1 bg-black/[0.06]" />
-            </div>
+            <DesignSystemField />
 
-            <button
-                type="button"
-                onClick={onCopyMacCommand}
-                disabled={phase !== "idle"}
-                className="group flex items-center justify-between gap-3 w-full h-10 px-3.5 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 hover:bg-black/[0.02] disabled:opacity-70 disabled:cursor-not-allowed transition-[border-color,background-color,opacity] duration-150 text-left"
-                style={{ transitionTimingFunction: "var(--ease-out)" }}
-            >
-                <span className="flex items-center gap-2">
-                    <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        aria-hidden="true"
-                        className="text-[#737373]"
-                    >
-                        <path d="M11.6 8.55c-.02-1.84 1.5-2.72 1.57-2.77-.86-1.25-2.19-1.42-2.66-1.44-1.13-.11-2.21.66-2.78.66-.58 0-1.46-.65-2.41-.63-1.24.02-2.39.72-3.03 1.83-1.29 2.24-.33 5.55.93 7.37.61.89 1.34 1.89 2.29 1.85.92-.04 1.27-.6 2.39-.6 1.11 0 1.43.6 2.4.58.99-.02 1.62-.91 2.23-1.8.7-1.04.99-2.04 1.01-2.09-.02-.01-1.94-.74-1.96-2.96zM9.74 3.16c.51-.62.86-1.49.76-2.34-.74.03-1.63.49-2.16 1.11-.47.55-.89 1.43-.78 2.27.83.06 1.67-.42 2.18-1.04z" />
-                    </svg>
-                    <span className="text-[12.5px] font-medium text-[#0a0a0a] tracking-[-0.005em]">
-                        Lanzar en tu Mac
-                    </span>
-                </span>
-                <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#525252] tracking-[-0.005em]">
-                    {phase === "done" ? (
-                        <>
-                            <svg
-                                width="11"
-                                height="11"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                className="text-[#0a0a0a]"
-                            >
-                                <path
-                                    d="M3.5 8L7 11.5L13 5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.8"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                            Copiado
-                        </>
-                    ) : phase === "typing" ? (
-                        "Copiando…"
-                    ) : (
-                        <>
-                            Copiar comando
-                            <svg
-                                width="11"
-                                height="11"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors"
-                            >
-                                <path
-                                    d="M5 8H11M11 8L8 5M11 8L8 11"
-                                    stroke="currentColor"
-                                    strokeWidth="1.6"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                        </>
-                    )}
-                </span>
-            </button>
-
-            <AnimatePresence initial={false}>
-                {phase !== "idle" ? (
-                    <motion.div
-                        key="terminal"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-                        style={{ overflow: "hidden" }}
-                    >
-                        <div className="rounded-lg border border-black/[0.85] bg-[#0a0a0a] overflow-hidden shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]">
-                            <div className="flex items-center gap-1.5 h-7 px-3 border-b border-white/[0.06] bg-white/[0.02]">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
-                                <span className="ml-2 text-[10.5px] text-[#737373] font-mono tracking-tight">
-                                    claude — bash
-                                </span>
-                            </div>
-                            <pre className="px-3.5 py-3 text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
-                                <span className="text-[#a3e635] select-none">
-                                    ${" "}
-                                </span>
-                                {typed}
-                                {phase === "typing" ? (
-                                    <span
-                                        aria-hidden="true"
-                                        className="inline-block w-[7px] h-[12px] bg-[#e5e5e5] align-[-1px] ml-0.5"
-                                        style={{
-                                            animation:
-                                                "deck-cursor-blink 1s steps(2) infinite",
-                                        }}
-                                    />
-                                ) : null}
-                            </pre>
-                            <AnimatePresence>
-                                {phase === "done" ? (
-                                    <motion.div
-                                        key="done"
-                                        initial={{ opacity: 0, y: 4 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{
-                                            duration: 0.2,
-                                            ease: [0.16, 1, 0.3, 1],
-                                        }}
-                                        className="flex items-center gap-2 px-3.5 py-2.5 border-t border-white/[0.06] bg-white/[0.02]"
-                                    >
-                                        <svg
-                                            width="12"
-                                            height="12"
-                                            viewBox="0 0 16 16"
-                                            fill="none"
-                                            className="text-[#a3e635] shrink-0"
-                                        >
-                                            <path
-                                                d="M3.5 8L7 11.5L13 5"
-                                                stroke="currentColor"
-                                                strokeWidth="1.8"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
-                                        <span className="text-[11.5px] text-[#e5e5e5] tracking-[-0.005em]">
-                                            Comando copiado. Abre Terminal y pega.
-                                        </span>
-                                    </motion.div>
-                                ) : null}
-                            </AnimatePresence>
-                        </div>
-                    </motion.div>
-                ) : null}
-            </AnimatePresence>
+            <CreateRow
+                primary={{
+                    label: "Empezar",
+                    accent: true,
+                    disabled: !canStart,
+                    onClick: onSubmit,
+                }}
+            />
+            <p className="text-[10.5px] text-[#a3a3a3] tracking-[-0.005em] -mt-1">
+                ⌘ + Enter para enviar · generación toma ~25-50s con Opus 4.7
+            </p>
         </FormSurface>
     );
 }
