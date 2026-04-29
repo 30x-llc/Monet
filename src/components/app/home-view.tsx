@@ -175,7 +175,7 @@ const TAB_DEFS: TabDef[] = [
     { id: "proposal", label: "Propuesta", icon: <IconSlide /> },
     { id: "doc", label: "Documento", icon: <IconDoc /> },
     { id: "template", label: "Plantilla", icon: <IconTemplate /> },
-    { id: "prototype", label: "Prototipo", icon: <IconPrototype /> },
+    { id: "prototype", label: "App", icon: <IconPrototype /> },
     { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel />, comingSoon: true },
     { id: "story-ig", label: "Historia", icon: <IconStory />, comingSoon: true },
     { id: "other", label: "Otro", icon: <IconSpark />, comingSoon: true },
@@ -239,7 +239,7 @@ export function HomeView({
                             ¿Qué vamos a diseñar hoy?
                         </h1>
                         <p className="mt-3 text-[15px] text-[#525252] tracking-[-0.005em] leading-[1.5] max-w-[520px] mx-auto">
-                            Prototipos, propuestas, carruseles, historias o documentos — todo con el sistema 30X.
+                            Apps, propuestas, carruseles, historias o documentos — todo con el sistema 30X.
                         </p>
                     </div>
 
@@ -402,27 +402,47 @@ function TabButton({
 // Per-format forms
 // ──────────────────────────────────────────────────────────────
 
-const PROTOTYPE_REPO_URL =
-    "https://github.com/juandelaossa-30x/juan-diego-30x-design";
+const PROTOTYPE_REPO_SLUG = "juandelaossa-30x/juan-diego-30x-design";
+const PROTOTYPE_REPO_URL = `https://github.com/${PROTOTYPE_REPO_SLUG}`;
+const PROTOTYPE_WEB_IDE_URL = `https://github.dev/${PROTOTYPE_REPO_SLUG}`;
 const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude`;
 
-function PrototypeForm() {
-    const [copied, setCopied] = useState(false);
+type LaunchState = "idle" | "launching" | "done";
 
-    const onCopy = useCallback(async () => {
+function PrototypeForm() {
+    const [state, setState] = useState<LaunchState>("idle");
+    const [copyTick, setCopyTick] = useState(false);
+
+    const onLaunch = useCallback(async () => {
+        if (state !== "idle") return;
+        setState("launching");
         try {
             await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2200);
         } catch {
-            /* clipboard denied; ignore */
+            /* clipboard denied — keep going, the user can still copy manually */
+        }
+        // Small choreography delay so the press is felt before the new tab opens.
+        setTimeout(() => {
+            window.open(PROTOTYPE_WEB_IDE_URL, "_blank", "noopener,noreferrer");
+            setState("done");
+            setTimeout(() => setState("idle"), 2600);
+        }, 320);
+    }, [state]);
+
+    const onCopyOnly = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
+            setCopyTick(true);
+            setTimeout(() => setCopyTick(false), 1800);
+        } catch {
+            /* ignore */
         }
     }, []);
 
     return (
         <FormSurface
-            title="Lanzar tu studio"
-            subtitle="Prototipo abre Claude Code con tu sistema 30X — animaciones, responsive, listo para deploy en Vercel."
+            title="Diseña tu app"
+            subtitle="Claude Code con tu sistema 30X — animaciones, responsive, deploy a Vercel sin salir del flow."
         >
             <Field label="Studio">
                 <a
@@ -462,7 +482,7 @@ function PrototypeForm() {
                 </a>
             </Field>
 
-            <Field label="Comando">
+            <Field label="Comando — para Claude Code local">
                 <div className="relative rounded-lg border border-black/[0.09] bg-[#0a0a0a] overflow-hidden">
                     <pre className="px-3.5 py-3 pr-[88px] text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
                         <span className="text-[#737373] select-none">$ </span>
@@ -470,28 +490,22 @@ function PrototypeForm() {
                     </pre>
                     <button
                         type="button"
-                        onClick={onCopy}
+                        onClick={onCopyOnly}
                         className="absolute top-2 right-2 h-7 px-2.5 rounded-md text-[11px] font-medium bg-white/[0.08] text-white hover:bg-white/[0.14] active:bg-white/[0.18] transition-colors duration-150"
                         style={{ transitionTimingFunction: "var(--ease-out)" }}
                     >
-                        {copied ? "Copiado" : "Copiar"}
+                        {copyTick ? "Copiado" : "Copiar"}
                     </button>
                 </div>
             </Field>
 
-            <CreateRow
-                primary={{
-                    label: copied ? "Copiado — pega en tu terminal" : "Copiar comando",
-                    accent: true,
-                    onClick: onCopy,
-                }}
-            />
+            <LaunchButton state={state} onClick={onLaunch} />
 
             <ol className="pt-1 space-y-1.5">
                 {[
-                    "Pega el comando en tu terminal.",
-                    "Claude Code abre el repo con todas las skills cargadas.",
-                    "Diseña — pnpm dev y deploya a Vercel sin salir del flow.",
+                    "El repo abre en VS Code Web — code, animaciones, todo cargado.",
+                    "Para Claude Code local, el comando ya está en tu portapapeles.",
+                    "pnpm dev → deploya a Vercel sin salir del flow.",
                 ].map((step, i) => (
                     <li
                         key={i}
@@ -518,6 +532,73 @@ function PrototypeForm() {
                 .
             </p>
         </FormSurface>
+    );
+}
+
+function LaunchButton({
+    state,
+    onClick,
+}: {
+    state: LaunchState;
+    onClick: () => void;
+}) {
+    const isDone = state === "done";
+    const isLaunching = state === "launching";
+    return (
+        <div className="pt-2">
+            <button
+                type="button"
+                onClick={onClick}
+                disabled={state !== "idle"}
+                className="group relative w-full h-11 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 overflow-hidden transition-[filter,transform,box-shadow] duration-200 ease-out hover:brightness-[0.97] active:brightness-[0.92] active:scale-[0.99] shadow-[0_1px_2px_rgba(0,0,0,0.04),inset_0_-2px_0_rgba(0,0,0,0.05)] disabled:cursor-default disabled:hover:brightness-100 disabled:active:scale-100"
+            >
+                {/* Shine sweep on idle hover */}
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-[280%] transition-[transform,opacity] duration-700 ease-out"
+                />
+                <span
+                    className={`flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out ${
+                        isDone ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"
+                    }`}
+                >
+                    <span>{isLaunching ? "Abriendo studio…" : "Empezar"}</span>
+                    {!isLaunching && (
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            className="transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                        >
+                            <path
+                                d="M3.5 8H12.5M12.5 8L8.5 4M12.5 8L8.5 12"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    )}
+                </span>
+                <span
+                    className={`absolute inset-0 flex items-center justify-center gap-2 transition-[opacity,transform] duration-200 ease-out ${
+                        isDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+                    }`}
+                >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path
+                            d="M3.5 8.5L6.5 11.5L12.5 5"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </svg>
+                    <span>Studio abierto · comando copiado</span>
+                </span>
+            </button>
+        </div>
     );
 }
 
