@@ -631,7 +631,7 @@ function ProposalForm({
                 <TextInput
                     value={projectName}
                     onChange={setProjectName}
-                    placeholder="Ej: Propuesta Aeroméxico Q2 · Speaker Dylan · Partnership Bavaria…"
+                    placeholder="Ej: Propuesta Colsubsidio Q2 · Speaker LATAM · Partnership Bavaria…"
                     autoFocus
                 />
             </Field>
@@ -640,7 +640,7 @@ function ProposalForm({
                 <TextInput
                     value={clientName}
                     onChange={setClientName}
-                    placeholder="Ej: Aeroméxico · Bancolombia · Action Black"
+                    placeholder="Ej: Colsubsidio · LATAM · Bancolombia · Davivienda"
                 />
             </Field>
 
@@ -769,7 +769,7 @@ function DocForm({
                 <TextInput
                     value={projectName}
                     onChange={setProjectName}
-                    placeholder="Ej: Contrato 30X — Aeroméxico · Brief Davivienda"
+                    placeholder="Ej: Contrato 30X — Colsubsidio · Brief LATAM"
                     autoFocus
                 />
             </Field>
@@ -778,7 +778,7 @@ function DocForm({
                 <TextInput
                     value={clientName}
                     onChange={setClientName}
-                    placeholder="Ej: Aeroméxico · Bancolombia · Action Black"
+                    placeholder="Ej: Colsubsidio · LATAM · Bancolombia · Davivienda"
                 />
             </Field>
 
@@ -864,7 +864,7 @@ function OtherForm({
                 <Textarea
                     value={prompt}
                     onChange={setPrompt}
-                    placeholder="Ej: un one-pager para Bancolombia explicando Sales Machine, con diagnóstico y precio"
+                    placeholder="Ej: un one-pager para Colsubsidio explicando Sales Machine, con diagnóstico y precio"
                     rows={4}
                     autoFocus
                 />
