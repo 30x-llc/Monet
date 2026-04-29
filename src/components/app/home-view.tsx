@@ -11,6 +11,7 @@ import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
 import { BriefingDropZone } from "./briefing-drop-zone";
 import type { SuperPromptFormat } from "@/lib/super-prompt";
+import { AnimatePresence, motion } from "motion/react";
 
 /**
  * Shared handlers hook for the briefing drop zone — used by every
@@ -239,7 +240,7 @@ export function HomeView({
                             ¿Qué vamos a diseñar hoy?
                         </h1>
                         <p className="mt-3 text-[15px] text-[#525252] tracking-[-0.005em] leading-[1.5] max-w-[520px] mx-auto">
-                            Apps, propuestas, carruseles, historias o documentos — todo con el sistema 30X.
+                            Prototipos, propuestas, carruseles, historias o documentos — todo con el sistema 30X.
                         </p>
                     </div>
 
@@ -402,49 +403,47 @@ function TabButton({
 // Per-format forms
 // ──────────────────────────────────────────────────────────────
 
-const PROTOTYPE_REPO_SLUG = "juandelaossa-30x/juan-diego-30x-design";
-const PROTOTYPE_REPO_URL = `https://github.com/${PROTOTYPE_REPO_SLUG}`;
-const PROTOTYPE_WEB_IDE_URL = `https://github.dev/${PROTOTYPE_REPO_SLUG}`;
-const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude --dangerously-skip-permissions`;
+const PROTOTYPE_REPO_URL =
+    "https://github.com/juandelaossa-30x/juan-diego-30x-design";
+const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude`;
+const PROTOTYPE_CODESPACES_URL =
+    "https://github.com/codespaces/new?repo=juandelaossa-30x/juan-diego-30x-design";
 
-type LaunchState = "idle" | "launching" | "done";
+type LaunchPhase = "idle" | "typing" | "done";
 
 function PrototypeForm() {
-    const [state, setState] = useState<LaunchState>("idle");
-    const [copyTick, setCopyTick] = useState(false);
+    const [phase, setPhase] = useState<LaunchPhase>("idle");
+    const [typed, setTyped] = useState("");
 
     const onLaunch = useCallback(async () => {
-        if (state !== "idle") return;
-        setState("launching");
         try {
             await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
         } catch {
-            /* clipboard denied — keep going, the user can still copy manually */
+            /* clipboard denied; user can still see the command */
         }
-        // Small choreography delay so the press is felt before the new tab opens.
-        setTimeout(() => {
-            window.open(PROTOTYPE_WEB_IDE_URL, "_blank", "noopener,noreferrer");
-            setState("done");
-            setTimeout(() => setState("idle"), 2600);
-        }, 320);
-    }, [state]);
-
-    const onCopyOnly = useCallback(async () => {
-        try {
-            await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
-            setCopyTick(true);
-            setTimeout(() => setCopyTick(false), 1800);
-        } catch {
-            /* ignore */
-        }
+        setTyped("");
+        setPhase("typing");
+        let i = 0;
+        const tick = window.setInterval(() => {
+            i += 1;
+            setTyped(PROTOTYPE_COMMAND.slice(0, i));
+            if (i >= PROTOTYPE_COMMAND.length) {
+                window.clearInterval(tick);
+                setPhase("done");
+                window.setTimeout(() => {
+                    setPhase("idle");
+                    setTyped("");
+                }, 5000);
+            }
+        }, 17);
     }, []);
 
     return (
         <FormSurface
-            title="Diseña tu app"
-            subtitle="Claude Code con tu sistema 30X — animaciones, responsive, deploy a Vercel sin salir del flow."
+            title="Tu studio"
+            subtitle="Claude Code abre tu sistema 30X — animaciones, responsive, listo para deploy en Vercel."
         >
-            <Field label="Studio">
+            <Field label="Repositorio">
                 <a
                     href={PROTOTYPE_REPO_URL}
                     target="_blank"
@@ -482,123 +481,150 @@ function PrototypeForm() {
                 </a>
             </Field>
 
-            <Field label="Comando — para Claude Code local">
-                <div className="relative rounded-lg border border-black/[0.09] bg-[#0a0a0a] overflow-hidden">
-                    <pre className="px-3.5 py-3 pr-[88px] text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
-                        <span className="text-[#737373] select-none">$ </span>
-                        {PROTOTYPE_COMMAND}
-                    </pre>
-                    <button
-                        type="button"
-                        onClick={onCopyOnly}
-                        className="absolute top-2 right-2 h-7 px-2.5 rounded-md text-[11px] font-medium bg-white/[0.08] text-white hover:bg-white/[0.14] active:bg-white/[0.18] transition-colors duration-150"
-                        style={{ transitionTimingFunction: "var(--ease-out)" }}
-                    >
-                        {copyTick ? "Copiado" : "Copiar"}
-                    </button>
-                </div>
-            </Field>
-
-            <LaunchButton state={state} onClick={onLaunch} />
-
-            <ol className="pt-1 space-y-1.5">
-                {[
-                    "El repo abre en VS Code Web — code, animaciones, todo cargado.",
-                    "Para Claude Code local, el comando ya está en tu portapapeles.",
-                    "pnpm dev → deploya a Vercel sin salir del flow.",
-                ].map((step, i) => (
-                    <li
-                        key={i}
-                        className="flex gap-2.5 text-[12px] text-[#737373] tracking-[-0.005em]"
-                    >
-                        <span className="w-4 h-4 rounded-full bg-black/[0.04] text-[#525252] text-[10px] font-semibold flex items-center justify-center shrink-0 mt-px">
-                            {i + 1}
-                        </span>
-                        <span className="leading-[1.4]">{step}</span>
-                    </li>
-                ))}
-            </ol>
-
-            <p className="text-[11px] text-[#a3a3a3] tracking-[-0.005em]">
-                ¿No tienes Claude Code?{" "}
-                <a
-                    href="https://claude.com/claude-code"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-[#525252] transition-colors"
-                >
-                    Instalarlo
-                </a>
-                .
-            </p>
-        </FormSurface>
-    );
-}
-
-function LaunchButton({
-    state,
-    onClick,
-}: {
-    state: LaunchState;
-    onClick: () => void;
-}) {
-    const isDone = state === "done";
-    const isLaunching = state === "launching";
-    return (
-        <div className="pt-2">
             <button
                 type="button"
-                onClick={onClick}
-                disabled={state !== "idle"}
-                className="group relative w-full h-11 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 overflow-hidden transition-[filter,transform,box-shadow] duration-200 ease-out hover:brightness-[0.97] active:brightness-[0.92] active:scale-[0.99] shadow-[0_1px_2px_rgba(0,0,0,0.04),inset_0_-2px_0_rgba(0,0,0,0.05)] disabled:cursor-default disabled:hover:brightness-100 disabled:active:scale-100"
+                onClick={onLaunch}
+                disabled={phase !== "idle"}
+                className="group relative w-full h-12 rounded-lg bg-[#E9FF7B] text-[#0a0a0a] text-[13.5px] font-semibold tracking-[-0.01em] flex items-center justify-center gap-2 hover:brightness-[0.97] active:brightness-90 disabled:opacity-70 disabled:cursor-not-allowed transition-[filter,opacity,box-shadow] duration-200 overflow-hidden"
+                style={{
+                    transitionTimingFunction: "var(--ease-out)",
+                    boxShadow:
+                        "0 1px 0 rgba(0,0,0,0.04), 0 8px 22px -6px rgba(204,224,80,0.55)",
+                }}
             >
-                {/* Shine sweep on idle hover */}
-                <span
+                <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 group-hover:translate-x-[280%] transition-[transform,opacity] duration-700 ease-out"
-                />
-                <span
-                    className={`flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out ${
-                        isDone ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"
-                    }`}
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                    style={{ transitionTimingFunction: "var(--ease-out)" }}
                 >
-                    <span>{isLaunching ? "Abriendo studio…" : "Empezar"}</span>
-                    {!isLaunching && (
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                            className="transition-transform duration-200 ease-out group-hover:translate-x-0.5"
-                        >
-                            <path
-                                d="M3.5 8H12.5M12.5 8L8.5 4M12.5 8L8.5 12"
-                                stroke="currentColor"
-                                strokeWidth="1.6"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    )}
-                </span>
-                <span
-                    className={`absolute inset-0 flex items-center justify-center gap-2 transition-[opacity,transform] duration-200 ease-out ${
-                        isDone ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-                    }`}
-                >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                        <path
-                            d="M3.5 8.5L6.5 11.5L12.5 5"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </svg>
-                    <span>Studio abierto · comando copiado</span>
-                </span>
+                    <path d="M4 3.5L13 8L4 12.5V3.5Z" />
+                </svg>
+                {phase === "idle"
+                    ? "Lanzar Claude Code"
+                    : phase === "typing"
+                      ? "Lanzando…"
+                      : "Comando copiado"}
             </button>
-        </div>
+
+            <AnimatePresence initial={false}>
+                {phase !== "idle" ? (
+                    <motion.div
+                        key="terminal"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ overflow: "hidden" }}
+                    >
+                        <div className="rounded-lg border border-black/[0.85] bg-[#0a0a0a] overflow-hidden shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]">
+                            <div className="flex items-center gap-1.5 h-7 px-3 border-b border-white/[0.06] bg-white/[0.02]">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+                                <span className="ml-2 text-[10.5px] text-[#737373] font-mono tracking-tight">
+                                    claude — bash
+                                </span>
+                            </div>
+                            <pre className="px-3.5 py-3 text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
+                                <span className="text-[#a3e635] select-none">
+                                    ${" "}
+                                </span>
+                                {typed}
+                                {phase === "typing" ? (
+                                    <span
+                                        aria-hidden="true"
+                                        className="inline-block w-[7px] h-[12px] bg-[#e5e5e5] align-[-1px] ml-0.5"
+                                        style={{
+                                            animation:
+                                                "deck-cursor-blink 1s steps(2) infinite",
+                                        }}
+                                    />
+                                ) : null}
+                            </pre>
+                            <AnimatePresence>
+                                {phase === "done" ? (
+                                    <motion.div
+                                        key="done"
+                                        initial={{ opacity: 0, y: 4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{
+                                            duration: 0.2,
+                                            ease: [0.16, 1, 0.3, 1],
+                                        }}
+                                        className="flex items-center gap-2 px-3.5 py-2.5 border-t border-white/[0.06] bg-white/[0.02]"
+                                    >
+                                        <svg
+                                            width="12"
+                                            height="12"
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            className="text-[#a3e635] shrink-0"
+                                        >
+                                            <path
+                                                d="M3.5 8L7 11.5L13 5"
+                                                stroke="currentColor"
+                                                strokeWidth="1.8"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                        </svg>
+                                        <span className="text-[11.5px] text-[#e5e5e5] tracking-[-0.005em]">
+                                            Comando copiado. Abre Terminal y pega.
+                                        </span>
+                                    </motion.div>
+                                ) : null}
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
+
+            <div className="flex items-center gap-2 pt-1">
+                <span className="h-px flex-1 bg-black/[0.06]" />
+                <span className="text-[10px] text-[#a3a3a3] tracking-[0.06em] uppercase font-medium">
+                    o
+                </span>
+                <span className="h-px flex-1 bg-black/[0.06]" />
+            </div>
+
+            <a
+                href={PROTOTYPE_CODESPACES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-center gap-2 h-10 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 hover:bg-black/[0.02] transition-[border-color,background-color] duration-150 text-[12.5px] font-medium text-[#0a0a0a] tracking-[-0.005em]"
+                style={{ transitionTimingFunction: "var(--ease-out)" }}
+            >
+                <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                >
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                </svg>
+                Abrir en GitHub Codespaces
+                <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors"
+                >
+                    <path
+                        d="M5 11L11 5M11 5H6.5M11 5V9.5"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+            </a>
+        </FormSurface>
     );
 }
 
