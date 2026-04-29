@@ -161,7 +161,7 @@ interface HomeViewProps {
 // Tabs (order + icons)
 // ──────────────────────────────────────────────────────────────
 
-type TabId = "prototype" | "proposal" | "carousel-ig" | "story-ig" | "doc" | "template" | "other";
+type TabId = "prototype" | "proposal" | "carousel-ig" | "story-ig" | "doc" | "other";
 
 interface TabDef {
     id: TabId;
@@ -175,7 +175,6 @@ interface TabDef {
 const TAB_DEFS: TabDef[] = [
     { id: "proposal", label: "Propuesta", icon: <IconSlide /> },
     { id: "doc", label: "Documento", icon: <IconDoc /> },
-    { id: "template", label: "Plantilla", icon: <IconTemplate /> },
     { id: "prototype", label: "App", icon: <IconPrototype /> },
     { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel />, comingSoon: true },
     { id: "story-ig", label: "Historia", icon: <IconStory />, comingSoon: true },
@@ -349,8 +348,6 @@ function TabCard({
                         />
                     ) : tab === "doc" ? (
                         <DocForm onCreate={onCreate} />
-                    ) : tab === "template" ? (
-                        <TemplateGrid onOpenTemplate={onOpenTemplate} />
                     ) : (
                         <OtherForm onOpenIntake={onOpenIntake} />
                     )}
