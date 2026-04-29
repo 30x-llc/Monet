@@ -325,7 +325,7 @@ function TabCard({ tab, onTabChange, onCreate, onOpenIntake, onOpenTemplate }: T
             >
                 <div className="p-6">
                     {tab === "prototype" ? (
-                        <PrototypeForm onOpenIntake={onOpenIntake} />
+                        <PrototypeForm />
                     ) : tab === "proposal" ? (
                         <ProposalForm onCreate={onCreate} />
                     ) : tab === "carousel-ig" ? (
@@ -402,39 +402,121 @@ function TabButton({
 // Per-format forms
 // ──────────────────────────────────────────────────────────────
 
-function PrototypeForm({
-    onOpenIntake,
-}: {
-    onOpenIntake: (format: ProjectFormat, home?: HomeSeed) => void;
-}) {
-    const [name, setName] = useState("");
-    const canStart = name.trim().length > 1;
+const PROTOTYPE_REPO_URL =
+    "https://github.com/juandelaossa-30x/juan-diego-30x-design";
+const PROTOTYPE_COMMAND = `git clone ${PROTOTYPE_REPO_URL}.git && cd juan-diego-30x-design && claude`;
+
+function PrototypeForm() {
+    const [copied, setCopied] = useState(false);
+
+    const onCopy = useCallback(async () => {
+        try {
+            await navigator.clipboard.writeText(PROTOTYPE_COMMAND);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2200);
+        } catch {
+            /* clipboard denied; ignore */
+        }
+    }, []);
 
     return (
         <FormSurface
-            title="Nuevo prototipo"
-            subtitle="App, landing o componente con el sistema 30X."
+            title="Lanzar tu studio"
+            subtitle="Prototipo abre Claude Code con tu sistema 30X — animaciones, responsive, listo para deploy en Vercel."
         >
-            <Field label="Nombre del proyecto">
-                <TextInput
-                    value={name}
-                    onChange={setName}
-                    placeholder="Ej: Sales Machine Dashboard"
-                    autoFocus
-                />
+            <Field label="Studio">
+                <a
+                    href={PROTOTYPE_REPO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2.5 h-12 px-3 rounded-lg border border-black/[0.09] bg-white hover:border-black/25 transition-[border-color] duration-150"
+                    style={{ transitionTimingFunction: "var(--ease-out)" }}
+                >
+                    <img
+                        src="/30x-logo-square.svg"
+                        alt="30X"
+                        className="w-8 h-8 rounded-lg shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-[#0a0a0a] tracking-[-0.005em] leading-[1.2]">
+                            juan-diego-30x-design
+                        </div>
+                        <div className="text-[10.5px] text-[#a3a3a3] leading-[1.2] mt-0.5 truncate">
+                            Untitled UI · shadcn · Emil Kowalski · impeccable · 27 skills
+                        </div>
+                    </div>
+                    <span
+                        aria-hidden="true"
+                        className="text-[#a3a3a3] group-hover:text-[#525252] transition-colors duration-150"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                            <path
+                                d="M5 11L11 5M11 5H6.5M11 5V9.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </a>
             </Field>
 
-            <DesignSystemField />
+            <Field label="Comando">
+                <div className="relative rounded-lg border border-black/[0.09] bg-[#0a0a0a] overflow-hidden">
+                    <pre className="px-3.5 py-3 pr-[88px] text-[12px] text-[#e5e5e5] font-mono leading-[1.55] whitespace-pre-wrap break-all tracking-tight">
+                        <span className="text-[#737373] select-none">$ </span>
+                        {PROTOTYPE_COMMAND}
+                    </pre>
+                    <button
+                        type="button"
+                        onClick={onCopy}
+                        className="absolute top-2 right-2 h-7 px-2.5 rounded-md text-[11px] font-medium bg-white/[0.08] text-white hover:bg-white/[0.14] active:bg-white/[0.18] transition-colors duration-150"
+                        style={{ transitionTimingFunction: "var(--ease-out)" }}
+                    >
+                        {copied ? "Copiado" : "Copiar"}
+                    </button>
+                </div>
+            </Field>
 
             <CreateRow
                 primary={{
-                    label: "Empezar",
+                    label: copied ? "Copiado — pega en tu terminal" : "Copiar comando",
                     accent: true,
-                    disabled: !canStart,
-                    onClick: () =>
-                        onOpenIntake("prototype", { clientName: name.trim() }),
+                    onClick: onCopy,
                 }}
             />
+
+            <ol className="pt-1 space-y-1.5">
+                {[
+                    "Pega el comando en tu terminal.",
+                    "Claude Code abre el repo con todas las skills cargadas.",
+                    "Diseña — pnpm dev y deploya a Vercel sin salir del flow.",
+                ].map((step, i) => (
+                    <li
+                        key={i}
+                        className="flex gap-2.5 text-[12px] text-[#737373] tracking-[-0.005em]"
+                    >
+                        <span className="w-4 h-4 rounded-full bg-black/[0.04] text-[#525252] text-[10px] font-semibold flex items-center justify-center shrink-0 mt-px">
+                            {i + 1}
+                        </span>
+                        <span className="leading-[1.4]">{step}</span>
+                    </li>
+                ))}
+            </ol>
+
+            <p className="text-[11px] text-[#a3a3a3] tracking-[-0.005em]">
+                ¿No tienes Claude Code?{" "}
+                <a
+                    href="https://claude.com/claude-code"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-[#525252] transition-colors"
+                >
+                    Instalarlo
+                </a>
+                .
+            </p>
         </FormSurface>
     );
 }
