@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { IdentityGate } from "@/components/app/identity-gate";
+import { VersionDetector } from "@/components/app/version-detector";
 
 const inter = Inter({
     variable: "--font-inter",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <html lang="es" className={`${inter.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col bg-primary text-primary">
                 <IdentityGate>{children}</IdentityGate>
+                <VersionDetector />
                 <Analytics />
                 <SpeedInsights />
             </body>

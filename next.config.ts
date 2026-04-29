@@ -8,6 +8,14 @@ const BLOB_BASE_URL =
     "https://hn1w2duxxggnvpal.public.blob.vercel-storage.com"; // 30x-design-assets store
 
 const nextConfig: NextConfig = {
+    // Bake the deploy's git SHA into the client bundle so the version
+    // detector can compare it against /api/version (read at request time)
+    // and toast the user when a new deploy lands. Falls back to "dev"
+    // locally where VERCEL_GIT_COMMIT_SHA isn't set.
+    env: {
+        NEXT_PUBLIC_BUILD_SHA:
+            process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "dev",
+    },
     // @sparticuz/chromium ships a Brotli-compressed Chromium binary it
     // extracts at runtime from its own node_modules path. If Turbopack
     // bundles + relocates it, the path breaks and launch fails with
