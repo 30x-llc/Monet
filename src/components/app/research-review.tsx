@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ResearchResult } from "@/lib/slide-types";
+import { uploadImage } from "@/lib/upload-image";
 
 /**
  * Research approval gate.
@@ -398,15 +399,75 @@ function CandidatePicker({
         ...(url ? [url] : []),
         ...candidates.filter((c) => c !== url),
     ];
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    async function handleFile(file: File) {
+        setUploading(true);
+        setUploadError(null);
+        try {
+            const uploadedUrl = await uploadImage(file);
+            onChange(uploadedUrl);
+        } catch (err) {
+            setUploadError(
+                err instanceof Error ? err.message : "No se pudo subir la imagen.",
+            );
+        } finally {
+            setUploading(false);
+        }
+    }
 
     return (
         <div className="space-y-2.5">
             <div className="flex items-baseline justify-between">
                 <div className="text-[11px] font-medium text-[#525252]">{label}</div>
-                <div className="text-[10.5px] text-[#a3a3a3]">
-                    {ordered.length} {ordered.length === 1 ? "candidato" : "candidatos"}
+                <div className="flex items-center gap-2">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/avif"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFile(file);
+                            e.target.value = "";
+                        }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="text-[10.5px] font-medium text-[#0a0a0a] hover:text-[#525252] disabled:opacity-50 transition-colors flex items-center gap-1"
+                    >
+                        {uploading ? (
+                            <>
+                                <span className="w-2 h-2 rounded-full bg-[#0a0a0a] animate-pulse" />
+                                Subiendo…
+                            </>
+                        ) : (
+                            <>
+                                <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                                    <path
+                                        d="M8 11V3M8 3L4.5 6.5M8 3L11.5 6.5M3 13H13"
+                                        stroke="currentColor"
+                                        strokeWidth="1.4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                Subir
+                            </>
+                        )}
+                    </button>
+                    <span className="text-[10.5px] text-[#a3a3a3]">
+                        {ordered.length} {ordered.length === 1 ? "candidato" : "candidatos"}
+                    </span>
                 </div>
             </div>
+            {uploadError ? (
+                <div className="text-[10.5px] text-red-600 leading-snug">{uploadError}</div>
+            ) : null}
 
             {/* Currently selected — big preview */}
             <div className="flex items-start gap-3">

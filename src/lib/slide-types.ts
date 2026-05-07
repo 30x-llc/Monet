@@ -102,6 +102,10 @@ export interface ProblemCardsSlide {
     headline: string;
     subtitle?: string;
     cards: { title: string; body: string }[];
+    /** Optional editorial photo that washes the slide background with a
+     *  soft overlay. Use sparingly — one or two interior slides per deck
+     *  is what keeps the rhythm; more turns the deck into a mood board. */
+    backgroundImage?: string;
 }
 
 export interface DiagnosticSlide {
@@ -110,6 +114,7 @@ export interface DiagnosticSlide {
     headline: string;
     subtitle?: string;
     findings: { title: string; description: string }[];
+    backgroundImage?: string;
 }
 
 export interface CurriculumGridSlide {
@@ -117,6 +122,7 @@ export interface CurriculumGridSlide {
     headline: string;
     subtitle?: string;
     modules: { number: number | string; name: string; description: string }[];
+    backgroundImage?: string;
 }
 
 export interface MentorGridSlide {
@@ -137,6 +143,7 @@ export interface MethodologySlide {
     headline: string;
     subtitle?: string;
     steps: { number: number; title: string; description: string }[];
+    backgroundImage?: string;
 }
 
 export interface ImpactSlide {
@@ -151,6 +158,7 @@ export interface ImpactSlide {
     /** Optional context line that sits below the hero number in
      *  hero-number variant. Ignored by stats-row. */
     heroContext?: string;
+    backgroundImage?: string;
 }
 
 export interface PricingCtaSlide {

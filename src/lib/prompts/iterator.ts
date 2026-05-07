@@ -32,5 +32,10 @@ REGLAS:
    - /assets/immersive/<name>.jpg (SOLO para Inmersión Ejecutiva)
    - /assets/brand/portada-oficial.png (portada corporativa)
 10. Siempre terminar el deck con cover-globe.
+11. backgroundImage opcional en slides interiores (problem-cards, diagnostic,
+    curriculum-grid, methodology, impact). Distribuir 1-2 fotos editoriales
+    a lo largo del deck — una foto cada 3-4 slides — usando heroImageUrl
+    del research o un asset relevante. NO poner imagen en cada slide:
+    rompe el ritmo visual y hace ver el deck barato.
 
 Responde SOLO con el JSON completo del deck modificado.`;

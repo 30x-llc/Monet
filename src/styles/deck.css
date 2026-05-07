@@ -2574,3 +2574,42 @@
     line-height: 1.2;
     color: var(--chrome-fg-2);
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   SoftBackground — optional editorial photo for interior slides.
+   Sits behind everything via z-index; veil ensures the deck copy keeps
+   its contrast. Light theme: heavier white wash. Dark theme: darker
+   black wash. The slide content itself is not pushed.
+   ─────────────────────────────────────────────────────────────── */
+.deck-slide .soft-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.deck-slide .soft-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* Slightly desaturate so the photo never competes with brand color. */
+    filter: saturate(0.78) contrast(0.94);
+}
+.deck-slide .soft-bg-veil {
+    position: absolute;
+    inset: 0;
+}
+.deck-stage.theme-light .soft-bg-veil {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.85) 60%, rgba(255, 255, 255, 0.92) 100%);
+}
+.deck-stage.theme-dark .soft-bg-veil {
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.78) 60%, rgba(0, 0, 0, 0.9) 100%);
+}
+/* Lift slide chrome (logo + content) above the background. */
+.deck-slide.has-bg > *:not(.soft-bg) {
+    position: relative;
+    z-index: 1;
+}

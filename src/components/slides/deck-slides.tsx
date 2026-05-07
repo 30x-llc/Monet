@@ -155,6 +155,18 @@ function pickAngleIcon(key?: string) {
     }
 }
 
+// -------- Shared optional editorial background for interior slides --------
+// Light, sober wash so text stays the focus. Theme-aware via CSS vars
+// inherited from .deck-stage. The overlay is heavier in light mode so
+// the photo doesn't fight the slide copy.
+function SoftBackground({ url }: { url?: string }) {
+    if (!url) return null;
+    return <div className="soft-bg" data-element-path='["backgroundImage"]'>
+        <img src={proxyExternal(url)} alt="" />
+        <div className="soft-bg-veil" />
+    </div>;
+}
+
 // -------- Shared client logo (top-right when deck.clientLogoUrl is set) --------
 
 function LogoMarks({ clientLogoUrl }: { clientLogoUrl?: string }) {
@@ -468,7 +480,8 @@ function IntroMentorsGrid({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; 
 
 export function ProblemCards({ slide, clientLogoUrl }: { slide: ProblemCardsSlide; clientLogoUrl?: string }) {
     return (
-        <section className="deck-slide s-problem">
+        <section className={`deck-slide s-problem${slide.backgroundImage ? " has-bg" : ""}`}>
+            <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
                 <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
@@ -490,7 +503,8 @@ export function ProblemCards({ slide, clientLogoUrl }: { slide: ProblemCardsSlid
 
 export function Diagnostic({ slide, clientLogoUrl }: { slide: DiagnosticSlide; clientLogoUrl?: string }) {
     return (
-        <section className="deck-slide s-diagnostic">
+        <section className={`deck-slide s-diagnostic${slide.backgroundImage ? " has-bg" : ""}`}>
+            <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
             <div className="head">
@@ -514,7 +528,8 @@ export function CurriculumGrid({ slide, clientLogoUrl }: { slide: CurriculumGrid
     const modules = Array.isArray(slide.modules) ? slide.modules : [];
     const twoRows = modules.length > 4;
     return (
-        <section className={`deck-slide s-curric${twoRows ? " rows-2" : ""}`}>
+        <section className={`deck-slide s-curric${twoRows ? " rows-2" : ""}${slide.backgroundImage ? " has-bg" : ""}`}>
+            <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
                 <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
@@ -587,7 +602,8 @@ export function MentorDuo({ slide, clientLogoUrl }: { slide: MentorDuoSlide; cli
 
 export function Methodology({ slide, clientLogoUrl }: { slide: MethodologySlide; clientLogoUrl?: string }) {
     return (
-        <section className="deck-slide s-methodology">
+        <section className={`deck-slide s-methodology${slide.backgroundImage ? " has-bg" : ""}`}>
+            <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
                 <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
@@ -614,7 +630,8 @@ export function Impact({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLog
 
 function ImpactStatsRow({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLogoUrl?: string }) {
     return (
-        <section className="deck-slide s-impact">
+        <section className={`deck-slide s-impact${slide.backgroundImage ? " has-bg" : ""}`}>
+            <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
                 <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>

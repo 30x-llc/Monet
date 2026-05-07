@@ -485,6 +485,25 @@ ${VOICE_BLOCK}
 - Immersivo: /assets/immersive/cubrimiento-dscfXXXX.jpg solo para Inmersión Ejecutiva.
 - Portada corporativa: /assets/brand/portada-oficial.png.
 
+## IMÁGENES EDITORIALES EN SLIDES INTERIORES
+
+Los siguientes slide types aceptan un campo OPCIONAL backgroundImage que
+se renderiza con un wash sutil detrás del contenido:
+problem-cards · diagnostic · curriculum-grid · methodology · impact
+
+Distribuye 1-2 fotos editoriales a lo largo del deck — UNA cada 3-4 slides.
+NO pongas imagen en cada slide interior: el deck pierde ritmo y se ve barato.
+
+Cuándo SÍ usar backgroundImage en interior:
+- problem-cards si la foto representa el dolor de la industria del cliente
+- impact si tienes una foto que aterriza el "antes/después" del cliente
+- methodology si una foto refuerza la fase (ej: foto de salón Inmersivo)
+
+Cuándo NO usar:
+- En slides consecutivos
+- Si solo tienes la heroImageUrl: úsala SOLO en la portada
+- Si la foto es genérica stock — mejor sin imagen que con una que distrae
+
 ## CATÁLOGO DE PROGRAMAS (contexto)
 
 ${allPrograms}

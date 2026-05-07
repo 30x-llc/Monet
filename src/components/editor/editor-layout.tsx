@@ -331,6 +331,11 @@ export function EditorLayout({
                             Math.min(deck.slides.length - 1, selectedIndex + 1),
                         )
                     }
+                    onSlideChange={(nextSlide) => {
+                        const newSlides = [...deck.slides];
+                        newSlides[selectedIndex] = nextSlide;
+                        onDeckChange({ ...deck, slides: newSlides });
+                    }}
                     clientLogoUrl={effectiveClientLogoUrl}
                     format={deck.format}
                     theme={slideTheme}
