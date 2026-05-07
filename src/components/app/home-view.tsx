@@ -1252,7 +1252,7 @@ function EmptyState() {
             </div>
             <p className="text-[13.5px] text-[#525252] mb-1">Aún no has creado diseños.</p>
             <p className="text-[12px] text-[#a3a3a3]">
-                Elige un formato arriba y dale a Crear.
+                Elige un formato arriba y haz clic en Crear.
             </p>
         </div>
     );

@@ -65,7 +65,7 @@ const PROFILES: Record<SuperPromptFormat, FormatProfile> = {
             "**Cliente / contraparte** — ¿Para quién es? Si es contrato, ¿quién firma del otro lado (nombre + cargo + razón social)?",
             "**Scope / objetivo del documento** — ¿Qué cubre concretamente? Servicios, entregables, alcance. Si es brief, ¿cuál es el resultado esperado?",
             "**Términos comerciales** — Si aplica: precio, cuotas, fechas clave, duración, condiciones de pago, exclusividades.",
-            "**Contexto previo** — ¿Hay propuesta, contrato anterior, o conversación que este documento aterriza? Si me podés pegar fragmentos de ese material, mejor.",
+            "**Contexto previo** — ¿Hay propuesta, contrato anterior, o conversación que este documento aterriza? Si me puedes pegar fragmentos de ese material, mejor.",
             "**Tono y restricciones** — ¿Formal/legal/conversacional? ¿Algo sensible — confidencialidad, branding, propiedad intelectual?",
         ],
         schema: `## Tipo de documento
@@ -97,9 +97,9 @@ const PROFILES: Record<SuperPromptFormat, FormatProfile> = {
         angles: [
             "**Tema / hook** — ¿De qué se trata el carrusel? ¿Cuál es la frase de gancho del slide 1?",
             "**Audiencia** — ¿A quién le hablamos? ¿Founders, vendedores, marketing, RH?",
-            "**Mensaje núcleo** — ¿Cuál es la idea que querés que se lleven? Una sola frase.",
+            "**Mensaje núcleo** — ¿Cuál es la idea que quieres que se lleven? Una sola frase.",
             "**Datos / proof** — ¿Hay números, casos o frases de mentores que podemos usar como soporte?",
-            "**CTA** — ¿Qué querés que hagan al final? ¿Aplicar, comentar, mandar DM, leer artículo?",
+            "**CTA** — ¿Qué quieres que hagan al final? ¿Aplicar, comentar, mandar DM, leer artículo?",
         ],
         schema: `## Tema
 [Hook + ángulo en 1 frase]
@@ -120,7 +120,7 @@ const PROFILES: Record<SuperPromptFormat, FormatProfile> = {
         label: "historia para Instagram / WhatsApp",
         angles: [
             "**Hook del slide 1** — ¿Qué frase para la historia?",
-            "**Mensaje** — ¿Qué querés contar? Una idea por slide (3-5 slides).",
+            "**Mensaje** — ¿Qué quieres contar? Una idea por slide (3-5 slides).",
             "**CTA** — ¿Swipe up, link en bio, mandar mensaje?",
         ],
         schema: `## Hook
@@ -136,7 +136,7 @@ const PROFILES: Record<SuperPromptFormat, FormatProfile> = {
         label: "prototipo de app o landing",
         angles: [
             "**Producto** — ¿Qué es? Nombre, una frase de qué hace.",
-            "**Pantalla principal** — ¿Qué mostrás? Lista, dashboard, formulario, feed?",
+            "**Pantalla principal** — ¿Qué muestras? Lista, dashboard, formulario, feed?",
             "**Datos de ejemplo** — ¿Qué nombres, métricas, ítems usar para que se sienta real?",
         ],
         schema: `## Producto
@@ -151,7 +151,7 @@ const PROFILES: Record<SuperPromptFormat, FormatProfile> = {
     other: {
         label: "asset libre",
         angles: [
-            "**Qué necesitas** — ¿Qué tipo de pieza? Describí qué te imaginás.",
+            "**Qué necesitas** — ¿Qué tipo de pieza? Describe qué te imaginas.",
             "**Audiencia y propósito** — ¿Para quién y para qué?",
             "**Restricciones** — ¿Formato, longitud, tono?",
         ],
@@ -177,18 +177,18 @@ Eres mi asistente de BD. Vamos a sacar un briefing en markdown que voy a subir a
 
 ## Cómo trabajamos
 
-**Paso 1 — Yo te tiro material.** En mi siguiente mensaje voy a pegar (o linkear) todo lo que tengo del cliente: notas del call, hilo de emails, transcript, sheet de Drive, voice-note transcrito, propuesta o contrato anterior si existe, lo que sea. Puede ser estructurado o un dump caótico.
+**Paso 1 — Yo te paso material.** En mi siguiente mensaje voy a pegar (o linkear) todo lo que tengo del cliente: notas de la llamada, hilo de emails, transcripción, hoja de Drive, nota de voz transcrita, propuesta o contrato anterior si existe, lo que sea. Puede ser estructurado o un dump caótico.
 
-**Paso 2 — Vos lees todo y me devolvés el brief.** En tu primera respuesta no me hagas un cuestionario. Hace esto en este orden:
+**Paso 2 — Lees todo y me devuelves el brief.** En tu primera respuesta no me hagas un cuestionario. Haz esto en este orden:
 
 1. **Sintetiza** todo lo que tengo en el formato markdown de abajo. Llena cada sección con lo que ESTÉ en el material. Sin inventar nada.
 2. **Marca con \`[pendiente]\`** los campos que no aparecen en el material. No me los preguntes todavía.
-3. Devuelve el bloque markdown completo en tu primera respuesta, dentro de un \`\`\`markdown\`\`\` block para que copie de una.
-4. **Después** del bloque markdown, en una sección "**Gaps**", listame en máximo 3 bullets las cosas críticas que están en \`[pendiente]\` y que vale la pena que yo te aclare.
+3. Devuelve el bloque markdown completo en tu primera respuesta, dentro de un \`\`\`markdown\`\`\` block para que lo copie de una.
+4. **Después** del bloque markdown, en una sección "**Gaps**", lístame en máximo 3 bullets las cosas críticas que están en \`[pendiente]\` y que vale la pena que yo te aclare.
 
-**Paso 3 — Yo decido si rellenar gaps o no.** Si te respondo con info, actualiza el markdown. Si te digo "ya, eso es todo lo que tengo" o "dame el brief", devolvés el markdown final con los \`[pendiente]\` que queden — sin volver a preguntar nada. 30x Design + Exa van a rellenar lo que se pueda con deep research.
+**Paso 3 — Yo decido si rellenar gaps o no.** Si te respondo con info, actualiza el markdown. Si te digo "ya, eso es todo lo que tengo" o "dame el brief", devuelves el markdown final con los \`[pendiente]\` que queden — sin volver a preguntar nada. 30x Design + Exa van a rellenar lo que se pueda con deep research.
 
-## Ángulos a cubrir (en este orden si me hacés preguntas)
+## Ángulos a cubrir (en este orden si me haces preguntas)
 
 ${profile.angles.map((a, i) => `${i + 1}. ${a}`).join("\n")}
 
@@ -203,7 +203,7 @@ ${profile.schema}
 - **No me hagas cuestionarios.** Una sola pasada de gaps al final, máximo 3 items.
 - **No inventes datos.** Si no aparece, va \`[pendiente]\`.
 - **Respeta el lenguaje del cliente** — copia frases verbatim cuando aparezcan.
-- **Si yo no tengo nada y te empiezo desde cero**, recién ahí sí hacéme 4-5 preguntas cortas. Pero ese no es el caso típico.
+- **Si yo no tengo nada y te empiezo desde cero**, solo en ese caso hazme 4-5 preguntas cortas. Pero ese no es el caso típico.
 
-Empieza diciéndome: "Listo. Pasame el material y armo el brief." y esperá mi siguiente mensaje.`;
+Empieza diciéndome: "Listo. Pásame el material y armo el brief." y espera mi siguiente mensaje.`;
 }

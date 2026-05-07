@@ -3,13 +3,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Identity gate — wraps the app and asks the user to identify themselves
- * (name + email) on first visit. Persists in a signed HttpOnly cookie
- * via /api/identity. Once set, becomes invisible.
+ * Identity gate — wraps the app and requires the user to sign in with
+ * Google Workspace (30x.com) before showing the app. Identity is
+ * persisted in a signed HttpOnly cookie set by the OAuth callback at
+ * /api/auth/google/callback.
  *
- * For internal team use only — no real OAuth, no password. The threat
- * model is "70 trusted salespeople" so a self-attested identity is fine
- * for v1; v2 swaps in real SSO without changing this surface.
+ * The gate is intentionally invisible to signed-in users: a brief
+ * loading dot, then `children`. The sign-in screen mirrors 30x NPS:
+ * dark background, centered logo, single CTA, allow-list disclaimer.
  */
 
 interface Identity {
@@ -23,6 +24,23 @@ interface IdentityState {
     isOps: boolean;
     allowedDomains: string[];
 }
+
+const ERROR_COPY: Record<string, string> = {
+    not_workspace_member:
+        "Tu cuenta no es de Google Workspace 30x.com. Pídele a admin que te dé acceso.",
+    email_not_verified: "Google aún no verifica este correo.",
+    email_domain_mismatch: "El correo no termina en @30x.com.",
+    aud_mismatch: "Token inválido (audience).",
+    iss_mismatch: "Token inválido (issuer).",
+    expired: "El token expiró. Intenta de nuevo.",
+    invalid_token: "Token inválido.",
+    state_mismatch: "Sesión inválida. Vuelve a intentarlo.",
+    state_invalid: "Sesión inválida. Vuelve a intentarlo.",
+    missing_params: "Faltan parámetros del callback.",
+    google_error: "Google rechazó la solicitud.",
+    token_exchange_failed: "No se pudo intercambiar el token con Google.",
+    not_configured: "OAuth no está configurado todavía.",
+};
 
 export function IdentityGate({ children }: { children: ReactNode }) {
     const [state, setState] = useState<IdentityState>({
@@ -55,175 +73,100 @@ export function IdentityGate({ children }: { children: ReactNode }) {
 
     if (state.loading) {
         return (
-            <div className="min-h-screen bg-[#fafafa] grid place-items-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a] animate-pulse" />
+            <div className="min-h-screen bg-[#0a0a0a] grid place-items-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#E9FF7B] animate-pulse" />
             </div>
         );
     }
 
     if (!state.identity) {
-        return (
-            <IdentityForm
-                allowedDomains={state.allowedDomains}
-                onComplete={(identity, isOps) =>
-                    setState({
-                        loading: false,
-                        identity,
-                        isOps,
-                        allowedDomains: state.allowedDomains,
-                    })
-                }
-            />
-        );
+        return <SignInScreen />;
     }
 
     return <>{children}</>;
 }
 
-function IdentityForm({
-    allowedDomains,
-    onComplete,
-}: {
-    allowedDomains: string[];
-    onComplete: (identity: Identity, isOps: boolean) => void;
-}) {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [submitting, setSubmitting] = useState(false);
+function SignInScreen() {
     const [error, setError] = useState<string | null>(null);
 
-    const emailDomain = email.split("@")[1]?.trim().toLowerCase() ?? "";
-    const domainOk =
-        allowedDomains.length === 0 || allowedDomains.includes(emailDomain);
-    const canSubmit =
-        name.trim().length > 1 &&
-        email.trim().includes("@") &&
-        domainOk &&
-        !submitting;
-    const domainHint = allowedDomains.length
-        ? `Sólo correos ${allowedDomains.map((d) => `@${d}`).join(", ")}`
-        : null;
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const e = params.get("error");
+        if (e) setError(e);
+    }, []);
 
-    const submit = async () => {
-        if (!canSubmit) return;
-        setSubmitting(true);
-        setError(null);
-        try {
-            const res = await fetch("/api/identity", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name.trim(), email: email.trim() }),
-            });
-            const data = await res.json();
-            if (!data.ok) {
-                setError(data.error || "No se pudo guardar la identidad.");
-                setSubmitting(false);
-                return;
-            }
-            onComplete(data.identity, !!data.isOps);
-        } catch (err) {
-            setError(String(err));
-            setSubmitting(false);
-        }
-    };
+    const next = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+    const startUrl = `/api/auth/google/start?next=${encodeURIComponent(next)}`;
 
     return (
-        <div className="min-h-screen bg-[#fafafa] grid place-items-center px-4">
-            <div className="w-full max-w-[440px]">
-                <div className="text-center mb-7">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-black/[0.06] mb-4">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E9FF7B]" />
-                        <span className="text-[11px] font-medium tracking-[-0.005em] text-[#525252]">
-                            30x Design
-                        </span>
+        <div className="min-h-screen bg-[#0a0a0a] grid place-items-center px-4 text-white">
+            <div className="w-full max-w-[440px] flex flex-col items-center">
+                {/* Wordmark */}
+                <div className="flex flex-col items-center mb-10">
+                    <div className="flex items-baseline">
+                        <span className="text-white text-[44px] font-extrabold tracking-[-0.04em] leading-none">3</span>
+                        <span className="text-white text-[44px] font-extrabold tracking-[-0.04em] leading-none">0</span>
+                        <span className="text-[#E9FF7B] text-[44px] font-extrabold tracking-[-0.04em] leading-none">X</span>
                     </div>
-                    <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-[#0a0a0a] leading-[1.1] mb-2">
-                        ¿Quién eres?
-                    </h1>
-                    <p className="text-[13px] text-[#525252] tracking-[-0.005em] leading-[1.5] max-w-[360px] mx-auto">
-                        Cada propuesta queda asociada a vos. Sólo lo pregunto una vez
-                        por navegador.
-                    </p>
-                    {domainHint ? (
-                        <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0a0a0a] text-white">
-                            <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                                <path
-                                    d="M8 1.5l5.5 3v5c0 3.5-2.5 5-5.5 5s-5.5-1.5-5.5-5v-5l5.5-3z"
-                                    stroke="currentColor"
-                                    strokeWidth="1.6"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                            <span className="text-[11px] font-medium tracking-[-0.005em]">
-                                {domainHint}
-                            </span>
-                        </div>
-                    ) : null}
-                </div>
-
-                <div className="bg-white rounded-2xl border border-black/[0.06] shadow-[0_2px_4px_rgba(0,0,0,0.02),0_12px_32px_-12px_rgba(0,0,0,0.08)] p-6">
-                    <div className="space-y-4">
-                        <div>
-                            <div className="text-[11px] font-medium text-[#525252] tracking-[-0.005em] mb-1.5">
-                                Tu nombre
-                            </div>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Juan Diego de la Ossa"
-                                autoFocus
-                                className="w-full h-10 px-3.5 rounded-lg border border-black/[0.09] bg-white text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-black/35 focus:ring-4 focus:ring-black/[0.04] tracking-[-0.005em]"
-                            />
-                        </div>
-                        <div>
-                            <div className="text-[11px] font-medium text-[#525252] tracking-[-0.005em] mb-1.5">
-                                Tu email de 30x
-                            </div>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="juandelaossa@30x.com"
-                                className={`w-full h-10 px-3.5 rounded-lg border bg-white text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:ring-4 tracking-[-0.005em] ${
-                                    email && !domainOk
-                                        ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                                        : "border-black/[0.09] focus:border-black/35 focus:ring-black/[0.04]"
-                                }`}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") submit();
-                                }}
-                            />
-                            {email && !domainOk && allowedDomains.length > 0 ? (
-                                <div className="mt-1.5 text-[11px] text-red-600">
-                                    Sólo aceptamos correos {allowedDomains.map((d) => `@${d}`).join(", ")}.
-                                </div>
-                            ) : null}
-                        </div>
-
-                        {error ? (
-                            <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-[12px] text-red-700">
-                                {error}
-                            </div>
-                        ) : null}
-
-                        <button
-                            onClick={submit}
-                            disabled={!canSubmit}
-                            className="w-full h-11 rounded-lg text-[13.5px] font-semibold tracking-[-0.01em] bg-[#0a0a0a] text-white hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition-[filter,opacity] duration-150"
-                        >
-                            {submitting ? "Guardando…" : "Continuar"}
-                        </button>
+                    <div className="flex items-center gap-2 mt-3">
+                        <span className="h-px w-6 bg-white/20" />
+                        <span className="text-[10px] font-semibold tracking-[0.24em] text-white/70">DESIGN</span>
+                        <span className="h-px w-6 bg-white/20" />
                     </div>
                 </div>
 
-                <p className="text-center text-[11px] text-[#a3a3a3] mt-5 leading-[1.5]">
-                    Tus propuestas se sincronizan al store central de 30x Design.
-                    <br />
-                    Sales Ops puede verlas en el dashboard <code>/ops</code>.
+                {/* Subtitle */}
+                <p className="text-[14px] text-white/70 tracking-[-0.005em] text-center mb-6">
+                    Diseño y propuestas comerciales de 30x
                 </p>
+
+                {/* Google button */}
+                <a
+                    href={startUrl}
+                    className="w-full h-14 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.06] flex items-center justify-center gap-3 transition-colors"
+                >
+                    <GoogleLogo />
+                    <span className="text-[15px] font-medium tracking-[-0.01em] text-white">
+                        Continuar con Google
+                    </span>
+                </a>
+
+                <p className="text-[12px] text-white/45 tracking-[-0.005em] text-center mt-5">
+                    Solo disponible para cuentas{" "}
+                    <span className="text-white/75">@30x.com</span>
+                </p>
+
+                {error ? (
+                    <div className="mt-6 w-full rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-[12.5px] text-red-200 leading-[1.5] tracking-[-0.005em]">
+                        {ERROR_COPY[error] ?? `Error: ${error}`}
+                    </div>
+                ) : null}
             </div>
         </div>
+    );
+}
+
+function GoogleLogo() {
+    return (
+        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white">
+            <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    fill="#4285F4"
+                    d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+                />
+                <path
+                    fill="#34A853"
+                    d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                />
+                <path
+                    fill="#FBBC05"
+                    d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                />
+                <path
+                    fill="#EA4335"
+                    d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+                />
+            </svg>
+        </span>
     );
 }

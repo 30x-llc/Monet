@@ -60,7 +60,7 @@ export function BriefingDropZone({
             <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
                     <label className="text-[11px] font-medium text-[#525252] tracking-[-0.005em]">
-                        Briefing cargado
+                        Brief cargado
                     </label>
                     <button
                         onClick={onClear}
@@ -96,23 +96,23 @@ export function BriefingDropZone({
 
     const helperByFormat: Record<SuperPromptFormat, string> = {
         proposal:
-            "Si tenés contrato anterior, sheet con notas, transcript del call, voice-note — montalo acá. La propuesta jala data verbatim.",
+            "Si tienes un contrato anterior, hoja con notas, transcripción de la llamada o nota de voz — súbelo aquí. La propuesta usará esos datos textualmente.",
         doc:
-            "Si tenés la propuesta del cliente, brief del call, contrato anterior — montalo acá. El doc se arma con esa información.",
+            "Si tienes la propuesta del cliente, brief de la llamada o contrato anterior — súbelo aquí. El documento se construye con esa información.",
         "carousel-ig":
-            "Si tenés notas, casos, frases de mentores — montalo acá.",
-        "story-ig": "Si tenés notas o frases — montalo acá.",
-        prototype: "Si tenés specs, copys o brief — montalo acá.",
-        other: "Si tenés contexto previo en archivo — montalo acá.",
+            "Si tienes notas, casos o frases de mentores — súbelos aquí.",
+        "story-ig": "Si tienes notas o frases — súbelas aquí.",
+        prototype: "Si tienes specs, copys o un brief — súbelos aquí.",
+        other: "Si tienes contexto previo en archivo — súbelo aquí.",
     };
 
     const titleByFormat: Record<SuperPromptFormat, string> = {
-        proposal: "Briefing del cliente — opcional",
-        doc: "Material previo — opcional",
-        "carousel-ig": "Briefing del contenido — opcional",
-        "story-ig": "Briefing del contenido — opcional",
-        prototype: "Brief del producto — opcional",
-        other: "Material previo — opcional",
+        proposal: "Genera tu brief con IA — opcional",
+        doc: "Genera tu brief con IA — opcional",
+        "carousel-ig": "Genera tu brief con IA — opcional",
+        "story-ig": "Genera tu brief con IA — opcional",
+        prototype: "Genera tu brief con IA — opcional",
+        other: "Genera tu brief con IA — opcional",
     };
 
     return (

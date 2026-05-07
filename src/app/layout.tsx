@@ -14,7 +14,7 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: "30x Design",
     description:
-        "Sistema de diseño y generación de propuestas comerciales de 30x, la red ejecutiva más grande de Latinoamérica",
+        "Sistema de diseño y generación de propuestas comerciales de 30x, la red ejecutiva más importante de Latinoamérica",
 };
 
 export default function RootLayout({

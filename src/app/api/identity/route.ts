@@ -1,10 +1,7 @@
-import type { NextRequest } from "next/server";
 import {
     readIdentity,
-    setIdentity,
     clearIdentity,
     isSalesOps,
-    isAllowedEmail,
     getAllowedEmailDomains,
 } from "@/lib/auth/identity";
 
@@ -12,9 +9,12 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/identity → { identity, isOps, allowedDomains } | { identity: null, allowedDomains }
- * POST /api/identity { name, email } → { ok, identity, isOps }
- *   403 if email domain not in ALLOWED_EMAIL_DOMAINS
  * DELETE /api/identity → { ok }
+ *
+ * POST is gone: identity now comes from Google OAuth at
+ * /api/auth/google/callback. Self-attested name+email is no longer
+ * accepted (it allowed `pepito@30x.com` to walk in without being a real
+ * Workspace member). See src/lib/auth/google-oauth.ts for the full check.
  */
 export async function GET() {
     const identity = await readIdentity();
@@ -29,32 +29,14 @@ export async function GET() {
     });
 }
 
-export async function POST(request: NextRequest) {
-    const body = (await request.json().catch(() => ({}))) as Partial<{
-        name: string;
-        email: string;
-    }>;
-    const name = (body.name ?? "").toString().trim();
-    const email = (body.email ?? "").toString().trim().toLowerCase();
-    if (name.length < 2 || !email.includes("@")) {
-        return Response.json(
-            { ok: false, error: "Nombre y email requeridos" },
-            { status: 400 },
-        );
-    }
-    if (!isAllowedEmail(email)) {
-        const domains = getAllowedEmailDomains();
-        const list = domains.map((d) => `@${d}`).join(", ");
-        return Response.json(
-            {
-                ok: false,
-                error: `Solo correos ${list} pueden acceder a 30x Design.`,
-            },
-            { status: 403 },
-        );
-    }
-    await setIdentity({ name, email });
-    return Response.json({ ok: true, identity: { name, email }, isOps: isSalesOps(email) });
+export async function POST() {
+    return Response.json(
+        {
+            ok: false,
+            error: "Sign in con Google: GET /api/auth/google/start",
+        },
+        { status: 410 },
+    );
 }
 
 export async function DELETE() {
