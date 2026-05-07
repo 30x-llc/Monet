@@ -2494,3 +2494,83 @@
     border-color: var(--chrome-accent, #E9FF7B);
     color: var(--chrome-fg, #0a0a0a);
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Element-level editing — Apple/Linear-grade selection affordance.
+   Outlines render OUTSIDE the element via offset rings so they sit
+   like a Figma multi-select frame. Hover is a whisper (8% gray);
+   selected snaps to the brand lime with a soft glow halo. Easing
+   matches our --ease-out spring used everywhere else.
+   ─────────────────────────────────────────────────────────────── */
+.deck-edit-surface [data-element-path] {
+    cursor: pointer;
+    position: relative;
+    border-radius: inherit;
+}
+.deck-edit-surface [data-element-path]::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: 0 0 0 0 transparent;
+    transition: box-shadow 180ms cubic-bezier(0.32, 0.72, 0.24, 1);
+    z-index: 50;
+}
+.deck-edit-surface [data-element-path]:hover::after {
+    box-shadow: 0 0 0 1.5px rgba(10, 10, 10, 0.14);
+}
+.deck-stage.theme-dark .deck-edit-surface [data-element-path]:hover::after,
+.theme-dark .deck-edit-surface [data-element-path]:hover::after {
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18);
+}
+.deck-edit-surface [data-element-selected="true"]::after {
+    box-shadow:
+        0 0 0 2px #0a0a0a,
+        0 0 0 4px #E9FF7B,
+        0 0 0 8px rgba(233, 255, 123, 0.22);
+    animation: deck-element-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.deck-stage.theme-dark .deck-edit-surface [data-element-selected="true"]::after,
+.theme-dark .deck-edit-surface [data-element-selected="true"]::after {
+    box-shadow:
+        0 0 0 2px #ffffff,
+        0 0 0 4px #E9FF7B,
+        0 0 0 8px rgba(233, 255, 123, 0.18);
+}
+@keyframes deck-element-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.78; }
+}
+.deck-edit-surface [data-element-selected="true"] {
+    /* Subtle lift so the selected element pops without disturbing
+       neighbors. transform-origin keeps it anchored centrally. */
+    transform: scale(1.012);
+    transform-origin: center;
+    transition: transform 220ms cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+
+/* Properties panel — slide in from the right with a spring curve. */
+.properties-panel {
+    animation: properties-panel-in 220ms cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+@keyframes properties-panel-in {
+    from {
+        opacity: 0;
+        transform: translateX(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.properties-panel kbd {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--chrome-bg, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--chrome-border, rgba(0, 0, 0, 0.1));
+    font-size: 10px;
+    line-height: 1.2;
+    color: var(--chrome-fg-2);
+}

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { Slide, ProjectFormat } from "@/lib/slide-types";
+import type { ElementPath } from "@/lib/element-edits";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { FORMATS } from "@/lib/slide-types";
@@ -14,6 +16,14 @@ interface SlideCanvasProps {
     clientLogoUrl?: string;
     format?: ProjectFormat;
     theme?: "dark" | "light";
+    selectedPath?: ElementPath | null;
+    onSelectElement?: (path: ElementPath | null) => void;
+}
+
+function pathsEqual(a: ElementPath | null | undefined, b: ElementPath | null | undefined): boolean {
+    if (!a || !b) return a === b;
+    if (a.length !== b.length) return false;
+    return a.every((v, i) => v === b[i]);
 }
 
 export function SlideCanvas({
@@ -25,16 +35,56 @@ export function SlideCanvas({
     clientLogoUrl,
     format = "proposal",
     theme = "light",
+    selectedPath,
+    onSelectElement,
 }: SlideCanvasProps) {
     const spec = FORMATS[format];
     const aspect = `${spec.width} / ${spec.height}`;
     const canPrev = slideIndex > 0;
     const canNext = slideIndex < totalSlides - 1;
+    const stageWrapRef = useRef<HTMLDivElement>(null);
+
+    // Toggle data-selected on the matching element so CSS can outline it.
+    // We re-query on every selection change and on every slide change so
+    // the outline lands on the right node after a render.
+    useEffect(() => {
+        const root = stageWrapRef.current;
+        if (!root) return;
+        root.querySelectorAll<HTMLElement>('[data-element-selected="true"]').forEach((el) => {
+            el.removeAttribute("data-element-selected");
+        });
+        if (!selectedPath) return;
+        const target = JSON.stringify(selectedPath);
+        const match = root.querySelector<HTMLElement>(`[data-element-path='${target}']`);
+        if (match) match.setAttribute("data-element-selected", "true");
+    }, [selectedPath, slide, slideIndex]);
+
+    function handleCanvasClick(e: React.MouseEvent) {
+        if (!onSelectElement) return;
+        const target = e.target as HTMLElement;
+        const node = target.closest<HTMLElement>("[data-element-path]");
+        if (!node) {
+            if (selectedPath) onSelectElement(null);
+            return;
+        }
+        const raw = node.getAttribute("data-element-path");
+        if (!raw) return;
+        try {
+            const path = JSON.parse(raw) as ElementPath;
+            if (!pathsEqual(path, selectedPath)) {
+                onSelectElement(path);
+            }
+        } catch {
+            // ignore malformed path
+        }
+    }
 
     return (
         <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-[var(--chrome-canvas-bg)] p-10">
             <div
-                className="relative rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/5"
+                ref={stageWrapRef}
+                onClick={handleCanvasClick}
+                className="relative rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/5 deck-edit-surface"
                 style={{
                     aspectRatio: aspect,
                     maxWidth: format === "story-ig" ? 520 : format === "doc" ? 780 : 1400,

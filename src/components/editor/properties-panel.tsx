@@ -1,142 +1,168 @@
 "use client";
 
 import type { Slide } from "@/lib/slide-types";
-import { XMarkIcon } from "@heroicons/react/24/solid";
-
-// Friendly type names
-const TYPE_LABELS: Record<string, string> = {
-  "cover-hero": "Cover Hero",
-  "corporate-cover": "Portada Corporativa",
-  "cover-globe": "Cierre",
-  "intro-mentors": "Intro + Mentores",
-  "problem-cards": "Problema",
-  "diagnostic": "Diagnóstico",
-  "curriculum-grid": "Currículo",
-  "mentor-duo": "Mentor Duo",
-  "mentor-grid": "Mentor Grid",
-  "methodology": "Metodología",
-  "impact": "Impacto",
-  "pricing-cta": "Inversión",
-  "content": "Contenido",
-};
-
-function PropertyRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="py-2 border-b border-[var(--chrome-border)]">
-      <p className="text-[10px] font-medium text-[var(--chrome-fg-5)] uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="text-[12px] text-[var(--chrome-fg-2)] leading-relaxed break-words">{value}</p>
-    </div>
-  );
-}
-
-function PropertySection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="px-3 py-2">
-      <p className="text-[10px] font-semibold text-[var(--chrome-accent-fg)] uppercase tracking-wider mb-1">{title}</p>
-      {children}
-    </div>
-  );
-}
-
-function getSlideProperties(slide: Slide): { label: string; value: string }[] {
-  const props: { label: string; value: string }[] = [];
-
-  if ("headline" in slide && slide.headline) props.push({ label: "Headline", value: slide.headline });
-  if ("subtitle" in slide && slide.subtitle) props.push({ label: "Subtitle", value: slide.subtitle as string });
-  if ("body" in slide && slide.body) props.push({ label: "Body", value: slide.body as string });
-  if ("label" in slide && slide.label) props.push({ label: "Label", value: slide.label as string });
-  if ("title" in slide && slide.title) props.push({ label: "Title", value: slide.title as string });
-  if ("price" in slide && slide.price) props.push({ label: "Price", value: slide.price as string });
-  if ("description" in slide && slide.description) props.push({ label: "Description", value: slide.description as string });
-  if ("programName" in slide && slide.programName) props.push({ label: "Program", value: slide.programName as string });
-  if ("moduleTitle" in slide && slide.moduleTitle) props.push({ label: "Module", value: slide.moduleTitle as string });
-  if ("backgroundImage" in slide && slide.backgroundImage) props.push({ label: "Background", value: slide.backgroundImage as string });
-  if ("imageKey" in slide && slide.imageKey) props.push({ label: "Image", value: slide.imageKey as string });
-
-  return props;
-}
-
-function getSlideItems(slide: Slide): string[] {
-  if ("cards" in slide && slide.cards) return slide.cards.map((c: { title: string }) => c.title);
-  if ("modules" in slide && slide.modules) return slide.modules.map((m: { name: string }) => m.name);
-  if ("steps" in slide && slide.steps) return slide.steps.map((s: { title: string }) => s.title);
-  if ("findings" in slide && slide.findings) return slide.findings.map((f: { title: string }) => f.title);
-  if ("angles" in slide && slide.angles) return slide.angles.map((a: { title: string }) => a.title);
-  if ("stats" in slide && slide.stats) return slide.stats.map((s: { label: string; value: string }) => `${s.value} · ${s.label}`);
-  if ("bullets" in slide && Array.isArray(slide.bullets)) return slide.bullets as string[];
-  if ("checklist" in slide && slide.checklist) return slide.checklist as string[];
-  if ("mentors" in slide && Array.isArray(slide.mentors)) return slide.mentors.map((m: { name?: string }) => m.name ?? "");
-  return [];
-}
+import {
+    type ElementAction,
+    type ElementPath,
+    canMove,
+    describeElement,
+} from "@/lib/element-edits";
 
 interface PropertiesPanelProps {
-  slide: Slide;
-  slideIndex: number;
-  onClose: () => void;
+    slide: Slide;
+    slideIndex: number;
+    selectedPath: ElementPath | null;
+    onAction: (action: ElementAction) => void;
+    onClose: () => void;
 }
 
-export function PropertiesPanel({ slide, slideIndex, onClose }: PropertiesPanelProps) {
-  const properties = getSlideProperties(slide);
-  const items = getSlideItems(slide);
+export function PropertiesPanel({
+    slide,
+    slideIndex,
+    selectedPath,
+    onAction,
+    onClose,
+}: PropertiesPanelProps) {
+    const hasSelection = selectedPath !== null && selectedPath.length > 0;
+    const elementLabel = hasSelection ? describeElement(selectedPath!) : null;
+    const isArrayItem = hasSelection && selectedPath!.length >= 2;
 
-  return (
-    <div className="w-[280px] shrink-0 border-l border-[var(--chrome-border)] bg-[var(--chrome-bg-elevated)] flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="px-3 py-2.5 border-b border-[var(--chrome-border)] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-[var(--chrome-accent-fg)] tabular-nums">#{slideIndex + 1}</span>
-          <span className="text-[11px] font-medium text-[var(--chrome-fg-3)]">
-            {TYPE_LABELS[slide.type] || slide.type}
-          </span>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-5 h-5 rounded flex items-center justify-center text-[var(--chrome-fg-5)] hover:text-[var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] transition-colors"
-        >
-          <XMarkIcon className="w-3.5 h-3.5" />
-        </button>
-      </div>
+    const cap = (action: ElementAction) =>
+        hasSelection && isArrayItem ? canMove(slide, selectedPath!, action) : false;
+    const canUp = cap("moveUp");
+    const canDown = cap("moveDown");
+    const canLeft = cap("moveLeft");
+    const canRight = cap("moveRight");
+    const canDelete = cap("delete");
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {/* Properties */}
-        {properties.length > 0 && (
-          <PropertySection title="Propiedades">
-            {properties.map((prop, i) => (
-              <PropertyRow key={i} label={prop.label} value={prop.value} />
-            ))}
-          </PropertySection>
-        )}
-
-        {/* Items/children */}
-        {items.length > 0 && (
-          <PropertySection title="Contenido">
-            <div className="space-y-1 py-1">
-              {items.map((item, i) => (
-                <div key={i} className="flex items-start gap-2 py-1">
-                  <span className="text-[10px] text-[var(--chrome-fg-5)] font-medium tabular-nums mt-0.5 shrink-0">{i + 1}</span>
-                  <span className="text-[11px] text-[var(--chrome-fg-3)] leading-snug break-words">{item}</span>
+    return (
+        <div className="properties-panel w-[260px] shrink-0 border-l border-[var(--chrome-border)] bg-[var(--chrome-bg-elevated)] flex flex-col overflow-hidden">
+            <div className="px-3 py-2.5 border-b border-[var(--chrome-border)] flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[11px] font-medium text-[var(--chrome-accent-fg)] tabular-nums">
+                        #{slideIndex + 1}
+                    </span>
+                    <span className="text-[11px] font-medium text-[var(--chrome-fg-3)] truncate">
+                        {hasSelection ? elementLabel : "Editar slide"}
+                    </span>
                 </div>
-              ))}
+                <button
+                    onClick={onClose}
+                    aria-label="Cerrar panel"
+                    className="w-5 h-5 rounded flex items-center justify-center text-[var(--chrome-fg-5)] hover:text-[var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] transition-colors shrink-0"
+                >
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                </button>
             </div>
-          </PropertySection>
-        )}
 
-        {/* Type badge */}
-        <div className="px-3 py-3 mt-auto">
-          <div className="bg-[var(--chrome-bg)] border border-[var(--chrome-border)] rounded-md p-2.5">
-            <p className="text-[9px] text-[var(--chrome-fg-5)] uppercase tracking-wider mb-1">Tipo de slide</p>
-            <p className="text-[12px] font-mono text-[var(--chrome-accent-fg)]">{slide.type}</p>
-          </div>
-        </div>
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-4">
+                {hasSelection && isArrayItem ? (
+                    <>
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider">
+                                Mover
+                            </p>
+                            <div className="grid grid-cols-3 gap-1.5 max-w-[140px]">
+                                <div />
+                                <ArrowButton dir="up" disabled={!canUp} onClick={() => onAction("moveUp")} />
+                                <div />
+                                <ArrowButton dir="left" disabled={!canLeft} onClick={() => onAction("moveLeft")} />
+                                <div className="aspect-square rounded-md bg-[var(--chrome-bg)] border border-[var(--chrome-border)]" />
+                                <ArrowButton dir="right" disabled={!canRight} onClick={() => onAction("moveRight")} />
+                                <div />
+                                <ArrowButton dir="down" disabled={!canDown} onClick={() => onAction("moveDown")} />
+                                <div />
+                            </div>
+                        </div>
 
-        {/* Hint */}
-        <div className="px-3 pb-3">
-          <p className="text-[10px] text-[var(--chrome-fg-6)] leading-relaxed">
-            Usa el chat para editar: &ldquo;cambia el headline del slide {slideIndex + 1}&rdquo;
-          </p>
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider">
+                                Acciones
+                            </p>
+                            <button
+                                disabled={!canDelete}
+                                onClick={() => onAction("delete")}
+                                className="w-full text-[12px] font-medium px-3 py-2 rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] text-[var(--chrome-fg-2)] hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                    <path
+                                        d="M3 4H13M5.5 4V3C5.5 2.448 5.948 2 6.5 2H9.5C10.052 2 10.5 2.448 10.5 3V4M6.5 7V11M9.5 7V11M4.5 4L5 13C5 13.552 5.448 14 6 14H10C10.552 14 11 13.552 11 13L11.5 4"
+                                        stroke="currentColor"
+                                        strokeWidth="1.4"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                Eliminar elemento
+                            </button>
+                        </div>
+
+                        <div className="rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] p-2.5">
+                            <p className="text-[10px] text-[var(--chrome-fg-5)] leading-relaxed">
+                                Atajos: <kbd className="font-mono">←↑↓→</kbd> mover,{" "}
+                                <kbd className="font-mono">⌫</kbd> eliminar,{" "}
+                                <kbd className="font-mono">Esc</kbd> deseleccionar.
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <div className="space-y-3">
+                        <div className="rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] p-3">
+                            <p className="text-[11px] text-[var(--chrome-fg-3)] leading-relaxed">
+                                Click en un elemento del slide para seleccionarlo y moverlo o eliminarlo.
+                            </p>
+                            <p className="text-[10px] text-[var(--chrome-fg-5)] mt-2 leading-relaxed">
+                                Para cambiar texto o copys, sigue usando el chat: &ldquo;cambia el headline a X&rdquo;.
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider mb-1">
+                                Slide
+                            </p>
+                            <p className="text-[12px] font-mono text-[var(--chrome-accent-fg)]">{slide.type}</p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
+}
+
+function ArrowButton({
+    dir,
+    disabled,
+    onClick,
+}: {
+    dir: "up" | "down" | "left" | "right";
+    disabled: boolean;
+    onClick: () => void;
+}) {
+    const rotation = { up: 0, right: 90, down: 180, left: 270 }[dir];
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            aria-label={`Mover ${dir}`}
+            className="aspect-square rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] text-[var(--chrome-fg-2)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)] hover:border-[var(--chrome-accent-fg)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+        >
+            <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                style={{ transform: `rotate(${rotation}deg)` }}
+            >
+                <path
+                    d="M8 3V13M8 3L4 7M8 3L12 7"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </svg>
+        </button>
+    );
 }

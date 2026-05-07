@@ -2,11 +2,17 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Deck } from "@/lib/slide-types";
+import {
+    type ElementAction,
+    type ElementPath,
+    applyAction,
+} from "@/lib/element-edits";
 import { SlideCanvas } from "./slide-canvas";
 import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { HandoffModal } from "./handoff-modal";
 import { SlideThumbnailRail } from "./slide-thumbnail-rail";
+import { PropertiesPanel } from "./properties-panel";
 import { findLocalPartnerLogo } from "@/lib/research/local-logos";
 
 const CHROME_THEME_KEY = "30x.chromeTheme";
@@ -27,9 +33,17 @@ export function EditorLayout({
     isIterating,
 }: EditorLayoutProps) {
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedElementPath, setSelectedElementPath] =
+        useState<ElementPath | null>(null);
     const [chromeTheme, setChromeTheme] = useState<"dark" | "light">("light");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [handoffOpen, setHandoffOpen] = useState(false);
+
+    // Reset element selection whenever the active slide changes — paths
+    // are slide-local, so a stale path on a different slide is meaningless.
+    useEffect(() => {
+        setSelectedElementPath(null);
+    }, [selectedIndex]);
 
     // Restore chrome theme preference.
     useEffect(() => {
@@ -85,12 +99,70 @@ export function EditorLayout({
         [deck, onDeckChange],
     );
 
-    // ── Arrow-key nav + Backspace/Delete ─────────────────────────────
+    // ── Element actions (move/delete inside a slide) ─────────────────
+    const handleElementAction = useCallback(
+        (action: ElementAction) => {
+            if (!selectedElementPath) return;
+            const current = deck.slides[selectedIndex];
+            if (!current) return;
+            const { slide: nextSlide, newPath } = applyAction(
+                current,
+                selectedElementPath,
+                action,
+            );
+            if (nextSlide === current) return; // no-op (action wasn't valid)
+            const newSlides = [...deck.slides];
+            newSlides[selectedIndex] = nextSlide;
+            onDeckChange({ ...deck, slides: newSlides });
+            setSelectedElementPath(newPath);
+        },
+        [deck, selectedIndex, selectedElementPath, onDeckChange],
+    );
+
+    // ── Arrow-key nav + Backspace/Delete + Esc ────────────────────────
+    // When an element is selected: arrows move the element within its
+    // array, Backspace deletes it, Esc clears selection. When no element
+    // is selected: arrows navigate slides, Backspace deletes the slide.
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             const target = e.target as HTMLElement | null;
             if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
                 return;
+
+            if (selectedElementPath) {
+                if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSelectedElementPath(null);
+                    return;
+                }
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    handleElementAction("moveLeft");
+                    return;
+                }
+                if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    handleElementAction("moveRight");
+                    return;
+                }
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    handleElementAction("moveUp");
+                    return;
+                }
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    handleElementAction("moveDown");
+                    return;
+                }
+                if (e.key === "Backspace" || e.key === "Delete") {
+                    e.preventDefault();
+                    handleElementAction("delete");
+                    return;
+                }
+                return;
+            }
+
             if (e.key === "ArrowLeft") {
                 setSelectedIndex((i) => Math.max(0, i - 1));
             } else if (e.key === "ArrowRight") {
@@ -102,7 +174,7 @@ export function EditorLayout({
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [deck.slides.length, selectedIndex, handleDeleteSlide]);
+    }, [deck.slides.length, selectedIndex, selectedElementPath, handleDeleteSlide, handleElementAction]);
 
     // ── PDF pre-render: re-runs whenever the deck mutates ─────────────
     // Debounced 1.2s so a flurry of iterate edits batch into one render.
@@ -262,7 +334,18 @@ export function EditorLayout({
                     clientLogoUrl={effectiveClientLogoUrl}
                     format={deck.format}
                     theme={slideTheme}
+                    selectedPath={selectedElementPath}
+                    onSelectElement={setSelectedElementPath}
                 />
+                {selectedElementPath ? (
+                    <PropertiesPanel
+                        slide={selectedSlide}
+                        slideIndex={selectedIndex}
+                        selectedPath={selectedElementPath}
+                        onAction={handleElementAction}
+                        onClose={() => setSelectedElementPath(null)}
+                    />
+                ) : null}
             </div>
 
             <SlideThumbnailRail
