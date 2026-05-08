@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import type { Deck } from "@/lib/slide-types";
 import {
     ArrowDownTrayIcon,
@@ -8,6 +9,7 @@ import {
     MoonIcon,
 } from "@heroicons/react/24/solid";
 import { Logo30x } from "@/components/foundations/logo/30x-logo";
+import { uploadImage } from "@/lib/upload-image";
 
 interface EditorToolbarProps {
     deck: Deck;
@@ -18,6 +20,7 @@ interface EditorToolbarProps {
     pdfReady: boolean;
     theme?: "dark" | "light";
     onToggleTheme?: () => void;
+    onLogoChange?: (url: string | undefined) => void;
 }
 
 export function EditorToolbar({
@@ -29,8 +32,27 @@ export function EditorToolbar({
     pdfReady,
     theme = "dark",
     onToggleTheme,
+    onLogoChange,
 }: EditorToolbarProps) {
     const isPrototype = deck.format === "prototype";
+    const logoInputRef = useRef<HTMLInputElement>(null);
+    const [logoUploading, setLogoUploading] = useState(false);
+    const [logoMenuOpen, setLogoMenuOpen] = useState(false);
+
+    async function handleLogoFile(file: File) {
+        if (!onLogoChange) return;
+        setLogoUploading(true);
+        try {
+            const url = await uploadImage(file);
+            onLogoChange(url);
+        } catch {
+            // Silently swallow — toolbar isn't the place for verbose errors.
+            // The user will see the logo didn't change and can retry.
+        } finally {
+            setLogoUploading(false);
+            setLogoMenuOpen(false);
+        }
+    }
     return (
         <div className="h-12 shrink-0 border-b border-[var(--chrome-border)] bg-[var(--chrome-bg)] flex items-center justify-between px-3">
             <div className="flex items-center gap-3">
@@ -57,6 +79,88 @@ export function EditorToolbar({
             </div>
 
             <div className="flex items-center gap-1.5">
+                {onLogoChange && (
+                    <div className="relative">
+                        <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/avif"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleLogoFile(file);
+                                e.target.value = "";
+                            }}
+                        />
+                        <button
+                            onClick={() => {
+                                if (deck.clientLogoUrl) {
+                                    setLogoMenuOpen((v) => !v);
+                                } else {
+                                    logoInputRef.current?.click();
+                                }
+                            }}
+                            disabled={logoUploading}
+                            aria-label="Cambiar logo del cliente"
+                            title={deck.clientLogoUrl ? "Logo del cliente" : "Subir logo del cliente"}
+                            className="h-7 px-2 rounded-md text-[var(--chrome-fg-4)] hover:text-[var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] flex items-center gap-1.5 transition-[background,color] duration-150 disabled:opacity-50"
+                            style={{ transitionTimingFunction: "var(--ease-out)" }}
+                        >
+                            {logoUploading ? (
+                                <span className="w-3.5 h-3.5 rounded-full bg-current opacity-50 animate-pulse" />
+                            ) : deck.clientLogoUrl ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                    src={deck.clientLogoUrl}
+                                    alt=""
+                                    className="h-3.5 w-auto max-w-[28px] object-contain"
+                                    style={{ filter: theme === "dark" ? "brightness(0) invert(1)" : "none" }}
+                                />
+                            ) : (
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                    <path
+                                        d="M2 11V13H14V11M8 2V11M8 11L11 8M8 11L5 8"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                            )}
+                            <span className="text-[10.5px] font-medium">Logo</span>
+                        </button>
+                        {logoMenuOpen ? (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setLogoMenuOpen(false)}
+                                />
+                                <div className="absolute right-0 mt-1 w-44 rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg-elevated)] shadow-lg z-20 py-1 text-[11.5px]">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLogoMenuOpen(false);
+                                            logoInputRef.current?.click();
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)] transition-colors"
+                                    >
+                                        Subir nuevo logo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onLogoChange(undefined);
+                                            setLogoMenuOpen(false);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 hover:bg-red-500/10 hover:text-red-400 text-[var(--chrome-fg-3)] transition-colors"
+                                    >
+                                        Quitar logo
+                                    </button>
+                                </div>
+                            </>
+                        ) : null}
+                    </div>
+                )}
                 {onToggleTheme && (
                     <button
                         onClick={onToggleTheme}

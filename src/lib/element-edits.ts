@@ -75,6 +75,34 @@ const ELEMENT_LABELS: Record<string, string> = {
     rows: "Fila",
 };
 
+/**
+ * Set a string field at the given path inside a slide. Path can be:
+ *   ["headline"]              — top-level field
+ *   ["cards", 2, "title"]     — array item field
+ * Returns a new slide with the value applied (no-op if the path is
+ * malformed or doesn't resolve to a writeable string slot).
+ */
+export function setTextAt(slide: Slide, path: (string | number)[], value: string): Slide {
+    if (path.length === 0) return slide;
+    const root = slide as unknown as Record<string, unknown>;
+    if (path.length === 1) {
+        return { ...root, [path[0] as string]: value } as unknown as Slide;
+    }
+    if (path.length === 3 && typeof path[1] === "number") {
+        const arrayKey = path[0] as string;
+        const idx = path[1] as number;
+        const field = path[2] as string;
+        const arr = root[arrayKey];
+        if (!Array.isArray(arr) || idx < 0 || idx >= arr.length) return slide;
+        const newArr = arr.map((item, i) => {
+            if (i !== idx) return item;
+            return { ...(item as Record<string, unknown>), [field]: value };
+        });
+        return { ...root, [arrayKey]: newArr } as unknown as Slide;
+    }
+    return slide;
+}
+
 export function describeElement(path: ElementPath): string {
     if (path.length === 0) return "";
     if (path.length === 1) {

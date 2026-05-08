@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import type { Slide } from "@/lib/slide-types";
 import {
     type ElementAction,
@@ -7,12 +8,14 @@ import {
     canMove,
     describeElement,
 } from "@/lib/element-edits";
+import { uploadImage } from "@/lib/upload-image";
 
 interface PropertiesPanelProps {
     slide: Slide;
     slideIndex: number;
     selectedPath: ElementPath | null;
     onAction: (action: ElementAction) => void;
+    onElementImageChange?: (url: string | undefined) => void;
     onClose: () => void;
 }
 
@@ -21,11 +24,40 @@ export function PropertiesPanel({
     slideIndex,
     selectedPath,
     onAction,
+    onElementImageChange,
     onClose,
 }: PropertiesPanelProps) {
     const hasSelection = selectedPath !== null && selectedPath.length > 0;
     const elementLabel = hasSelection ? describeElement(selectedPath!) : null;
     const isArrayItem = hasSelection && selectedPath!.length >= 2;
+
+    // Detect "this element supports an image" — currently mentors do
+    // (custom imageUrl that overrides the imageKey lookup). Future:
+    // company logos in intro-mentors angles, etc.
+    const isMentorItem =
+        isArrayItem && selectedPath![0] === "mentors" && typeof selectedPath![1] === "number";
+    const mentor = isMentorItem
+        ? (slide as unknown as { mentors?: { imageUrl?: string }[] }).mentors?.[
+              selectedPath![1] as number
+          ]
+        : undefined;
+    const mentorImgInputRef = useRef<HTMLInputElement>(null);
+    const [mentorUploading, setMentorUploading] = useState(false);
+    const [mentorError, setMentorError] = useState<string | null>(null);
+
+    async function handleMentorFile(file: File) {
+        if (!onElementImageChange) return;
+        setMentorUploading(true);
+        setMentorError(null);
+        try {
+            const url = await uploadImage(file);
+            onElementImageChange(url);
+        } catch (err) {
+            setMentorError(err instanceof Error ? err.message : "Falló la subida.");
+        } finally {
+            setMentorUploading(false);
+        }
+    }
 
     const cap = (action: ElementAction) =>
         hasSelection && isArrayItem ? canMove(slide, selectedPath!, action) : false;
@@ -76,6 +108,63 @@ export function PropertiesPanel({
                                 <div />
                             </div>
                         </div>
+
+                        {isMentorItem && onElementImageChange ? (
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider">
+                                    Foto del mentor
+                                </p>
+                                <input
+                                    ref={mentorImgInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/avif"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleMentorFile(file);
+                                        e.target.value = "";
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => mentorImgInputRef.current?.click()}
+                                    disabled={mentorUploading}
+                                    className="w-full text-[12px] font-medium px-3 py-2 rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] text-[var(--chrome-fg-2)] hover:bg-[var(--chrome-hover-bg)] hover:text-[var(--chrome-fg)] hover:border-[var(--chrome-accent-fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {mentorUploading ? (
+                                        <>
+                                            <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                                            Subiendo…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                                <path
+                                                    d="M8 11V3M8 3L4.5 6.5M8 3L11.5 6.5M3 13H13"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.4"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                            {mentor?.imageUrl ? "Cambiar foto" : "Subir foto"}
+                                        </>
+                                    )}
+                                </button>
+                                {mentor?.imageUrl ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => onElementImageChange(undefined)}
+                                        className="w-full text-[11px] text-[var(--chrome-fg-3)] hover:text-red-400 transition-colors py-1"
+                                    >
+                                        Volver a la foto por defecto
+                                    </button>
+                                ) : null}
+                                {mentorError ? (
+                                    <p className="text-[10.5px] text-red-500 leading-snug">{mentorError}</p>
+                                ) : null}
+                            </div>
+                        ) : null}
 
                         <div className="space-y-2">
                             <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider">

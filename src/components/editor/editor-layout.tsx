@@ -6,6 +6,7 @@ import {
     type ElementAction,
     type ElementPath,
     applyAction,
+    setTextAt,
 } from "@/lib/element-edits";
 import { SlideCanvas } from "./slide-canvas";
 import { EditorToolbar } from "./editor-toolbar";
@@ -312,6 +313,7 @@ export function EditorLayout({
                 pdfReady={pdfReady}
                 theme={chromeTheme}
                 onToggleTheme={toggleTheme}
+                onLogoChange={(url) => onDeckChange({ ...deck, clientLogoUrl: url })}
             />
 
             <div className="flex flex-1 min-h-0">
@@ -336,6 +338,15 @@ export function EditorLayout({
                         newSlides[selectedIndex] = nextSlide;
                         onDeckChange({ ...deck, slides: newSlides });
                     }}
+                    onTextChange={(path, value) => {
+                        const current = deck.slides[selectedIndex];
+                        if (!current) return;
+                        const next = setTextAt(current, path, value);
+                        if (next === current) return;
+                        const newSlides = [...deck.slides];
+                        newSlides[selectedIndex] = next;
+                        onDeckChange({ ...deck, slides: newSlides });
+                    }}
                     clientLogoUrl={effectiveClientLogoUrl}
                     format={deck.format}
                     theme={slideTheme}
@@ -348,6 +359,28 @@ export function EditorLayout({
                         slideIndex={selectedIndex}
                         selectedPath={selectedElementPath}
                         onAction={handleElementAction}
+                        onElementImageChange={(url) => {
+                            // Mutates the array item at the selected path,
+                            // setting/clearing imageUrl. Today only used
+                            // for mentors[i].imageUrl override.
+                            if (!selectedElementPath || selectedElementPath.length < 2) return;
+                            const arrayKey = selectedElementPath[selectedElementPath.length - 2] as string;
+                            const idx = selectedElementPath[selectedElementPath.length - 1] as number;
+                            const current = deck.slides[selectedIndex] as unknown as Record<string, unknown>;
+                            const arr = current[arrayKey];
+                            if (!Array.isArray(arr)) return;
+                            const newArr = arr.map((item, i) => {
+                                if (i !== idx) return item;
+                                const next = { ...(item as Record<string, unknown>) };
+                                if (url === undefined) delete next.imageUrl;
+                                else next.imageUrl = url;
+                                return next;
+                            });
+                            const nextSlide = { ...current, [arrayKey]: newArr };
+                            const newSlides = [...deck.slides];
+                            newSlides[selectedIndex] = nextSlide as unknown as typeof deck.slides[number];
+                            onDeckChange({ ...deck, slides: newSlides });
+                        }}
                         onClose={() => setSelectedElementPath(null)}
                     />
                 ) : null}

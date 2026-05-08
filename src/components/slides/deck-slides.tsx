@@ -419,7 +419,7 @@ function IntroMentorsSplit({ slide, clientLogoUrl }: { slide: IntroMentorsSlide;
                     return (
                         <div key={i} className="m-card" data-element-path={JSON.stringify(["mentors", i])}>
                             <div className="portrait">
-                                <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                                <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                             </div>
                             <div className="meta">
                                 {m.company ? (
@@ -458,7 +458,7 @@ function IntroMentorsGrid({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; 
                     return (
                         <div key={i} className="m-tile" data-element-path={JSON.stringify(["mentors", i])}>
                             <div className="portrait">
-                                <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                                <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                             </div>
                             <div className="meta">
                                 <h3 className="name">{m.name}</h3>
@@ -484,16 +484,16 @@ export function ProblemCards({ slide, clientLogoUrl }: { slide: ProblemCardsSlid
             <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
             {slide.subtitle ? (
-                <p className="lead p-lead" data-element-path='["subtitle"]'>{slide.subtitle}</p>
+                <p className="lead p-lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p>
             ) : null}
             <div className="grid">
                 {(Array.isArray(slide.cards) ? slide.cards : []).slice(0, 6).map((c, i) => (
                     <div key={i} data-element-path={JSON.stringify(["cards", i])}>
-                        <h3 className="card-title">{c.title}</h3>
-                        <p className="card-body">{c.body}</p>
+                        <h3 className="card-title" data-text-path={JSON.stringify(["cards", i, "title"])}>{c.title}</h3>
+                        <p className="card-body" data-text-path={JSON.stringify(["cards", i, "body"])}>{c.body}</p>
                     </div>
                 ))}
             </div>
@@ -506,17 +506,17 @@ export function Diagnostic({ slide, clientLogoUrl }: { slide: DiagnosticSlide; c
         <section className={`deck-slide s-diagnostic${slide.backgroundImage ? " has-bg" : ""}`}>
             <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
-            {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
+            {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             <div className="findings">
                 {(Array.isArray(slide.findings) ? slide.findings : []).slice(0, 3).map((f, i) => (
                     <div key={i} className="finding" data-element-path={JSON.stringify(["findings", i])}>
                         <div className="n">Hallazgo {String(i + 1).padStart(2, "0")}</div>
-                        <h3 className="t">{f.title}</h3>
-                        <p className="d">{f.description}</p>
+                        <h3 className="t" data-text-path={JSON.stringify(["findings", i, "title"])}>{f.title}</h3>
+                        <p className="d" data-text-path={JSON.stringify(["findings", i, "description"])}>{f.description}</p>
                     </div>
                 ))}
             </div>
@@ -532,15 +532,15 @@ export function CurriculumGrid({ slide, clientLogoUrl }: { slide: CurriculumGrid
             <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.subtitle ? <p className="lead p-lead" data-element-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            {slide.subtitle ? <p className="lead p-lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             <div className="weeks">
                 {modules.slice(0, 8).map((m, i) => (
                     <div key={i} className="week" data-element-path={JSON.stringify(["modules", i])}>
                         <div className="n">{typeof m.number === "number" ? `Módulo ${m.number}` : m.number}</div>
-                        <div className="t">{m.name}</div>
-                        <div className="d">{m.description}</div>
+                        <div className="t" data-text-path={JSON.stringify(["modules", i, "name"])}>{m.name}</div>
+                        <div className="d" data-text-path={JSON.stringify(["modules", i, "description"])}>{m.description}</div>
                     </div>
                 ))}
             </div>
@@ -553,19 +553,19 @@ export function MentorGrid({ slide, clientLogoUrl }: { slide: MentorGridSlide; c
         <section className="deck-slide s-mentors">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             <div className="people">
                 {(Array.isArray(slide.mentors) ? slide.mentors : []).slice(0, 4).map((m, i) => (
                     <div key={i} className="person" data-element-path={JSON.stringify(["mentors", i])}>
                         <div className="portrait">
-                            <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                            <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                         </div>
                         <div className="person-text">
-                            <h3 className="name">{m.name}</h3>
-                            <p className="role">{m.role}</p>
-                            {m.bio ? <p className="bio">{m.bio}</p> : null}
+                            <h3 className="name" data-text-path={JSON.stringify(["mentors", i, "name"])}>{m.name}</h3>
+                            <p className="role" data-text-path={JSON.stringify(["mentors", i, "role"])}>{m.role}</p>
+                            {m.bio ? <p className="bio" data-text-path={JSON.stringify(["mentors", i, "bio"])}>{m.bio}</p> : null}
                         </div>
                     </div>
                 ))}
@@ -580,18 +580,18 @@ export function MentorDuo({ slide, clientLogoUrl }: { slide: MentorDuoSlide; cli
         <section className="deck-slide s-mentors">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
             <div className="people" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 1280, margin: "auto auto 0" }}>
                 {(Array.isArray(slide.mentors) ? slide.mentors : []).slice(0, 2).map((m, i) => (
                     <div key={i} className="person" data-element-path={JSON.stringify(["mentors", i])}>
                         <div className="portrait">
-                            <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                            <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                         </div>
                         <div className="person-text">
-                            <h3 className="name">{m.name}</h3>
-                            <p className="role">{m.role}</p>
-                            {m.bio ? <p className="bio">{m.bio}</p> : null}
+                            <h3 className="name" data-text-path={JSON.stringify(["mentors", i, "name"])}>{m.name}</h3>
+                            <p className="role" data-text-path={JSON.stringify(["mentors", i, "role"])}>{m.role}</p>
+                            {m.bio ? <p className="bio" data-text-path={JSON.stringify(["mentors", i, "bio"])}>{m.bio}</p> : null}
                         </div>
                     </div>
                 ))}
@@ -606,15 +606,15 @@ export function Methodology({ slide, clientLogoUrl }: { slide: MethodologySlide;
             <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             <div className="steps">
                 {(Array.isArray(slide.steps) ? slide.steps : []).slice(0, 4).map((s, i) => (
                     <div key={i} className="step" data-element-path={JSON.stringify(["steps", i])}>
                         <div className="n">{String(s.number).padStart(2, "0")}</div>
-                        <h3 className="t">{s.title}</h3>
-                        <p className="d">{s.description}</p>
+                        <h3 className="t" data-text-path={JSON.stringify(["steps", i, "title"])}>{s.title}</h3>
+                        <p className="d" data-text-path={JSON.stringify(["steps", i, "description"])}>{s.description}</p>
                     </div>
                 ))}
             </div>
@@ -634,14 +634,14 @@ function ImpactStatsRow({ slide, clientLogoUrl }: { slide: ImpactSlide; clientLo
             <SoftBackground url={slide.backgroundImage} />
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            {slide.subtitle ? <p className="lead" data-element-path='["subtitle"]' data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             <div className="stats">
                 {(Array.isArray(slide.stats) ? slide.stats : []).slice(0, 4).map((s, i) => (
                     <div key={i} className="stat" data-element-path={JSON.stringify(["stats", i])}>
-                        <div className="v">{s.value}</div>
-                        <p className="k">{s.label}</p>
+                        <div className="v" data-text-path={JSON.stringify(["stats", i, "value"])}>{s.value}</div>
+                        <p className="k" data-text-path={JSON.stringify(["stats", i, "label"])}>{s.label}</p>
                     </div>
                 ))}
             </div>
@@ -1265,7 +1265,7 @@ export function DocStatsHero({
                     {mentors.slice(0, 5).map((m, i) => (
                         <div key={i} className="mentor-tile">
                             <div className="portrait">
-                                <img src={getMentorImage(m.imageKey)} alt={m.name} />
+                                <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                             </div>
                             <div className="nm">{m.name}</div>
                             <div className="rl">{m.role}</div>
@@ -1330,7 +1330,7 @@ export function DocMentorWall({
                         {mentors.slice(0, 15).map((m, i) => (
                             <div key={i} className="m-tile">
                                 <img
-                                    src={getMentorImage(m.imageKey)}
+                                    src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)}
                                     alt={m.name ?? ""}
                                 />
                             </div>

@@ -26,6 +26,7 @@ interface SlideCanvasProps {
     onPrev: () => void;
     onNext: () => void;
     onSlideChange?: (slide: Slide) => void;
+    onTextChange?: (path: (string | number)[], value: string) => void;
     clientLogoUrl?: string;
     format?: ProjectFormat;
     theme?: "dark" | "light";
@@ -46,6 +47,7 @@ export function SlideCanvas({
     onPrev,
     onNext,
     onSlideChange,
+    onTextChange,
     clientLogoUrl,
     format = "proposal",
     theme = "light",
@@ -103,6 +105,8 @@ export function SlideCanvas({
     function handleCanvasClick(e: React.MouseEvent) {
         if (!onSelectElement) return;
         const target = e.target as HTMLElement;
+        // Don't hijack clicks while user is mid-edit on a contentEditable.
+        if (target.isContentEditable || target.closest('[contenteditable="true"]')) return;
         const node = target.closest<HTMLElement>("[data-element-path]");
         if (!node) {
             if (selectedPath) onSelectElement(null);
@@ -119,6 +123,83 @@ export function SlideCanvas({
             // ignore malformed path
         }
     }
+
+    // ── Inline text editing on double-click ──────────────────────────
+    // We make the matched node contentEditable on the fly, focus it,
+    // select all, and on blur/Enter parse the new text and dispatch
+    // onTextChange. React doesn't know about the in-DOM mutation but
+    // our state never changes during the edit, so re-render doesn't
+    // clobber the user. On commit, the deck mutation triggers a normal
+    // re-render with the new text.
+    useEffect(() => {
+        const root = stageWrapRef.current;
+        if (!root || !onTextChange) return;
+
+        function endEdit(node: HTMLElement, commit: boolean) {
+            const raw = node.getAttribute("data-text-path");
+            const original = node.dataset.editOriginal ?? "";
+            node.contentEditable = "false";
+            node.removeAttribute("data-editing");
+            delete node.dataset.editOriginal;
+            if (!commit) {
+                node.textContent = original;
+                return;
+            }
+            const text = (node.textContent ?? "").trim();
+            if (!raw) return;
+            if (text === original.trim()) return;
+            try {
+                const path = JSON.parse(raw) as (string | number)[];
+                onTextChange?.(path, text);
+            } catch {
+                // path malformed — restore original to avoid divergence
+                node.textContent = original;
+            }
+        }
+
+        function onDblClick(e: Event) {
+            const target = e.target as HTMLElement;
+            const node = target.closest<HTMLElement>("[data-text-path]");
+            if (!node) return;
+            if (node.getAttribute("data-editing") === "true") return;
+            e.preventDefault();
+            node.dataset.editOriginal = node.textContent ?? "";
+            node.setAttribute("data-editing", "true");
+            node.contentEditable = "true";
+            // Use requestAnimationFrame so the contentEditable surface is
+            // ready before we try to focus + select.
+            requestAnimationFrame(() => {
+                node.focus();
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                const sel = window.getSelection();
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+            });
+
+            const onBlur = () => {
+                endEdit(node, true);
+                node.removeEventListener("blur", onBlur);
+                node.removeEventListener("keydown", onKeyDown);
+            };
+            const onKeyDown = (kev: KeyboardEvent) => {
+                if (kev.key === "Enter" && !kev.shiftKey) {
+                    kev.preventDefault();
+                    node.blur();
+                } else if (kev.key === "Escape") {
+                    kev.preventDefault();
+                    endEdit(node, false);
+                    node.removeEventListener("blur", onBlur);
+                    node.removeEventListener("keydown", onKeyDown);
+                }
+            };
+            node.addEventListener("blur", onBlur);
+            node.addEventListener("keydown", onKeyDown);
+        }
+
+        root.addEventListener("dblclick", onDblClick);
+        return () => root.removeEventListener("dblclick", onDblClick);
+    }, [onTextChange]);
 
     return (
         <div className="flex-1 flex items-center justify-center relative overflow-hidden bg-[var(--chrome-canvas-bg)] p-10">

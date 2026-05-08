@@ -94,7 +94,7 @@ export interface IntroMentorsSlide {
     pill?: string;
     description: string;
     angles: { title: string; description: string; icon?: string }[];
-    mentors: { name: string; role: string; imageKey: string; company?: string; companyLogo?: string }[];
+    mentors: { name: string; role: string; imageKey: string; imageUrl?: string; company?: string; companyLogo?: string }[];
 }
 
 export interface ProblemCardsSlide {
@@ -129,13 +129,13 @@ export interface MentorGridSlide {
     type: "mentor-grid";
     headline: string;
     subtitle?: string;
-    mentors: { name: string; role: string; imageKey: string; bio?: string }[];
+    mentors: { name: string; role: string; imageKey: string; imageUrl?: string; bio?: string }[];
 }
 
 export interface MentorDuoSlide {
     type: "mentor-duo";
     headline: string;
-    mentors: { name: string; role: string; imageKey: string; bio?: string }[];
+    mentors: { name: string; role: string; imageKey: string; imageUrl?: string; bio?: string }[];
 }
 
 export interface MethodologySlide {
@@ -322,7 +322,7 @@ export interface DocStatsHeroSlide {
     heading: string;
     subheading?: string; // typically used as the lime-accented qualifier
     stats: { value: string; label: string }[]; // 3 stats
-    mentors?: { imageKey: string; name: string; role: string }[]; // up to 5
+    mentors?: { imageKey: string; imageUrl?: string; name: string; role: string }[]; // up to 5
 }
 
 /**
@@ -337,7 +337,7 @@ export interface DocMentorWallSlide {
     stats: { value: string; label: string }[]; // 3 stats
     countries?: string[]; // ["MÉXICO", "COLOMBIA", ...]
     context?: string; // short paragraph of context
-    mentors: { imageKey: string; name?: string }[]; // up to 15 portraits
+    mentors: { imageKey: string; imageUrl?: string; name?: string }[]; // up to 15 portraits
     brandLogos?: string[]; // company keys: ["femsa", "google", "netflix", ...]
 }
 
