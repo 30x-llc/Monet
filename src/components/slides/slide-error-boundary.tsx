@@ -5,10 +5,17 @@ import { Component, type ReactNode } from "react";
 interface Props {
     children: ReactNode;
     slideType?: string;
+    /** Anything whose change should clear a captured error (e.g. the slide
+     *  object itself). When this changes between renders the boundary drops
+     *  the previous error and re-renders the children. Crucial for undo/redo —
+     *  otherwise a one-time render fault would freeze the slide forever even
+     *  after the deck mutates back to a working state. */
+    resetKey?: unknown;
 }
 
 interface State {
     error: Error | null;
+    lastResetKey: unknown;
 }
 
 /**
@@ -19,10 +26,17 @@ interface State {
  * dies showing Chrome's "This page couldn't load" screen.
  */
 export class SlideErrorBoundary extends Component<Props, State> {
-    state: State = { error: null };
+    state: State = { error: null, lastResetKey: undefined };
 
-    static getDerivedStateFromError(error: Error): State {
+    static getDerivedStateFromError(error: Error): Partial<State> {
         return { error };
+    }
+
+    static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> | null {
+        if (nextProps.resetKey !== prevState.lastResetKey) {
+            return { error: null, lastResetKey: nextProps.resetKey };
+        }
+        return null;
     }
 
     componentDidCatch(error: Error) {

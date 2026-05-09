@@ -21,7 +21,7 @@ export function SlideRendererClient({
     pageIndex?: number;
 }) {
     return (
-        <SlideErrorBoundary slideType={slide?.type}>
+        <SlideErrorBoundary slideType={slide?.type} resetKey={slide}>
             <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={pageIndex} />
         </SlideErrorBoundary>
     );
