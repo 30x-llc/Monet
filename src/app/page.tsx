@@ -487,25 +487,43 @@ export default function Home() {
         setRefreshKey((k) => k + 1);
     }, [currentDeckId]);
 
+    // Stable refs so the global keydown listener never has to re-mount
+    // on every deck change. Re-mounting drops events fired during the
+    // tear-down/setup cycle, which produced the "Cmd+Z works only when
+    // focus is on the slide" bug.
+    const undoRef = useRef(handleUndo);
+    const redoRef = useRef(handleRedo);
     useEffect(() => {
-        if (view !== "editor" || !deck) return;
+        undoRef.current = handleUndo;
+        redoRef.current = handleRedo;
+    }, [handleUndo, handleRedo]);
+
+    useEffect(() => {
+        if (view !== "editor") return;
         function onKeyDown(e: KeyboardEvent) {
             if (!(e.metaKey || e.ctrlKey)) return;
             if (e.key !== "z" && e.key !== "Z") return;
             const t = e.target as HTMLElement | null;
-            // Skip only inside an active inline contentEditable on the canvas.
-            // Form inputs/textareas in side panels still go through handleDeckChange,
-            // so we WANT to undo at the deck level there (matches Framer/Figma).
+            // Skip only inside an active inline contentEditable on the canvas
+            // (so the browser handles char-by-char native undo while typing).
+            // Everything else — inputs, buttons, body, void areas — gets the
+            // deck-level undo. Matches Framer / Figma feel.
             if (t && t.isContentEditable) return;
             e.preventDefault();
             e.stopPropagation();
-            if (e.shiftKey) handleRedo();
-            else handleUndo();
+            if (e.shiftKey) redoRef.current();
+            else undoRef.current();
         }
-        // capture=true so we beat any panel-level handlers that might swallow it.
+        // Register on both window and document, capture phase, so no panel
+        // handler can swallow it and so a missing/null focus target still
+        // routes the event to us.
         window.addEventListener("keydown", onKeyDown, true);
-        return () => window.removeEventListener("keydown", onKeyDown, true);
-    }, [view, deck, handleUndo, handleRedo]);
+        document.addEventListener("keydown", onKeyDown, true);
+        return () => {
+            window.removeEventListener("keydown", onKeyDown, true);
+            document.removeEventListener("keydown", onKeyDown, true);
+        };
+    }, [view]);
 
     const handleIterate = useCallback(
         async (instruction: string): Promise<{ ok: boolean; summary?: string; error?: string }> => {
