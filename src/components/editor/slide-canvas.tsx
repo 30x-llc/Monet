@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Slide, ProjectFormat } from "@/lib/slide-types";
+import type { Slide, ProjectFormat, CanvasSlide } from "@/lib/slide-types";
 import type { ElementPath } from "@/lib/element-edits";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
+import { CanvasSlideView } from "@/components/slides/canvas-slide";
 import { FORMATS } from "@/lib/slide-types";
 import { uploadImage } from "@/lib/upload-image";
 
@@ -65,6 +66,39 @@ export function SlideCanvas({
 
     const supportsBg = BG_CAPABLE_TYPES.has(slide.type);
     const currentBg = (slide as { backgroundImage?: string }).backgroundImage;
+    const isCanvas = slide.type === "canvas";
+    const [canvasSelectedId, setCanvasSelectedId] = useState<string | null>(null);
+
+    // Reset selection when the active slide changes — otherwise a stale id
+    // points into the prior slide's elements.
+    useEffect(() => {
+        setCanvasSelectedId(null);
+    }, [slideIndex]);
+
+    // Backspace / Delete on a selected canvas element removes it. We attach
+    // here (not in editor-layout) so canvas selection stays scoped to the
+    // active slide and doesn't conflict with structured-slide element delete.
+    useEffect(() => {
+        if (!isCanvas || !canvasSelectedId || !onSlideChange) return;
+        const change = onSlideChange;
+        const currentSlide = slide;
+        const selectedId = canvasSelectedId;
+        function onKey(e: KeyboardEvent) {
+            if (e.key !== "Backspace" && e.key !== "Delete") return;
+            const t = e.target as HTMLElement | null;
+            if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+            e.preventDefault();
+            const cs = currentSlide as CanvasSlide;
+            const next: CanvasSlide = {
+                ...cs,
+                elements: cs.elements.filter((el) => el.id !== selectedId),
+            };
+            setCanvasSelectedId(null);
+            change(next as Slide);
+        }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [isCanvas, canvasSelectedId, onSlideChange, slide]);
 
     async function handleBgFile(file: File) {
         if (!onSlideChange) return;
@@ -216,7 +250,16 @@ export function SlideCanvas({
                 }}
             >
                 <SlideStage format={format} theme={theme}>
-                    <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
+                    {isCanvas ? (
+                        <CanvasSlideView
+                            slide={slide as CanvasSlide}
+                            onChange={onSlideChange ? (next) => onSlideChange(next as Slide) : undefined}
+                            selectedId={canvasSelectedId}
+                            onSelect={setCanvasSelectedId}
+                        />
+                    ) : (
+                        <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
+                    )}
                 </SlideStage>
             </div>
 

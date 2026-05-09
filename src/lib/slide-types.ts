@@ -427,6 +427,74 @@ export interface ContentSlide {
 }
 
 // ============================================================
+// CANVAS — free-positioned elements (Phase 2 of Monet)
+// ============================================================
+//
+// Unlike the structured slide types above (which encode layout in their
+// shape: a "diagnostic" slide always has a headline + 3 findings in a
+// fixed grid), a canvas slide is a flat array of elements with explicit
+// x/y/w/h. The renderer is dumb: it positions each element absolutely
+// and gets out of the way. Drag, resize, delete, multi-select all live
+// at the canvas level — no per-slide-type quirks.
+//
+// Coordinate space: 1280x720 (16:9 at 80px = 1in, matches export). The
+// renderer scales to fit the available stage. x/y is the top-left of
+// the element bounding box; w/h is its size.
+
+export interface CanvasElementBase {
+    /** Stable id for selection / undo / drag tracking. */
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    /** Rotation in degrees, clockwise. Defaults to 0. */
+    rotate?: number;
+    /** Higher = drawn on top. Defaults to position in array. */
+    zIndex?: number;
+    /** Lock prevents drag/resize from the canvas (still editable from panel). */
+    locked?: boolean;
+}
+
+export interface CanvasTextElement extends CanvasElementBase {
+    kind: "text";
+    text: string;
+    /** Font size in canvas units. Defaults to 24. */
+    fontSize?: number;
+    /** 100-900. Defaults to 400. */
+    fontWeight?: number;
+    /** CSS color string. Defaults to currentColor (theme-aware). */
+    color?: string;
+    /** "left" | "center" | "right". Defaults to "left". */
+    align?: "left" | "center" | "right";
+    /** Line-height multiplier. Defaults to 1.2. */
+    lineHeight?: number;
+    /** Letter-spacing in em. Defaults to 0. */
+    letterSpacing?: number;
+    /** "normal" | "italic". Defaults to "normal". */
+    fontStyle?: "normal" | "italic";
+}
+
+export interface CanvasImageElement extends CanvasElementBase {
+    kind: "image";
+    src: string;
+    alt?: string;
+    /** "cover" crops to fill, "contain" letterboxes. Defaults to "cover". */
+    fit?: "cover" | "contain";
+    /** CSS border-radius in canvas units. Defaults to 0. */
+    radius?: number;
+}
+
+export type CanvasElement = CanvasTextElement | CanvasImageElement;
+
+export interface CanvasSlide {
+    type: "canvas";
+    /** Background color or image url. Defaults to white. */
+    background?: string;
+    elements: CanvasElement[];
+}
+
+// ============================================================
 // UNION
 // ============================================================
 
@@ -458,7 +526,12 @@ export type Slide =
     | DocMentorWallSlide
     | DocMentorSpotlightSlide
     | PrototypeFrameSlide
-    | ContentSlide;
+    | ContentSlide
+    | CanvasSlide;
+
+/** Canvas coordinate space — matches deck export ratio (16:9 at 1280x720). */
+export const CANVAS_WIDTH = 1280;
+export const CANVAS_HEIGHT = 720;
 
 export interface Deck {
     deckTitle: string;

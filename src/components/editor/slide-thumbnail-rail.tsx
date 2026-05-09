@@ -20,6 +20,7 @@ interface SlideThumbnailRailProps {
     selectedIndex: number;
     onSelect: (index: number) => void;
     onAdd?: () => void;
+    onAddCanvas?: () => void;
     onDelete?: (index: number) => void;
     onReorder?: (from: number, to: number) => void;
     clientLogoUrl?: string;
@@ -32,6 +33,7 @@ export function SlideThumbnailRail({
     selectedIndex,
     onSelect,
     onAdd,
+    onAddCanvas,
     onDelete,
     onReorder,
     clientLogoUrl,
@@ -171,7 +173,8 @@ export function SlideThumbnailRail({
                     <button
                         onClick={onAdd}
                         className="proto-rail-add"
-                        aria-label="Agregar slide"
+                        aria-label="Duplicar slide actual"
+                        title="Duplicar slide actual"
                         style={{ height: thumbHeight }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -181,6 +184,20 @@ export function SlideThumbnailRail({
                                 strokeWidth="2"
                                 strokeLinecap="round"
                             />
+                        </svg>
+                    </button>
+                ) : null}
+                {onAddCanvas ? (
+                    <button
+                        onClick={onAddCanvas}
+                        className="proto-rail-add"
+                        aria-label="Agregar canvas vacío"
+                        title="Canvas vacío — diseño libre"
+                        style={{ height: thumbHeight }}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
+                            <path d="M9 12h6M12 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                         </svg>
                     </button>
                 ) : null}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CanvasSlideView } from "./canvas-slide";
 import type {
     CoverHeroSlide,
     CorporateCoverSlide,
@@ -1776,6 +1777,8 @@ export function renderSlide(
             return <PrototypeFrame slide={slide} />;
         case "content":
             return <Content slide={slide} clientLogoUrl={clientLogoUrl} />;
+        case "canvas":
+            return <CanvasSlideView slide={slide} />;
         default:
             return (
                 <section className="deck-slide">

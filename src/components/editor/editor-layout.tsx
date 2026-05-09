@@ -9,6 +9,7 @@ import {
     setTextAt,
 } from "@/lib/element-edits";
 import { SlideCanvas } from "./slide-canvas";
+import { newCanvasSlide } from "@/components/slides/canvas-slide";
 import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { HandoffModal } from "./handoff-modal";
@@ -129,6 +130,10 @@ export function EditorLayout({
             const target = e.target as HTMLElement | null;
             if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
                 return;
+
+            // Canvas slides own their own keyboard (delete element, etc.) inside
+            // SlideCanvas — don't fight them with the structured-slide handler.
+            if (deck.slides[selectedIndex]?.type === "canvas") return;
 
             if (selectedElementPath) {
                 if (e.key === "Escape") {
@@ -396,6 +401,12 @@ export function EditorLayout({
                     const cloned = JSON.parse(JSON.stringify(current));
                     const newSlides = [...deck.slides];
                     newSlides.splice(selectedIndex + 1, 0, cloned);
+                    onDeckChange({ ...deck, slides: newSlides });
+                    setSelectedIndex(selectedIndex + 1);
+                }}
+                onAddCanvas={() => {
+                    const newSlides = [...deck.slides];
+                    newSlides.splice(selectedIndex + 1, 0, newCanvasSlide());
                     onDeckChange({ ...deck, slides: newSlides });
                     setSelectedIndex(selectedIndex + 1);
                 }}
