@@ -246,15 +246,16 @@ function CorporateCoverRecognition({
     const bg = slide.backgroundImage || PORTADA;
     const accent = slide.headlineAccent?.trim();
     const paragraphs = (slide.bodyParagraphs ?? []).filter(Boolean);
+    const headline = slide.headline ?? "";
 
     // Split the headline so we can wrap the accent substring in a
     // styled span while preserving the rest of the text. If the accent
     // isn't found in the headline we just render the headline as-is.
-    let headlineNodes: ReactNode = slide.headline;
-    if (accent && slide.headline.includes(accent)) {
-        const idx = slide.headline.indexOf(accent);
-        const before = slide.headline.slice(0, idx);
-        const after = slide.headline.slice(idx + accent.length);
+    let headlineNodes: ReactNode = headline;
+    if (accent && headline.includes(accent)) {
+        const idx = headline.indexOf(accent);
+        const before = headline.slice(0, idx);
+        const after = headline.slice(idx + accent.length);
         headlineNodes = (
             <>
                 {before}

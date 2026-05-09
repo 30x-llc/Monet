@@ -19,14 +19,18 @@ export function canMove(
     action: ElementAction,
 ): boolean {
     if (!canEdit(slide, path)) return false;
+    // Top-level fields like ["headline"] aren't movable or deletable —
+    // they're singletons on the slide, not array items. Bailing early
+    // avoids reading slide[undefined] and crashing when the user hits
+    // Backspace on a selected title.
+    if (path.length < 2) return false;
+    const arrayKey = path[path.length - 2] as string;
+    const arr = (slide as unknown as Record<string, unknown>)[arrayKey];
+    if (!Array.isArray(arr)) return false;
     if (action === "delete") {
-        const arrayKey = path[path.length - 2] as string;
-        const arr = (slide as unknown as Record<string, unknown>)[arrayKey] as unknown[];
         return arr.length > 1;
     }
-    const arrayKey = path[path.length - 2] as string;
     const idx = path[path.length - 1] as number;
-    const arr = (slide as unknown as Record<string, unknown>)[arrayKey] as unknown[];
     const offset = action === "moveUp" || action === "moveLeft" ? -1 : 1;
     const newIdx = idx + offset;
     return newIdx >= 0 && newIdx < arr.length;
