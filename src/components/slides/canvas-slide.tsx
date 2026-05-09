@@ -343,6 +343,7 @@ function ElementView({
         baseH: number;
         handle: "nw" | "ne" | "sw" | "se";
     } | null>(null);
+    const rotateRef = useRef<{ centerX: number; centerY: number; baseAngle: number; pointerStart: number } | null>(null);
 
     const onPointerDown = useCallback(
         (e: React.PointerEvent) => {
@@ -367,6 +368,15 @@ function ElementView({
         (e: React.PointerEvent) => {
             const drag = dragRef.current;
             const resize = resizeRef.current;
+            const rotate = rotateRef.current;
+            if (rotate) {
+                const angleNow = Math.atan2(e.clientY - rotate.centerY, e.clientX - rotate.centerX);
+                let deg = rotate.baseAngle + ((angleNow - rotate.pointerStart) * 180) / Math.PI;
+                if (e.shiftKey) deg = Math.round(deg / 15) * 15;
+                else deg = Math.round(deg);
+                onPatch({ rotate: deg });
+                return;
+            }
             if (drag) {
                 const dx = (e.clientX - drag.startX) / scale;
                 const dy = (e.clientY - drag.startY) / scale;
@@ -423,6 +433,7 @@ function ElementView({
         (e: React.PointerEvent) => {
             dragRef.current = null;
             resizeRef.current = null;
+            rotateRef.current = null;
             onGuides({ v: [], h: [] });
             if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
                 (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
@@ -447,6 +458,29 @@ function ElementView({
             };
         },
         [interactive, el.locked, el.x, el.y, el.w, el.h],
+    );
+
+    const startRotate = useCallback(
+        (e: React.PointerEvent) => {
+            if (!interactive || el.locked) return;
+            e.stopPropagation();
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            // Center of element in screen pixels (approx — find via the rendered
+            // element's bounding rect for accuracy across CSS rotations).
+            const node = (e.currentTarget as HTMLElement).parentElement; // the element wrap
+            if (!node) return;
+            const r = node.getBoundingClientRect();
+            const cx = r.left + r.width / 2;
+            const cy = r.top + r.height / 2;
+            const start = Math.atan2(e.clientY - cy, e.clientX - cx);
+            rotateRef.current = {
+                centerX: cx,
+                centerY: cy,
+                baseAngle: el.rotate ?? 0,
+                pointerStart: start,
+            };
+        },
+        [interactive, el.locked, el.rotate],
     );
 
     const baseStyle: React.CSSProperties = {
@@ -496,6 +530,7 @@ function ElementView({
                             <ResizeHandle position="ne" onPointerDown={startResize("ne")} />
                             <ResizeHandle position="sw" onPointerDown={startResize("sw")} />
                             <ResizeHandle position="se" onPointerDown={startResize("se")} />
+                            <RotationHandle onPointerDown={startRotate} />
                         </>
                     )}
                 </>
@@ -619,6 +654,39 @@ function ImageElementBody({ el }: { el: CanvasImageElement }) {
                 pointerEvents: "none",
             }}
         />
+    );
+}
+
+function RotationHandle({ onPointerDown }: { onPointerDown: (e: React.PointerEvent) => void }) {
+    return (
+        <div
+            onPointerDown={onPointerDown}
+            style={{
+                position: "absolute",
+                top: -28,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 14,
+                height: 14,
+                background: "#0a0a0a",
+                border: "2px solid #E9FF7B",
+                borderRadius: "50%",
+                cursor: "grab",
+            }}
+            title="Rotar (Shift = snap a 15°)"
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    top: 14,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: 1,
+                    height: 14,
+                    background: "#E9FF7B",
+                }}
+            />
+        </div>
     );
 }
 

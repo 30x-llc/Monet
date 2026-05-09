@@ -107,23 +107,96 @@ export function SlideCanvas({
             : canvasSelectedId
                 ? [canvasSelectedId]
                 : [];
-        if (ids.length === 0) return;
         const change = onSlideChange;
         const currentSlide = slide;
         function onKey(e: KeyboardEvent) {
-            if (e.key !== "Backspace" && e.key !== "Delete") return;
             const t = e.target as HTMLElement | null;
             if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
-            e.preventDefault();
             const cs = currentSlide as CanvasSlide;
+            const cmd = e.metaKey || e.ctrlKey;
+
+            // Cmd+A — select every element on the canvas.
+            if (cmd && (e.key === "a" || e.key === "A")) {
+                e.preventDefault();
+                const all = cs.elements.map((x) => x.id);
+                onCanvasSelectedIdsChange?.(all);
+                if (all.length === 1) setCanvasSelectedId(all[0]);
+                else setCanvasSelectedId(null);
+                return;
+            }
+
+            // Esc — clear selection.
+            if (e.key === "Escape" && ids.length > 0) {
+                e.preventDefault();
+                setCanvasSelectedId(null);
+                onCanvasSelectedIdsChange?.([]);
+                return;
+            }
+
+            if (ids.length === 0) return;
             const idSet = new Set(ids);
-            const next: CanvasSlide = {
-                ...cs,
-                elements: cs.elements.filter((el) => !idSet.has(el.id)),
-            };
-            setCanvasSelectedId(null);
-            onCanvasSelectedIdsChange?.([]);
-            change(next as Slide);
+
+            // Cmd+D — duplicate selected element(s) at +20/+20 offset.
+            if (cmd && (e.key === "d" || e.key === "D")) {
+                e.preventDefault();
+                const dupIds: string[] = [];
+                const next: CanvasSlide = {
+                    ...cs,
+                    elements: [
+                        ...cs.elements,
+                        ...cs.elements
+                            .filter((el) => idSet.has(el.id))
+                            .map((el) => {
+                                const newId = Math.random().toString(36).slice(2, 10);
+                                dupIds.push(newId);
+                                return { ...el, id: newId, x: el.x + 20, y: el.y + 20 };
+                            }),
+                    ],
+                };
+                change(next as Slide);
+                if (dupIds.length === 1) setCanvasSelectedId(dupIds[0]);
+                onCanvasSelectedIdsChange?.(dupIds);
+                return;
+            }
+
+            // Arrow keys — nudge selection. Shift = 10px, plain = 1px.
+            const nudge =
+                e.key === "ArrowLeft"
+                    ? { dx: -1, dy: 0 }
+                    : e.key === "ArrowRight"
+                      ? { dx: 1, dy: 0 }
+                      : e.key === "ArrowUp"
+                        ? { dx: 0, dy: -1 }
+                        : e.key === "ArrowDown"
+                          ? { dx: 0, dy: 1 }
+                          : null;
+            if (nudge) {
+                e.preventDefault();
+                const mult = e.shiftKey ? 10 : 1;
+                const next: CanvasSlide = {
+                    ...cs,
+                    elements: cs.elements.map((el) =>
+                        idSet.has(el.id)
+                            ? { ...el, x: el.x + nudge.dx * mult, y: el.y + nudge.dy * mult }
+                            : el,
+                    ),
+                };
+                change(next as Slide);
+                return;
+            }
+
+            // Backspace / Delete — remove selected element(s).
+            if (e.key === "Backspace" || e.key === "Delete") {
+                e.preventDefault();
+                const next: CanvasSlide = {
+                    ...cs,
+                    elements: cs.elements.filter((el) => !idSet.has(el.id)),
+                };
+                setCanvasSelectedId(null);
+                onCanvasSelectedIdsChange?.([]);
+                change(next as Slide);
+                return;
+            }
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
