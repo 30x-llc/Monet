@@ -5,7 +5,8 @@ import type { Slide, ProjectFormat, CanvasSlide } from "@/lib/slide-types";
 import type { ElementPath } from "@/lib/element-edits";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
-import { CanvasSlideView } from "@/components/slides/canvas-slide";
+import { CanvasSlideView, CanvasCreationToolbar, newImageElement } from "@/components/slides/canvas-slide";
+import type { CanvasElement } from "@/lib/slide-types";
 import { FORMATS } from "@/lib/slide-types";
 import { uploadImage } from "@/lib/upload-image";
 
@@ -275,6 +276,28 @@ export function SlideCanvas({
                         <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
                     )}
                 </SlideStage>
+                {isCanvas && onSlideChange ? (
+                    <CanvasCreationToolbar
+                        onAdd={(el: CanvasElement) => {
+                            const cs = slide as CanvasSlide;
+                            const next: CanvasSlide = { ...cs, elements: [...cs.elements, el] };
+                            onSlideChange(next as Slide);
+                            setCanvasSelectedId(el.id);
+                        }}
+                        onUploadImage={async (file: File) => {
+                            try {
+                                const url = await uploadImage(file);
+                                const cs = slide as CanvasSlide;
+                                const el = newImageElement(url);
+                                const next: CanvasSlide = { ...cs, elements: [...cs.elements, el] };
+                                onSlideChange(next as Slide);
+                                setCanvasSelectedId(el.id);
+                            } catch (err) {
+                                console.error("[canvas image upload]", err);
+                            }
+                        }}
+                    />
+                ) : null}
             </div>
 
             {canPrev && (

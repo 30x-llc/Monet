@@ -6,6 +6,7 @@ import {
     CANVAS_WIDTH,
     type CanvasElement,
     type CanvasImageElement,
+    type CanvasShapeElement,
     type CanvasSlide,
     type CanvasTextElement,
 } from "@/lib/slide-types";
@@ -249,8 +250,10 @@ function ElementView({ el, scale, interactive, selected, onSelect, onPatch }: El
                     }}
                     onCancel={() => setEditing(false)}
                 />
-            ) : (
+            ) : el.kind === "image" ? (
                 <ImageElementBody el={el as CanvasImageElement} />
+            ) : (
+                <ShapeElementBody el={el as CanvasShapeElement} />
             )}
             {selected && interactive && !editing ? (
                 <>
@@ -335,6 +338,36 @@ function TextElementBody({
     );
 }
 
+function ShapeElementBody({ el }: { el: CanvasShapeElement }) {
+    const fill = el.fill ?? "#E9FF7B";
+    const stroke = el.stroke;
+    const strokeWidth = el.strokeWidth ?? 0;
+    if (el.shape === "ellipse") {
+        return (
+            <div
+                style={{
+                    width: "100%",
+                    height: "100%",
+                    background: fill,
+                    border: stroke && strokeWidth > 0 ? `${strokeWidth}px solid ${stroke}` : undefined,
+                    borderRadius: "50%",
+                }}
+            />
+        );
+    }
+    return (
+        <div
+            style={{
+                width: "100%",
+                height: "100%",
+                background: fill,
+                border: stroke && strokeWidth > 0 ? `${strokeWidth}px solid ${stroke}` : undefined,
+                borderRadius: el.radius ?? 0,
+            }}
+        />
+    );
+}
+
 function ImageElementBody({ el }: { el: CanvasImageElement }) {
     return (
         <img
@@ -402,4 +435,126 @@ export function newCanvasSlide(): CanvasSlide {
 
 export function newCanvasElementId(): string {
     return Math.random().toString(36).slice(2, 10);
+}
+
+// ─── Element factories ──────────────────────────────────────────────
+
+/** Centers a w×h box on the 1280×720 canvas. */
+function centeredBox(w: number, h: number): { x: number; y: number; w: number; h: number } {
+    return { x: Math.round((CANVAS_WIDTH - w) / 2), y: Math.round((CANVAS_HEIGHT - h) / 2), w, h };
+}
+
+export function newTextElement(): CanvasTextElement {
+    return {
+        id: newCanvasElementId(),
+        kind: "text",
+        text: "Texto",
+        ...centeredBox(360, 56),
+        fontSize: 32,
+        fontWeight: 500,
+        color: "#0a0a0a",
+        align: "left",
+        lineHeight: 1.2,
+    };
+}
+
+export function newImageElement(src: string, w = 480, h = 320): CanvasImageElement {
+    return {
+        id: newCanvasElementId(),
+        kind: "image",
+        src,
+        ...centeredBox(w, h),
+        fit: "cover",
+    };
+}
+
+export function newRectElement(): CanvasShapeElement {
+    return {
+        id: newCanvasElementId(),
+        kind: "shape",
+        shape: "rect",
+        ...centeredBox(280, 200),
+        fill: "#E9FF7B",
+        radius: 12,
+    };
+}
+
+export function newEllipseElement(): CanvasShapeElement {
+    return {
+        id: newCanvasElementId(),
+        kind: "shape",
+        shape: "ellipse",
+        ...centeredBox(240, 240),
+        fill: "#E9FF7B",
+    };
+}
+
+// ─── Floating creation toolbar ─────────────────────────────────────
+
+interface CanvasCreationToolbarProps {
+    onAdd: (el: CanvasElement) => void;
+    onUploadImage: (file: File) => Promise<void>;
+}
+
+export function CanvasCreationToolbar({ onAdd, onUploadImage }: CanvasCreationToolbarProps) {
+    const fileRef = useRef<HTMLInputElement>(null);
+    return (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-full shadow-lg ring-1 ring-black/5 p-1">
+            <ToolbarButton label="Texto" onClick={() => onAdd(newTextElement())}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 4h10M8 4v8M6 12h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+            </ToolbarButton>
+            <ToolbarButton label="Rectángulo" onClick={() => onAdd(newRectElement())}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+            </ToolbarButton>
+            <ToolbarButton label="Elipse" onClick={() => onAdd(newEllipseElement())}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <ellipse cx="8" cy="8" rx="5.5" ry="5.5" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+            </ToolbarButton>
+            <span className="w-px h-5 bg-black/10 mx-0.5" />
+            <ToolbarButton label="Subir imagen" onClick={() => fileRef.current?.click()}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M2 11l3-3 3 3 2-2 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" fill="none" />
+                    <circle cx="11" cy="6" r="1" fill="currentColor" />
+                </svg>
+            </ToolbarButton>
+            <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/avif"
+                hidden
+                onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onUploadImage(f);
+                    e.target.value = "";
+                }}
+            />
+        </div>
+    );
+}
+
+function ToolbarButton({
+    label,
+    onClick,
+    children,
+}: {
+    label: string;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            title={label}
+            aria-label={label}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#0a0a0a] hover:bg-black/5 active:scale-95 transition"
+        >
+            {children}
+        </button>
+    );
 }

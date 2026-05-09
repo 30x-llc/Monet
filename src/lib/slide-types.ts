@@ -485,7 +485,21 @@ export interface CanvasImageElement extends CanvasElementBase {
     radius?: number;
 }
 
-export type CanvasElement = CanvasTextElement | CanvasImageElement;
+export interface CanvasShapeElement extends CanvasElementBase {
+    kind: "shape";
+    /** "rect" or "ellipse". */
+    shape: "rect" | "ellipse";
+    /** Fill color. Defaults to #E9FF7B (lime accent). */
+    fill?: string;
+    /** Optional stroke color. */
+    stroke?: string;
+    /** Stroke width in canvas units. Defaults to 0. */
+    strokeWidth?: number;
+    /** Border radius for rectangles in canvas units. Defaults to 0. */
+    radius?: number;
+}
+
+export type CanvasElement = CanvasTextElement | CanvasImageElement | CanvasShapeElement;
 
 export interface CanvasSlide {
     type: "canvas";
