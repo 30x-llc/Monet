@@ -144,6 +144,7 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropF
                 onMouseDown={deselect}
             >
                 {slide.elements
+                    .filter((el) => !el.hidden)
                     .slice()
                     .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
                     .map((el) => (

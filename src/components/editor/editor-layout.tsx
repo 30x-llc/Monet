@@ -11,6 +11,7 @@ import {
 import { SlideCanvas } from "./slide-canvas";
 import { newCanvasSlide, newCanvasElementId } from "@/components/slides/canvas-slide";
 import { CanvasPropertiesPanel } from "./canvas-properties-panel";
+import { CanvasLayersPanel } from "./canvas-layers-panel";
 import type { CanvasElement, CanvasSlide } from "@/lib/slide-types";
 import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
@@ -331,6 +332,18 @@ export function EditorLayout({
                     isLoading={isIterating}
                     chromeTheme={chromeTheme}
                 />
+                {selectedSlide?.type === "canvas" ? (
+                    <CanvasLayersPanel
+                        slide={selectedSlide as CanvasSlide}
+                        selectedId={canvasSelectedId}
+                        onSelect={setCanvasSelectedId}
+                        onChange={(next) => {
+                            const newSlides = [...deck.slides];
+                            newSlides[selectedIndex] = next;
+                            onDeckChange({ ...deck, slides: newSlides });
+                        }}
+                    />
+                ) : null}
                 <SlideCanvas
                     slide={selectedSlide}
                     slideIndex={selectedIndex}

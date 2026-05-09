@@ -454,6 +454,8 @@ export interface CanvasElementBase {
     zIndex?: number;
     /** Lock prevents drag/resize from the canvas (still editable from panel). */
     locked?: boolean;
+    /** When true, the renderer skips this element entirely (eye-off in layers). */
+    hidden?: boolean;
 }
 
 export interface CanvasTextElement extends CanvasElementBase {
