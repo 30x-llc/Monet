@@ -202,8 +202,8 @@ export function CoverHero({ slide, clientLogoUrl }: { slide: CoverHeroSlide; cli
             </div>
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="title-wrap">
-                <h1 className="h-cover">{slide.headline}</h1>
-                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
+                <h1 className="h-cover" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
             </div>
             {slide.meta && slide.meta.length > 0 ? (
                 <div className="meta">
@@ -211,8 +211,8 @@ export function CoverHero({ slide, clientLogoUrl }: { slide: CoverHeroSlide; cli
                         <div key={i} className="item">
                             <div className="icon">{pickMetaIcon(m.icon)}</div>
                             <div>
-                                <div className="k">{m.key}</div>
-                                <div className="v">{m.value}</div>
+                                <div className="k" data-text-path={JSON.stringify(["meta", i, "key"])}>{m.key}</div>
+                                <div className="v" data-text-path={JSON.stringify(["meta", i, "value"])}>{m.value}</div>
                             </div>
                         </div>
                     ))}
@@ -400,16 +400,16 @@ function IntroMentorsSplit({ slide, clientLogoUrl }: { slide: IntroMentorsSlide;
         <section className="deck-slide s-intro">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="left">
-                <h2 className="title-big">{slide.title}</h2>
-                {slide.pill ? <span className="pill">{slide.pill}</span> : null}
-                <p className="desc">{slide.description}</p>
+                <h2 className="title-big" data-text-path='["title"]'>{slide.title}</h2>
+                {slide.pill ? <span className="pill" data-text-path='["pill"]'>{slide.pill}</span> : null}
+                <p className="desc" data-text-path='["description"]'>{slide.description}</p>
                 <div className="angles">
                     {angles.map((a, i) => (
                         <div key={i} className="angle" data-element-path={JSON.stringify(["angles", i])}>
                             <div className="ic">{pickAngleIcon(a.icon)}</div>
                             <div>
-                                <h3 className="t">{a.title}</h3>
-                                <p className="d">{a.description}</p>
+                                <h3 className="t" data-text-path={JSON.stringify(["angles", i, "title"])}>{a.title}</h3>
+                                <p className="d" data-text-path={JSON.stringify(["angles", i, "description"])}>{a.description}</p>
                             </div>
                         </div>
                     ))}
@@ -425,13 +425,13 @@ function IntroMentorsSplit({ slide, clientLogoUrl }: { slide: IntroMentorsSlide;
                             </div>
                             <div className="meta">
                                 {m.company ? (
-                                    <div className="company">
+                                    <div className="company" data-text-path={JSON.stringify(["mentors", i, "company"])}>
                                         {companyLogo ? <img src={companyLogo} alt="" /> : null}
                                         {m.company}
                                     </div>
                                 ) : null}
-                                <h3 className="name">{m.name}</h3>
-                                <p className="role">{m.role}</p>
+                                <h3 className="name" data-text-path={JSON.stringify(["mentors", i, "name"])}>{m.name}</h3>
+                                <p className="role" data-text-path={JSON.stringify(["mentors", i, "role"])}>{m.role}</p>
                             </div>
                         </div>
                     );
@@ -450,9 +450,9 @@ function IntroMentorsGrid({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; 
         <section className="deck-slide s-intro-grid">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                {slide.pill ? <div className="eyebrow">{slide.pill}</div> : null}
-                <h2 className="h-title">{slide.title}</h2>
-                {slide.description ? <p className="lead p-lead">{slide.description}</p> : null}
+                {slide.pill ? <div className="eyebrow" data-text-path='["pill"]'>{slide.pill}</div> : null}
+                <h2 className="h-title" data-text-path='["title"]'>{slide.title}</h2>
+                {slide.description ? <p className="lead p-lead" data-text-path='["description"]'>{slide.description}</p> : null}
             </div>
             <div className="m-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
                 {visible.map((m, i) => {
@@ -463,12 +463,12 @@ function IntroMentorsGrid({ slide, clientLogoUrl }: { slide: IntroMentorsSlide; 
                                 <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                             </div>
                             <div className="meta">
-                                <h3 className="name">{m.name}</h3>
-                                <p className="role">{m.role}</p>
+                                <h3 className="name" data-text-path={JSON.stringify(["mentors", i, "name"])}>{m.name}</h3>
+                                <p className="role" data-text-path={JSON.stringify(["mentors", i, "role"])}>{m.role}</p>
                                 {m.company ? (
                                     <div className="company">
                                         {companyLogo ? <img src={companyLogo} alt="" /> : null}
-                                        <span>{m.company}</span>
+                                        <span data-text-path={JSON.stringify(["mentors", i, "company"])}>{m.company}</span>
                                     </div>
                                 ) : null}
                             </div>
@@ -657,21 +657,21 @@ function ImpactHeroNumber({ slide, clientLogoUrl }: { slide: ImpactSlide; client
     return (
         <section className="deck-slide s-impact-hero">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
-            {slide.subtitle ? <div className="eyebrow">{slide.subtitle}</div> : null}
-            <h2 className="h-title">{slide.headline}</h2>
+            {slide.subtitle ? <div className="eyebrow" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
+            <h2 className="h-title" data-text-path='["headline"]'>{slide.headline}</h2>
             {hero ? (
                 <div className="hero-stat">
-                    <div className="v">{hero.value}</div>
-                    <p className="k">{hero.label}</p>
+                    <div className="v" data-text-path={JSON.stringify(["stats", 0, "value"])}>{hero.value}</div>
+                    <p className="k" data-text-path={JSON.stringify(["stats", 0, "label"])}>{hero.label}</p>
                 </div>
             ) : null}
-            {slide.heroContext ? <p className="context">{slide.heroContext}</p> : null}
+            {slide.heroContext ? <p className="context" data-text-path='["heroContext"]'>{slide.heroContext}</p> : null}
             {supporting.length > 0 ? (
                 <div className="supporting">
                     {supporting.slice(0, 3).map((s, i) => (
                         <div key={i} className="stat">
-                            <div className="v">{s.value}</div>
-                            <p className="k">{s.label}</p>
+                            <div className="v" data-text-path={JSON.stringify(["stats", i + 1, "value"])}>{s.value}</div>
+                            <p className="k" data-text-path={JSON.stringify(["stats", i + 1, "label"])}>{s.label}</p>
                         </div>
                     ))}
                 </div>
@@ -693,35 +693,35 @@ function PricingCtaSplit({ slide, clientLogoUrl }: { slide: PricingCtaSlide; cli
         <section className="deck-slide s-invest">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="left">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
                 <div className="get-label">Lo que recibirás:</div>
                 <ul className="gets">
                     {(Array.isArray(slide.checklist) ? slide.checklist : []).slice(0, 6).map((item, i) => (
-                        <li key={i} data-element-path={JSON.stringify(["checklist", i])}>{item}</li>
+                        <li key={i} data-element-path={JSON.stringify(["checklist", i])} data-text-path={JSON.stringify(["checklist", i])}>{item}</li>
                     ))}
                 </ul>
                 <div className="price-block">
                     <div className="lab">Inversión</div>
                     <div className="amt">
-                        <span className="big">{slide.price}</span>
+                        <span className="big" data-text-path='["price"]'>{slide.price}</span>
                     </div>
-                    {slide.paymentNote ? <div className="pay">{slide.paymentNote}</div> : null}
+                    {slide.paymentNote ? <div className="pay" data-text-path='["paymentNote"]'>{slide.paymentNote}</div> : null}
                 </div>
             </div>
             <div className="right">
                 <div className="facts">
                     {(Array.isArray(slide.sidebar) ? slide.sidebar : []).map((row, i) => (
                         <div key={i} className="row" data-element-path={JSON.stringify(["sidebar", i])}>
-                            <div className="k">{row.label}</div>
-                            <div className="v">{row.value}</div>
+                            <div className="k" data-text-path={JSON.stringify(["sidebar", i, "label"])}>{row.label}</div>
+                            <div className="v" data-text-path={JSON.stringify(["sidebar", i, "value"])}>{row.value}</div>
                         </div>
                     ))}
                 </div>
                 {slide.contact ? (
                     <div className="contact">
-                        <div className="cn">{slide.contact.name}</div>
-                        <div className="cr">{slide.contact.role}</div>
-                        <div className="cm" style={{ whiteSpace: "pre-line" }}>{slide.contact.details}</div>
+                        <div className="cn" data-text-path='["contact","name"]'>{slide.contact.name}</div>
+                        <div className="cr" data-text-path='["contact","role"]'>{slide.contact.role}</div>
+                        <div className="cm" style={{ whiteSpace: "pre-line" }} data-text-path='["contact","details"]'>{slide.contact.details}</div>
                     </div>
                 ) : null}
             </div>
@@ -735,7 +735,7 @@ function PricingCtaPackage({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
         <section className="deck-slide s-invest-pkg">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title" data-element-path='["headline"]'>{slide.headline}</h2>
+                <h2 className="h-title" data-element-path='["headline"]' data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
             <div className="pkg-grid">
                 {packages.map((pkg, i) => (
@@ -745,15 +745,15 @@ function PricingCtaPackage({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
                         data-element-path={JSON.stringify(["packages", i])}
                     >
                         {pkg.highlighted ? <div className="ribbon">Recomendado</div> : null}
-                        <div className="pkg-name">{pkg.name}</div>
-                        {pkg.tagline ? <div className="pkg-tag">{pkg.tagline}</div> : null}
+                        <div className="pkg-name" data-text-path={JSON.stringify(["packages", i, "name"])}>{pkg.name}</div>
+                        {pkg.tagline ? <div className="pkg-tag" data-text-path={JSON.stringify(["packages", i, "tagline"])}>{pkg.tagline}</div> : null}
                         <div className="pkg-price">
-                            <span className="big">{pkg.price}</span>
-                            {pkg.priceNote ? <span className="pay">{pkg.priceNote}</span> : null}
+                            <span className="big" data-text-path={JSON.stringify(["packages", i, "price"])}>{pkg.price}</span>
+                            {pkg.priceNote ? <span className="pay" data-text-path={JSON.stringify(["packages", i, "priceNote"])}>{pkg.priceNote}</span> : null}
                         </div>
                         <ul className="pkg-features">
                             {pkg.features.slice(0, 6).map((f, fi) => (
-                                <li key={fi}>{f}</li>
+                                <li key={fi} data-text-path={JSON.stringify(["packages", i, "features", fi])}>{f}</li>
                             ))}
                         </ul>
                     </div>
@@ -761,9 +761,9 @@ function PricingCtaPackage({ slide, clientLogoUrl }: { slide: PricingCtaSlide; c
             </div>
             {slide.contact ? (
                 <div className="pkg-contact">
-                    <span className="cn">{slide.contact.name}</span>
-                    <span className="cr">· {slide.contact.role}</span>
-                    <span className="cm">· {slide.contact.details}</span>
+                    <span className="cn" data-text-path='["contact","name"]'>{slide.contact.name}</span>
+                    <span className="cr" data-text-path='["contact","role"]'>· {slide.contact.role}</span>
+                    <span className="cm" data-text-path='["contact","details"]'>· {slide.contact.details}</span>
                 </div>
             ) : null}
         </section>
@@ -802,6 +802,7 @@ export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; c
                         className="lockup-partner"
                         src={proxyExternal(clientLogoUrl)}
                         alt="Logo del aliado"
+                        style={{ filter: "brightness(0) invert(1)" }}
                     />
                 </div>
             </section>
@@ -832,14 +833,15 @@ export function Content({ slide, clientLogoUrl }: { slide: ContentSlide; clientL
         <section className="deck-slide s-problem">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="head">
-                <h2 className="h-title">{slide.headline}</h2>
+                <h2 className="h-title" data-text-path='["headline"]'>{slide.headline}</h2>
             </div>
-            {slide.body ? <p className="lead p-lead">{slide.body}</p> : null}
+            {slide.body ? <p className="lead p-lead" data-text-path='["body"]'>{slide.body}</p> : null}
             {slide.bullets && slide.bullets.length > 0 ? (
                 <ul style={{ listStyle: "none", padding: 0, margin: "auto 0 0 0", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
                     {slide.bullets.map((b, i) => (
                         <li
                             key={i}
+                            data-text-path={JSON.stringify(["bullets", i])}
                             style={{
                                 background: "#0a0a0a",
                                 border: "1px solid #222",
@@ -872,9 +874,9 @@ export function IgCover({ slide }: { slide: IgCoverSlide }) {
             ) : null}
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
             <div className="body">
-                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
-                <h1 className="h">{slide.headline}</h1>
-                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
+                {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
+                <h1 className="h" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
             </div>
         </section>
     );
@@ -884,9 +886,9 @@ export function IgText({ slide }: { slide: IgTextSlide }) {
     return (
         <section className="deck-slide s-ig-text">
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
-            {slide.number ? <div className="num">{slide.number}</div> : null}
-            <h2 className="h">{slide.headline}</h2>
-            {slide.body ? <p className="body">{slide.body}</p> : null}
+            {slide.number ? <div className="num" data-text-path='["number"]'>{slide.number}</div> : null}
+            <h2 className="h" data-text-path='["headline"]'>{slide.headline}</h2>
+            {slide.body ? <p className="body" data-text-path='["body"]'>{slide.body}</p> : null}
             <div className="footer">30X</div>
         </section>
     );
@@ -896,9 +898,9 @@ export function IgStat({ slide }: { slide: IgStatSlide }) {
     return (
         <section className="deck-slide s-ig-stat">
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
-            <div className="v">{slide.value}</div>
-            <div className="k">{slide.label}</div>
-            {slide.footnote ? <div className="foot">{slide.footnote}</div> : null}
+            <div className="v" data-text-path='["value"]'>{slide.value}</div>
+            <div className="k" data-text-path='["label"]'>{slide.label}</div>
+            {slide.footnote ? <div className="foot" data-text-path='["footnote"]'>{slide.footnote}</div> : null}
         </section>
     );
 }
@@ -915,8 +917,8 @@ export function IgQuote({ slide }: { slide: IgQuoteSlide }) {
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
             <div className="body">
                 <div className="mark">&ldquo;</div>
-                <p className="q">{slide.quote}</p>
-                {slide.attribution ? <div className="attr">— {slide.attribution}</div> : null}
+                <p className="q" data-text-path='["quote"]'>{slide.quote}</p>
+                {slide.attribution ? <div className="attr" data-text-path='["attribution"]'>— {slide.attribution}</div> : null}
             </div>
         </section>
     );
@@ -926,9 +928,9 @@ export function IgCta({ slide }: { slide: IgCtaSlide }) {
     return (
         <section className="deck-slide s-ig-cta">
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
-            <h2 className="h">{slide.headline}</h2>
-            {slide.subtitle ? <p className="sub">{slide.subtitle}</p> : null}
-            <div className="cta">{slide.ctaLabel}</div>
+            <h2 className="h" data-text-path='["headline"]'>{slide.headline}</h2>
+            {slide.subtitle ? <p className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
+            <div className="cta" data-text-path='["ctaLabel"]'>{slide.ctaLabel}</div>
         </section>
     );
 }
@@ -947,11 +949,11 @@ export function StoryCover({ slide }: { slide: StoryCoverSlide }) {
             ) : null}
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
             <div className="body">
-                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
-                <h1 className="h">{slide.headline}</h1>
-                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
+                {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
+                <h1 className="h" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
             </div>
-            {slide.ctaLabel ? <div className="cta">{slide.ctaLabel}</div> : null}
+            {slide.ctaLabel ? <div className="cta" data-text-path='["ctaLabel"]'>{slide.ctaLabel}</div> : null}
         </section>
     );
 }
@@ -960,9 +962,9 @@ export function StoryText({ slide }: { slide: StoryTextSlide }) {
     return (
         <section className="deck-slide s-story-text">
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
-            <h1 className="h">{slide.headline}</h1>
-            {slide.body ? <p className="body">{slide.body}</p> : null}
-            {slide.footer ? <div className="footer">{slide.footer}</div> : null}
+            <h1 className="h" data-text-path='["headline"]'>{slide.headline}</h1>
+            {slide.body ? <p className="body" data-text-path='["body"]'>{slide.body}</p> : null}
+            {slide.footer ? <div className="footer" data-text-path='["footer"]'>{slide.footer}</div> : null}
         </section>
     );
 }
@@ -985,21 +987,21 @@ export function DocCover({ slide }: { slide: DocCoverSlide }) {
         <section className="deck-slide s-doc s-doc-cover">
             <DocHeader pageLabel={slide.eyebrow} />
             <div>
-                <div className="eyebrow">{slide.eyebrow}</div>
-                <h1 className="h">{slide.headline}</h1>
-                {slide.subtitle ? <p className="sub">{slide.subtitle}</p> : null}
+                <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div>
+                <h1 className="h" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <p className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</p> : null}
             </div>
             <div className="meta">
                 {slide.forClient ? (
                     <div>
                         <div className="k">Preparado para</div>
-                        <div className="v">{slide.forClient}</div>
+                        <div className="v" data-text-path='["forClient"]'>{slide.forClient}</div>
                     </div>
                 ) : null}
                 {slide.date ? (
                     <div>
                         <div className="k">Fecha</div>
-                        <div className="v">{slide.date}</div>
+                        <div className="v" data-text-path='["date"]'>{slide.date}</div>
                     </div>
                 ) : null}
             </div>
@@ -1011,17 +1013,17 @@ export function DocSection({ slide, pageNumber }: { slide: DocSectionSlide; page
     return (
         <section className="deck-slide s-doc s-doc-section">
             <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
-            {slide.sectionNumber ? <div className="secnum">Sección {slide.sectionNumber}</div> : null}
-            <h2 className="secheading">{slide.heading}</h2>
+            {slide.sectionNumber ? <div className="secnum" data-text-path='["sectionNumber"]'>Sección {slide.sectionNumber}</div> : null}
+            <h2 className="secheading" data-text-path='["heading"]'>{slide.heading}</h2>
             {(Array.isArray(slide.paragraphs) ? slide.paragraphs : []).map((p, i) => (
-                <p key={i} className="p">
+                <p key={i} className="p" data-text-path={JSON.stringify(["paragraphs", i])}>
                     {p}
                 </p>
             ))}
             {slide.bullets && slide.bullets.length > 0 ? (
                 <ul className="bullets">
                     {slide.bullets.map((b, i) => (
-                        <li key={i}>{b}</li>
+                        <li key={i} data-text-path={JSON.stringify(["bullets", i])}>{b}</li>
                     ))}
                 </ul>
             ) : null}
@@ -1056,7 +1058,10 @@ export function DocPage({
         firstHeadingIdx >= 0
             ? (blocks[firstHeadingIdx] as Extract<DocBlock, { kind: "heading" }>).text
             : slide.pageLabel ?? "";
-    const bodyBlocks = blocks.filter((_, i) => i !== firstHeadingIdx);
+    // Keep original indices so inline-edit can write back to the right block.
+    const bodyBlocks = blocks
+        .map((b, i) => ({ block: b, i }))
+        .filter((entry) => entry.i !== firstHeadingIdx);
 
     // Pick a deterministic immersive photo so re-renders stay stable.
     const heroBg = getImmersivePhoto(heroHeading || `page-${pageNumber}`);
@@ -1091,18 +1096,27 @@ export function DocPage({
                     </div>
                     <div className="hero-bottom">
                         {slide.pageLabel ? (
-                            <div className="hero-label">{slide.pageLabel}</div>
+                            <div className="hero-label" data-text-path='["pageLabel"]'>{slide.pageLabel}</div>
                         ) : null}
                         {heroHeading ? (
-                            <h2 className="hero-heading">{heroHeading}</h2>
+                            <h2
+                                className="hero-heading"
+                                data-text-path={
+                                    firstHeadingIdx >= 0
+                                        ? JSON.stringify(["blocks", firstHeadingIdx, "text"])
+                                        : '["pageLabel"]'
+                                }
+                            >
+                                {heroHeading}
+                            </h2>
                         ) : null}
                     </div>
                 </div>
             </div>
             <div className="body">
                 <div className="blocks">
-                    {bodyBlocks.map((b, i) => (
-                        <DocBlockRenderer key={i} block={b} />
+                    {bodyBlocks.map(({ block, i }) => (
+                        <DocBlockRenderer key={i} block={block} blockIndex={i} />
                     ))}
                 </div>
             </div>
@@ -1110,21 +1124,27 @@ export function DocPage({
     );
 }
 
-function DocBlockRenderer({ block }: { block: DocBlock }) {
+function DocBlockRenderer({ block, blockIndex }: { block: DocBlock; blockIndex?: number }) {
+    const tp = (field: string) =>
+        blockIndex == null ? undefined : JSON.stringify(["blocks", blockIndex, field]);
+    const tpRow = (field: string, idx: number, sub: string) =>
+        blockIndex == null ? undefined : JSON.stringify(["blocks", blockIndex, field, idx, sub]);
+    const tpItem = (field: string, idx: number) =>
+        blockIndex == null ? undefined : JSON.stringify(["blocks", blockIndex, field, idx]);
     switch (block.kind) {
         case "heading":
             return block.level === 2 ? (
-                <h3 className="b-h2">{block.text}</h3>
+                <h3 className="b-h2" data-text-path={tp("text")}>{block.text}</h3>
             ) : (
-                <h2 className="b-h1">{block.text}</h2>
+                <h2 className="b-h1" data-text-path={tp("text")}>{block.text}</h2>
             );
         case "paragraph":
-            return <p className="b-p">{block.text}</p>;
+            return <p className="b-p" data-text-path={tp("text")}>{block.text}</p>;
         case "bullets":
             return (
                 <ul className="b-ul">
                     {(block.items ?? []).map((it, i) => (
-                        <li key={i}>{it}</li>
+                        <li key={i} data-text-path={tpItem("items", i)}>{it}</li>
                     ))}
                 </ul>
             );
@@ -1132,7 +1152,7 @@ function DocBlockRenderer({ block }: { block: DocBlock }) {
             return (
                 <ol className="b-ol">
                     {(block.items ?? []).map((it, i) => (
-                        <li key={i}>{it}</li>
+                        <li key={i} data-text-path={tpItem("items", i)}>{it}</li>
                     ))}
                 </ol>
             );
@@ -1141,8 +1161,8 @@ function DocBlockRenderer({ block }: { block: DocBlock }) {
                 <dl className="b-kv">
                     {(block.rows ?? []).map((r, i) => (
                         <div key={i} className="kv-row">
-                            <dt>{r.label}</dt>
-                            <dd>{r.value}</dd>
+                            <dt data-text-path={tpRow("rows", i, "label")}>{r.label}</dt>
+                            <dd data-text-path={tpRow("rows", i, "value")}>{r.value}</dd>
                         </div>
                     ))}
                 </dl>
@@ -1155,7 +1175,7 @@ function DocBlockRenderer({ block }: { block: DocBlock }) {
                     <thead>
                         <tr>
                             {cols.map((c, i) => (
-                                <th key={i}>{c}</th>
+                                <th key={i} data-text-path={tpItem("columns", i)}>{c}</th>
                             ))}
                         </tr>
                     </thead>
@@ -1163,7 +1183,7 @@ function DocBlockRenderer({ block }: { block: DocBlock }) {
                         {rows.map((r, i) => (
                             <tr key={i}>
                                 {(r ?? []).map((cell, j) => (
-                                    <td key={j}>{cell}</td>
+                                    <td key={j} data-text-path={blockIndex == null ? undefined : JSON.stringify(["blocks", blockIndex, "rows", i, j])}>{cell}</td>
                                 ))}
                             </tr>
                         ))}
@@ -1172,7 +1192,7 @@ function DocBlockRenderer({ block }: { block: DocBlock }) {
             );
         }
         case "callout":
-            return <div className="b-callout">{block.text}</div>;
+            return <div className="b-callout" data-text-path={tp("text")}>{block.text}</div>;
         case "divider":
             return <hr className="b-hr" />;
         default:
@@ -1197,25 +1217,25 @@ export function DocComparisonTable({
         <section className="deck-slide s-doc s-doc-table">
             <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
             {slide.sectionNumber ? (
-                <div className="secnum">Sección {slide.sectionNumber}</div>
+                <div className="secnum" data-text-path='["sectionNumber"]'>Sección {slide.sectionNumber}</div>
             ) : null}
-            <h2 className="secheading">{slide.heading}</h2>
-            {slide.subheading ? <p className="p">{slide.subheading}</p> : null}
+            <h2 className="secheading" data-text-path='["heading"]'>{slide.heading}</h2>
+            {slide.subheading ? <p className="p" data-text-path='["subheading"]'>{slide.subheading}</p> : null}
             <div className="table-wrap">
                 <table>
                     <thead>
                         <tr>
                             {cols.map((c, i) => (
-                                <th key={i}>{c}</th>
+                                <th key={i} data-text-path={JSON.stringify(["columns", i])}>{c}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {rows.map((r, i) => (
                             <tr key={i}>
-                                {r.program ? <th scope="row">{r.program}</th> : null}
+                                {r.program ? <th scope="row" data-text-path={JSON.stringify(["rows", i, "program"])}>{r.program}</th> : null}
                                 {(r.cells ?? []).map((cell, j) => (
-                                    <td key={j}>
+                                    <td key={j} data-text-path={JSON.stringify(["rows", i, "cells", j])}>
                                         {cell.split(" · ").map((line, k) => (
                                             <div key={k} className="cell-line">
                                                 <span className="dash">—</span>
@@ -1245,7 +1265,7 @@ export function DocStatsHero({
     return (
         <section className="deck-slide s-doc s-doc-stats-hero">
             <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
-            <h2 className="secheading">
+            <h2 className="secheading" data-text-path='["heading"]'>
                 {slide.heading}
                 {slide.subheading ? (
                     <>
@@ -1257,8 +1277,8 @@ export function DocStatsHero({
             <div className="hero-stats">
                 {stats.slice(0, 3).map((s, i) => (
                     <div key={i} className="hero-stat">
-                        <div className="v">{s.value}</div>
-                        <p className="k">{s.label}</p>
+                        <div className="v" data-text-path={JSON.stringify(["stats", i, "value"])}>{s.value}</div>
+                        <p className="k" data-text-path={JSON.stringify(["stats", i, "label"])}>{s.label}</p>
                     </div>
                 ))}
             </div>
@@ -1269,8 +1289,8 @@ export function DocStatsHero({
                             <div className="portrait">
                                 <img src={m.imageUrl ? proxyExternal(m.imageUrl) : getMentorImage(m.imageKey)} alt={m.name} />
                             </div>
-                            <div className="nm">{m.name}</div>
-                            <div className="rl">{m.role}</div>
+                            <div className="nm" data-text-path={JSON.stringify(["mentors", i, "name"])}>{m.name}</div>
+                            <div className="rl" data-text-path={JSON.stringify(["mentors", i, "role"])}>{m.role}</div>
                         </div>
                     ))}
                 </div>
@@ -1295,14 +1315,14 @@ export function DocMentorWall({
             <DocHeader pageLabel={pageNumber ? `Página ${pageNumber}` : undefined} />
             <div className="wall-grid">
                 <div className="left">
-                    <h2 className="secheading">
+                    <h2 className="secheading" data-text-path='["heading"]'>
                         <span className="accent">30X</span> {slide.heading}
                     </h2>
                     <div className="wall-stats">
                         {stats.slice(0, 3).map((s, i) => (
                             <div key={i} className="stat">
-                                <div className="v">{s.value}</div>
-                                <p className="k">{s.label}</p>
+                                <div className="v" data-text-path={JSON.stringify(["stats", i, "value"])}>{s.value}</div>
+                                <p className="k" data-text-path={JSON.stringify(["stats", i, "label"])}>{s.label}</p>
                             </div>
                         ))}
                     </div>
@@ -1311,7 +1331,7 @@ export function DocMentorWall({
                             {countries.join(" · ")}
                         </div>
                     ) : null}
-                    {slide.context ? <p className="ctx">{slide.context}</p> : null}
+                    {slide.context ? <p className="ctx" data-text-path='["context"]'>{slide.context}</p> : null}
                     {brandLogos.length > 0 ? (
                         <div className="brand-strip">
                             {brandLogos.map((b, i) => {
@@ -1364,12 +1384,12 @@ export function DocMentorSpotlight({
                     />
                 </div>
                 <div className="bio">
-                    <h2 className="secheading">{slide.mentor.name}</h2>
-                    <div className="role">{slide.mentor.role}</div>
+                    <h2 className="secheading" data-text-path='["mentor","name"]'>{slide.mentor.name}</h2>
+                    <div className="role" data-text-path='["mentor","role"]'>{slide.mentor.role}</div>
                     {badges.length > 0 ? (
                         <div className="badges">
                             {badges.map((b, i) => (
-                                <span key={i} className="badge">
+                                <span key={i} className="badge" data-text-path={JSON.stringify(["badges", i])}>
                                     {b}
                                 </span>
                             ))}
@@ -1378,13 +1398,13 @@ export function DocMentorSpotlight({
                     <div className="sections">
                         {sections.map((s, i) => (
                             <div key={i} className="bio-section">
-                                <h3 className="t">{s.title}</h3>
-                                <p className="d">{s.body}</p>
+                                <h3 className="t" data-text-path={JSON.stringify(["sections", i, "title"])}>{s.title}</h3>
+                                <p className="d" data-text-path={JSON.stringify(["sections", i, "body"])}>{s.body}</p>
                             </div>
                         ))}
                     </div>
                     {slide.credentials ? (
-                        <div className="credentials">{slide.credentials}</div>
+                        <div className="credentials" data-text-path='["credentials"]'>{slide.credentials}</div>
                     ) : null}
                 </div>
             </div>

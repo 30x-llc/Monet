@@ -9,7 +9,9 @@ import {
     setTextAt,
 } from "@/lib/element-edits";
 import { SlideCanvas } from "./slide-canvas";
-import { newCanvasSlide } from "@/components/slides/canvas-slide";
+import { newCanvasSlide, newCanvasElementId } from "@/components/slides/canvas-slide";
+import { CanvasPropertiesPanel } from "./canvas-properties-panel";
+import type { CanvasElement, CanvasSlide } from "@/lib/slide-types";
 import { EditorToolbar } from "./editor-toolbar";
 import { ChatPanel, type ChatMessage } from "./chat-panel";
 import { HandoffModal } from "./handoff-modal";
@@ -37,6 +39,7 @@ export function EditorLayout({
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedElementPath, setSelectedElementPath] =
         useState<ElementPath | null>(null);
+    const [canvasSelectedId, setCanvasSelectedId] = useState<string | null>(null);
     const [chromeTheme, setChromeTheme] = useState<"dark" | "light">("light");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [handoffOpen, setHandoffOpen] = useState(false);
@@ -357,8 +360,59 @@ export function EditorLayout({
                     theme={slideTheme}
                     selectedPath={selectedElementPath}
                     onSelectElement={setSelectedElementPath}
+                    canvasSelectedId={canvasSelectedId}
+                    onCanvasSelectedChange={setCanvasSelectedId}
                 />
-                {selectedElementPath ? (
+                {selectedSlide?.type === "canvas" && canvasSelectedId ? (
+                    <CanvasPropertiesPanel
+                        slide={selectedSlide as CanvasSlide}
+                        selectedId={canvasSelectedId}
+                        onPatch={(id, patch) => {
+                            const cs = selectedSlide as CanvasSlide;
+                            const next: CanvasSlide = {
+                                ...cs,
+                                elements: cs.elements.map((e) =>
+                                    e.id === id ? ({ ...e, ...patch } as CanvasElement) : e,
+                                ),
+                            };
+                            const newSlides = [...deck.slides];
+                            newSlides[selectedIndex] = next;
+                            onDeckChange({ ...deck, slides: newSlides });
+                        }}
+                        onDelete={(id) => {
+                            const cs = selectedSlide as CanvasSlide;
+                            const next: CanvasSlide = {
+                                ...cs,
+                                elements: cs.elements.filter((e) => e.id !== id),
+                            };
+                            setCanvasSelectedId(null);
+                            const newSlides = [...deck.slides];
+                            newSlides[selectedIndex] = next;
+                            onDeckChange({ ...deck, slides: newSlides });
+                        }}
+                        onDuplicate={(id) => {
+                            const cs = selectedSlide as CanvasSlide;
+                            const src = cs.elements.find((e) => e.id === id);
+                            if (!src) return;
+                            const dup: CanvasElement = {
+                                ...(src as CanvasElement),
+                                id: newCanvasElementId(),
+                                x: src.x + 20,
+                                y: src.y + 20,
+                            };
+                            const next: CanvasSlide = {
+                                ...cs,
+                                elements: [...cs.elements, dup],
+                            };
+                            const newSlides = [...deck.slides];
+                            newSlides[selectedIndex] = next;
+                            onDeckChange({ ...deck, slides: newSlides });
+                            setCanvasSelectedId(dup.id);
+                        }}
+                        onClose={() => setCanvasSelectedId(null)}
+                    />
+                ) : null}
+                {selectedElementPath && selectedSlide?.type !== "canvas" ? (
                     <PropertiesPanel
                         slide={selectedSlide}
                         slideIndex={selectedIndex}

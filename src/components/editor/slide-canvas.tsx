@@ -33,6 +33,9 @@ interface SlideCanvasProps {
     theme?: "dark" | "light";
     selectedPath?: ElementPath | null;
     onSelectElement?: (path: ElementPath | null) => void;
+    /** Canvas-slide-only: id of the currently selected element on the canvas. */
+    canvasSelectedId?: string | null;
+    onCanvasSelectedChange?: (id: string | null) => void;
 }
 
 function pathsEqual(a: ElementPath | null | undefined, b: ElementPath | null | undefined): boolean {
@@ -54,6 +57,8 @@ export function SlideCanvas({
     theme = "light",
     selectedPath,
     onSelectElement,
+    canvasSelectedId: canvasSelectedIdProp,
+    onCanvasSelectedChange,
 }: SlideCanvasProps) {
     const spec = FORMATS[format];
     const aspect = `${spec.width} / ${spec.height}`;
@@ -67,12 +72,21 @@ export function SlideCanvas({
     const supportsBg = BG_CAPABLE_TYPES.has(slide.type);
     const currentBg = (slide as { backgroundImage?: string }).backgroundImage;
     const isCanvas = slide.type === "canvas";
-    const [canvasSelectedId, setCanvasSelectedId] = useState<string | null>(null);
+    // Controlled+uncontrolled: when the parent passes canvasSelectedIdProp +
+    // onCanvasSelectedChange we lift state up; otherwise we keep our own.
+    const [canvasSelectedIdLocal, setCanvasSelectedIdLocal] = useState<string | null>(null);
+    const canvasSelectedId = canvasSelectedIdProp ?? canvasSelectedIdLocal;
+    const setCanvasSelectedId = (id: string | null) => {
+        if (onCanvasSelectedChange) onCanvasSelectedChange(id);
+        else setCanvasSelectedIdLocal(id);
+    };
 
     // Reset selection when the active slide changes — otherwise a stale id
     // points into the prior slide's elements.
     useEffect(() => {
-        setCanvasSelectedId(null);
+        if (onCanvasSelectedChange) onCanvasSelectedChange(null);
+        else setCanvasSelectedIdLocal(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slideIndex]);
 
     // Backspace / Delete on a selected canvas element removes it. We attach
