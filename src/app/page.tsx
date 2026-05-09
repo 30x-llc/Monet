@@ -91,8 +91,8 @@ export default function Home() {
     // changes (typing) into a single entry: only changes more than
     // COALESCE_MS apart push a new snapshot. Reset whenever a different
     // deck loads.
-    const HISTORY_LIMIT = 100;
-    const COALESCE_MS = 1000;
+    const HISTORY_LIMIT = 200;
+    const COALESCE_MS = 400;
     const historyRef = useRef<{ undo: Deck[]; redo: Deck[]; lastChangeAt: number }>({
         undo: [],
         redo: [],
@@ -493,14 +493,18 @@ export default function Home() {
             if (!(e.metaKey || e.ctrlKey)) return;
             if (e.key !== "z" && e.key !== "Z") return;
             const t = e.target as HTMLElement | null;
-            // Let the browser handle native undo inside an active text edit.
-            if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+            // Skip only inside an active inline contentEditable on the canvas.
+            // Form inputs/textareas in side panels still go through handleDeckChange,
+            // so we WANT to undo at the deck level there (matches Framer/Figma).
+            if (t && t.isContentEditable) return;
             e.preventDefault();
+            e.stopPropagation();
             if (e.shiftKey) handleRedo();
             else handleUndo();
         }
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
+        // capture=true so we beat any panel-level handlers that might swallow it.
+        window.addEventListener("keydown", onKeyDown, true);
+        return () => window.removeEventListener("keydown", onKeyDown, true);
     }, [view, deck, handleUndo, handleRedo]);
 
     const handleIterate = useCallback(
