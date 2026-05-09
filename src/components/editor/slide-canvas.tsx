@@ -271,6 +271,27 @@ export function SlideCanvas({
                             onChange={onSlideChange ? (next) => onSlideChange(next as Slide) : undefined}
                             selectedId={canvasSelectedId}
                             onSelect={setCanvasSelectedId}
+                            onDropFile={
+                                onSlideChange
+                                    ? async (file, x, y) => {
+                                          try {
+                                              const url = await uploadImage(file);
+                                              const cs = slide as CanvasSlide;
+                                              const w = 480;
+                                              const h = 320;
+                                              const el = newImageElement(url, w, h);
+                                              // Center the new element on drop point.
+                                              el.x = Math.round(x - w / 2);
+                                              el.y = Math.round(y - h / 2);
+                                              const next: CanvasSlide = { ...cs, elements: [...cs.elements, el] };
+                                              onSlideChange(next as Slide);
+                                              setCanvasSelectedId(el.id);
+                                          } catch (err) {
+                                              console.error("[canvas drop image]", err);
+                                          }
+                                      }
+                                    : undefined
+                            }
                         />
                     ) : (
                         <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />

@@ -32,9 +32,11 @@ interface CanvasSlideViewProps {
     /** Externally controlled selection (for keyboard delete from parent). */
     selectedId?: string | null;
     onSelect?: (id: string | null) => void;
+    /** Drag-drop a file onto the canvas. Position is in canvas units (1280×720). */
+    onDropFile?: (file: File, x: number, y: number) => void;
 }
 
-export function CanvasSlideView({ slide, onChange, selectedId, onSelect }: CanvasSlideViewProps) {
+export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropFile }: CanvasSlideViewProps) {
     const wrapRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
 
@@ -81,12 +83,57 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect }: Canva
         [interactive, onSelect],
     );
 
+    const [dragOver, setDragOver] = useState(false);
+    const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+
+    function handleDragOver(e: React.DragEvent) {
+        if (!onDropFile) return;
+        if (Array.from(e.dataTransfer.items).some((it) => it.kind === "file")) {
+            e.preventDefault();
+            setDragOver(true);
+        }
+    }
+
+    function handleDragLeave(e: React.DragEvent) {
+        if (e.currentTarget === e.target) setDragOver(false);
+    }
+
+    function handleDrop(e: React.DragEvent) {
+        if (!onDropFile) return;
+        e.preventDefault();
+        setDragOver(false);
+        const file = e.dataTransfer.files?.[0];
+        if (!file || !file.type.startsWith("image/")) return;
+        // Translate screen coords to canvas coords. The inner div is centered
+        // and scaled, so subtract its top-left in screen space and divide.
+        const wrap = wrapRef.current;
+        if (!wrap) return;
+        const wrapRect = wrap.getBoundingClientRect();
+        const cx = wrapRect.left + wrapRect.width / 2;
+        const cy = wrapRect.top + wrapRect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const xCanvas = CANVAS_WIDTH / 2 + dx / scale;
+        const yCanvas = CANVAS_HEIGHT / 2 + dy / scale;
+        onDropFile(file, xCanvas, yCanvas);
+    }
+
     return (
         <div
             ref={wrapRef}
             className="relative w-full h-full overflow-hidden"
             style={{ background: slide.background ?? "#ffffff" }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
         >
+            {dragOver ? (
+                <div className="absolute inset-0 z-40 pointer-events-none border-2 border-dashed border-[#E9FF7B] bg-[#E9FF7B]/10 grid place-items-center">
+                    <div className="text-[14px] font-semibold text-[#0a0a0a] bg-white/90 rounded-full px-4 py-2 shadow">
+                        Suelta para insertar imagen
+                    </div>
+                </div>
+            ) : null}
             <div
                 className="absolute top-1/2 left-1/2 origin-center"
                 style={{
@@ -103,13 +150,30 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect }: Canva
                         <ElementView
                             key={el.id}
                             el={el}
+                            siblings={slide.elements.filter((s) => s.id !== el.id)}
                             scale={scale}
                             interactive={interactive}
                             selected={selectedId === el.id}
                             onSelect={() => onSelect?.(el.id)}
                             onPatch={(patch) => updateElement(el.id, patch)}
+                            onGuides={setGuides}
                         />
                     ))}
+                {/* Pink alignment guides — drawn above elements while dragging. */}
+                {guides.v.map((x, i) => (
+                    <div
+                        key={"v" + i}
+                        className="pointer-events-none absolute top-0 bottom-0"
+                        style={{ left: x, width: 1, background: "#FF007A", boxShadow: "0 0 4px rgba(255,0,122,0.5)" }}
+                    />
+                ))}
+                {guides.h.map((y, i) => (
+                    <div
+                        key={"h" + i}
+                        className="pointer-events-none absolute left-0 right-0"
+                        style={{ top: y, height: 1, background: "#FF007A", boxShadow: "0 0 4px rgba(255,0,122,0.5)" }}
+                    />
+                ))}
             </div>
         </div>
     );
@@ -117,14 +181,72 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect }: Canva
 
 interface ElementViewProps {
     el: CanvasElement;
+    siblings: CanvasElement[];
     scale: number;
     interactive: boolean;
     selected: boolean;
     onSelect: () => void;
     onPatch: (patch: Partial<CanvasElement>) => void;
+    onGuides: (g: { v: number[]; h: number[] }) => void;
 }
 
-function ElementView({ el, scale, interactive, selected, onSelect, onPatch }: ElementViewProps) {
+const SNAP_THRESHOLD = 6; // canvas units
+
+/** Snap proposed x/y to siblings + canvas edges. Returns adjusted coords
+ *  plus the guide lines (in canvas coords) that should be drawn. */
+function snapBox(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    siblings: CanvasElement[],
+): { x: number; y: number; vGuides: number[]; hGuides: number[] } {
+    const sourceVerticals = [
+        { type: "left" as const, value: x },
+        { type: "centerX" as const, value: x + w / 2 },
+        { type: "right" as const, value: x + w },
+    ];
+    const sourceHorizontals = [
+        { type: "top" as const, value: y },
+        { type: "centerY" as const, value: y + h / 2 },
+        { type: "bottom" as const, value: y + h },
+    ];
+    // Snap targets: canvas edges/center + every sibling edge/center.
+    const targetVs: number[] = [0, CANVAS_WIDTH / 2, CANVAS_WIDTH];
+    const targetHs: number[] = [0, CANVAS_HEIGHT / 2, CANVAS_HEIGHT];
+    for (const s of siblings) {
+        targetVs.push(s.x, s.x + s.w / 2, s.x + s.w);
+        targetHs.push(s.y, s.y + s.h / 2, s.y + s.h);
+    }
+    let bestX: { delta: number; line: number } | null = null;
+    for (const src of sourceVerticals) {
+        for (const t of targetVs) {
+            const delta = t - src.value;
+            if (Math.abs(delta) < SNAP_THRESHOLD && (!bestX || Math.abs(delta) < Math.abs(bestX.delta))) {
+                bestX = { delta, line: t };
+            }
+        }
+    }
+    let bestY: { delta: number; line: number } | null = null;
+    for (const src of sourceHorizontals) {
+        for (const t of targetHs) {
+            const delta = t - src.value;
+            if (Math.abs(delta) < SNAP_THRESHOLD && (!bestY || Math.abs(delta) < Math.abs(bestY.delta))) {
+                bestY = { delta, line: t };
+            }
+        }
+    }
+    const nx = bestX ? Math.round(x + bestX.delta) : x;
+    const ny = bestY ? Math.round(y + bestY.delta) : y;
+    return {
+        x: nx,
+        y: ny,
+        vGuides: bestX ? [bestX.line] : [],
+        hGuides: bestY ? [bestY.line] : [],
+    };
+}
+
+function ElementView({ el, siblings, scale, interactive, selected, onSelect, onPatch, onGuides }: ElementViewProps) {
     const [editing, setEditing] = useState(false);
     const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
     const resizeRef = useRef<{
@@ -160,7 +282,11 @@ function ElementView({ el, scale, interactive, selected, onSelect, onPatch }: El
             if (drag) {
                 const dx = (e.clientX - drag.startX) / scale;
                 const dy = (e.clientY - drag.startY) / scale;
-                onPatch({ x: Math.round(drag.baseX + dx), y: Math.round(drag.baseY + dy) });
+                const rawX = drag.baseX + dx;
+                const rawY = drag.baseY + dy;
+                const snap = snapBox(rawX, rawY, el.w, el.h, siblings);
+                onGuides({ v: snap.vGuides, h: snap.hGuides });
+                onPatch({ x: snap.x, y: snap.y });
             } else if (resize) {
                 const dx = (e.clientX - resize.startX) / scale;
                 const dy = (e.clientY - resize.startY) / scale;
@@ -188,16 +314,20 @@ function ElementView({ el, scale, interactive, selected, onSelect, onPatch }: El
                 onPatch({ x: Math.round(nx), y: Math.round(ny), w: Math.round(nw), h: Math.round(nh) });
             }
         },
-        [scale, onPatch],
+        [scale, onPatch, el.w, el.h, siblings, onGuides],
     );
 
-    const onPointerUp = useCallback((e: React.PointerEvent) => {
-        dragRef.current = null;
-        resizeRef.current = null;
-        if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
-            (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-        }
-    }, []);
+    const onPointerUp = useCallback(
+        (e: React.PointerEvent) => {
+            dragRef.current = null;
+            resizeRef.current = null;
+            onGuides({ v: [], h: [] });
+            if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+            }
+        },
+        [onGuides],
+    );
 
     const startResize = useCallback(
         (handle: "nw" | "ne" | "sw" | "se") => (e: React.PointerEvent) => {
