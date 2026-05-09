@@ -37,6 +37,9 @@ interface SlideCanvasProps {
     /** Canvas-slide-only: id of the currently selected element on the canvas. */
     canvasSelectedId?: string | null;
     onCanvasSelectedChange?: (id: string | null) => void;
+    /** Canvas-slide-only: full multi-selection set. */
+    canvasSelectedIds?: string[];
+    onCanvasSelectedIdsChange?: (ids: string[]) => void;
 }
 
 function pathsEqual(a: ElementPath | null | undefined, b: ElementPath | null | undefined): boolean {
@@ -60,6 +63,8 @@ export function SlideCanvas({
     onSelectElement,
     canvasSelectedId: canvasSelectedIdProp,
     onCanvasSelectedChange,
+    canvasSelectedIds,
+    onCanvasSelectedIdsChange,
 }: SlideCanvasProps) {
     const spec = FORMATS[format];
     const aspect = `${spec.width} / ${spec.height}`;
@@ -87,6 +92,7 @@ export function SlideCanvas({
     useEffect(() => {
         if (onCanvasSelectedChange) onCanvasSelectedChange(null);
         else setCanvasSelectedIdLocal(null);
+        onCanvasSelectedIdsChange?.([]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slideIndex]);
 
@@ -94,26 +100,33 @@ export function SlideCanvas({
     // here (not in editor-layout) so canvas selection stays scoped to the
     // active slide and doesn't conflict with structured-slide element delete.
     useEffect(() => {
-        if (!isCanvas || !canvasSelectedId || !onSlideChange) return;
+        if (!isCanvas || !onSlideChange) return;
+        const ids = (canvasSelectedIds && canvasSelectedIds.length > 0)
+            ? canvasSelectedIds
+            : canvasSelectedId
+                ? [canvasSelectedId]
+                : [];
+        if (ids.length === 0) return;
         const change = onSlideChange;
         const currentSlide = slide;
-        const selectedId = canvasSelectedId;
         function onKey(e: KeyboardEvent) {
             if (e.key !== "Backspace" && e.key !== "Delete") return;
             const t = e.target as HTMLElement | null;
             if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
             e.preventDefault();
             const cs = currentSlide as CanvasSlide;
+            const idSet = new Set(ids);
             const next: CanvasSlide = {
                 ...cs,
-                elements: cs.elements.filter((el) => el.id !== selectedId),
+                elements: cs.elements.filter((el) => !idSet.has(el.id)),
             };
             setCanvasSelectedId(null);
+            onCanvasSelectedIdsChange?.([]);
             change(next as Slide);
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [isCanvas, canvasSelectedId, onSlideChange, slide]);
+    }, [isCanvas, canvasSelectedId, canvasSelectedIds, onSlideChange, slide, onCanvasSelectedIdsChange]);
 
     async function handleBgFile(file: File) {
         if (!onSlideChange) return;
@@ -271,6 +284,8 @@ export function SlideCanvas({
                             onChange={onSlideChange ? (next) => onSlideChange(next as Slide) : undefined}
                             selectedId={canvasSelectedId}
                             onSelect={setCanvasSelectedId}
+                            selectedIds={canvasSelectedIds ?? []}
+                            onSelectMany={onCanvasSelectedIdsChange}
                             onDropFile={
                                 onSlideChange
                                     ? async (file, x, y) => {

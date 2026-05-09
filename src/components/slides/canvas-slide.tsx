@@ -32,11 +32,23 @@ interface CanvasSlideViewProps {
     /** Externally controlled selection (for keyboard delete from parent). */
     selectedId?: string | null;
     onSelect?: (id: string | null) => void;
+    /** Multi-selection set. When size > 1, single-element resize handles
+     *  are hidden and drag moves the whole group together. */
+    selectedIds?: string[];
+    onSelectMany?: (ids: string[]) => void;
     /** Drag-drop a file onto the canvas. Position is in canvas units (1280×720). */
     onDropFile?: (file: File, x: number, y: number) => void;
 }
 
-export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropFile }: CanvasSlideViewProps) {
+export function CanvasSlideView({
+    slide,
+    onChange,
+    selectedId,
+    onSelect,
+    selectedIds,
+    onSelectMany,
+    onDropFile,
+}: CanvasSlideViewProps) {
     const wrapRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
 
@@ -60,6 +72,15 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropF
 
     const interactive = !!onChange;
 
+    // Effective selection set. selectedIds (if provided) is the source of
+    // truth for multi-select; falls back to selectedId for single-select.
+    const effectiveSelectedIds: string[] = selectedIds && selectedIds.length > 0
+        ? selectedIds
+        : selectedId
+            ? [selectedId]
+            : [];
+    const isMulti = effectiveSelectedIds.length > 1;
+
     const updateElement = useCallback(
         (id: string, patch: Partial<CanvasElement>) => {
             if (!onChange) return;
@@ -74,13 +95,52 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropF
         [onChange, slide],
     );
 
+    /** Move ALL selected elements by the same delta. Used for group drag. */
+    const updateGroup = useCallback(
+        (ids: string[], dx: number, dy: number) => {
+            if (!onChange) return;
+            const idSet = new Set(ids);
+            const next: CanvasSlide = {
+                ...slide,
+                elements: slide.elements.map((el) =>
+                    idSet.has(el.id)
+                        ? ({ ...el, x: Math.round(el.x + dx), y: Math.round(el.y + dy) } as CanvasElement)
+                        : el,
+                ),
+            };
+            onChange(next);
+        },
+        [onChange, slide],
+    );
+
+    const handleElementSelect = useCallback(
+        (id: string, shift: boolean) => {
+            if (shift && onSelectMany) {
+                const set = new Set(effectiveSelectedIds);
+                if (set.has(id)) set.delete(id);
+                else set.add(id);
+                const arr = Array.from(set);
+                onSelectMany(arr);
+                if (arr.length === 1) onSelect?.(arr[0]);
+                else onSelect?.(null);
+            } else {
+                onSelectMany?.([id]);
+                onSelect?.(id);
+            }
+        },
+        [effectiveSelectedIds, onSelect, onSelectMany],
+    );
+
     const deselect = useCallback(
         (e: React.MouseEvent) => {
             if (!interactive) return;
             // Clicking the empty canvas deselects.
-            if (e.target === e.currentTarget) onSelect?.(null);
+            if (e.target === e.currentTarget) {
+                onSelect?.(null);
+                onSelectMany?.([]);
+            }
         },
-        [interactive, onSelect],
+        [interactive, onSelect, onSelectMany],
     );
 
     const [dragOver, setDragOver] = useState(false);
@@ -147,19 +207,26 @@ export function CanvasSlideView({ slide, onChange, selectedId, onSelect, onDropF
                     .filter((el) => !el.hidden)
                     .slice()
                     .sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
-                    .map((el) => (
-                        <ElementView
-                            key={el.id}
-                            el={el}
-                            siblings={slide.elements.filter((s) => s.id !== el.id)}
-                            scale={scale}
-                            interactive={interactive}
-                            selected={selectedId === el.id}
-                            onSelect={() => onSelect?.(el.id)}
-                            onPatch={(patch) => updateElement(el.id, patch)}
-                            onGuides={setGuides}
-                        />
-                    ))}
+                    .map((el) => {
+                        const inSelection = effectiveSelectedIds.includes(el.id);
+                        return (
+                            <ElementView
+                                key={el.id}
+                                el={el}
+                                siblings={slide.elements.filter((s) => s.id !== el.id)}
+                                scale={scale}
+                                interactive={interactive}
+                                selected={inSelection}
+                                groupSelected={isMulti && inSelection}
+                                groupSelectedIds={isMulti ? effectiveSelectedIds : null}
+                                onSelect={(shift) => handleElementSelect(el.id, shift)}
+                                onPatch={(patch) => updateElement(el.id, patch)}
+                                onGroupMove={(dx, dy) => updateGroup(effectiveSelectedIds, dx, dy)}
+                                onGuides={setGuides}
+                            />
+                        );
+                    })}
+                {isMulti ? <GroupBoundingBox slide={slide} ids={effectiveSelectedIds} /> : null}
                 {/* Pink alignment guides — drawn above elements while dragging. */}
                 {guides.v.map((x, i) => (
                     <div
@@ -186,8 +253,13 @@ interface ElementViewProps {
     scale: number;
     interactive: boolean;
     selected: boolean;
-    onSelect: () => void;
+    /** True only when this element is part of a multi-element selection. */
+    groupSelected: boolean;
+    /** Full group selection set (for batch drag). null when single. */
+    groupSelectedIds: string[] | null;
+    onSelect: (shift: boolean) => void;
     onPatch: (patch: Partial<CanvasElement>) => void;
+    onGroupMove: (dx: number, dy: number) => void;
     onGuides: (g: { v: number[]; h: number[] }) => void;
 }
 
@@ -247,7 +319,19 @@ function snapBox(
     };
 }
 
-function ElementView({ el, siblings, scale, interactive, selected, onSelect, onPatch, onGuides }: ElementViewProps) {
+function ElementView({
+    el,
+    siblings,
+    scale,
+    interactive,
+    selected,
+    groupSelected,
+    groupSelectedIds,
+    onSelect,
+    onPatch,
+    onGroupMove,
+    onGuides,
+}: ElementViewProps) {
     const [editing, setEditing] = useState(false);
     const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
     const resizeRef = useRef<{
@@ -264,7 +348,10 @@ function ElementView({ el, siblings, scale, interactive, selected, onSelect, onP
         (e: React.PointerEvent) => {
             if (!interactive || el.locked || editing) return;
             e.stopPropagation();
-            onSelect();
+            // Don't reset multi-selection when clicking an already-selected
+            // element — that lets group drag start from any member.
+            const shift = e.shiftKey;
+            if (!groupSelected || shift) onSelect(shift);
             (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
             dragRef.current = {
                 startX: e.clientX,
@@ -273,7 +360,7 @@ function ElementView({ el, siblings, scale, interactive, selected, onSelect, onP
                 baseY: el.y,
             };
         },
-        [interactive, el.locked, el.x, el.y, editing, onSelect],
+        [interactive, el.locked, el.x, el.y, editing, onSelect, groupSelected],
     );
 
     const onPointerMove = useCallback(
@@ -283,6 +370,20 @@ function ElementView({ el, siblings, scale, interactive, selected, onSelect, onP
             if (drag) {
                 const dx = (e.clientX - drag.startX) / scale;
                 const dy = (e.clientY - drag.startY) / scale;
+                if (groupSelected && groupSelectedIds && groupSelectedIds.length > 1) {
+                    // Group drag — move ALL selected by the cumulative delta.
+                    // We apply the delta relative to the last frame so the
+                    // group moves as a rigid unit. Snap is disabled in group
+                    // mode (would need a group bounding box snap, deferred).
+                    const newX = Math.round(drag.baseX + dx);
+                    const newY = Math.round(drag.baseY + dy);
+                    const stepX = newX - el.x;
+                    const stepY = newY - el.y;
+                    if (stepX !== 0 || stepY !== 0) {
+                        onGroupMove(stepX, stepY);
+                    }
+                    return;
+                }
                 const rawX = drag.baseX + dx;
                 const rawY = drag.baseY + dy;
                 const snap = snapBox(rawX, rawY, el.w, el.h, siblings);
@@ -315,7 +416,7 @@ function ElementView({ el, siblings, scale, interactive, selected, onSelect, onP
                 onPatch({ x: Math.round(nx), y: Math.round(ny), w: Math.round(nw), h: Math.round(nh) });
             }
         },
-        [scale, onPatch, el.w, el.h, siblings, onGuides],
+        [scale, onPatch, el.w, el.h, el.x, el.y, siblings, onGuides, groupSelected, groupSelectedIds, onGroupMove],
     );
 
     const onPointerUp = useCallback(
@@ -389,10 +490,14 @@ function ElementView({ el, siblings, scale, interactive, selected, onSelect, onP
             {selected && interactive && !editing ? (
                 <>
                     <div className="pointer-events-none absolute inset-0 ring-2 ring-[#E9FF7B]" />
-                    <ResizeHandle position="nw" onPointerDown={startResize("nw")} />
-                    <ResizeHandle position="ne" onPointerDown={startResize("ne")} />
-                    <ResizeHandle position="sw" onPointerDown={startResize("sw")} />
-                    <ResizeHandle position="se" onPointerDown={startResize("se")} />
+                    {groupSelected ? null : (
+                        <>
+                            <ResizeHandle position="nw" onPointerDown={startResize("nw")} />
+                            <ResizeHandle position="ne" onPointerDown={startResize("ne")} />
+                            <ResizeHandle position="sw" onPointerDown={startResize("sw")} />
+                            <ResizeHandle position="se" onPointerDown={startResize("se")} />
+                        </>
+                    )}
                 </>
             ) : null}
         </div>
@@ -512,6 +617,29 @@ function ImageElementBody({ el }: { el: CanvasImageElement }) {
                 borderRadius: el.radius ?? 0,
                 userSelect: "none",
                 pointerEvents: "none",
+            }}
+        />
+    );
+}
+
+function GroupBoundingBox({ slide, ids }: { slide: CanvasSlide; ids: string[] }) {
+    const set = new Set(ids);
+    const sel = slide.elements.filter((e) => set.has(e.id));
+    if (sel.length < 2) return null;
+    const minX = Math.min(...sel.map((e) => e.x));
+    const minY = Math.min(...sel.map((e) => e.y));
+    const maxX = Math.max(...sel.map((e) => e.x + e.w));
+    const maxY = Math.max(...sel.map((e) => e.y + e.h));
+    return (
+        <div
+            className="pointer-events-none absolute"
+            style={{
+                left: minX - 4,
+                top: minY - 4,
+                width: maxX - minX + 8,
+                height: maxY - minY + 8,
+                border: "1.5px dashed #E9FF7B",
+                borderRadius: 4,
             }}
         />
     );

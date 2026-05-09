@@ -41,6 +41,7 @@ export function EditorLayout({
     const [selectedElementPath, setSelectedElementPath] =
         useState<ElementPath | null>(null);
     const [canvasSelectedId, setCanvasSelectedId] = useState<string | null>(null);
+    const [canvasSelectedIds, setCanvasSelectedIds] = useState<string[]>([]);
     const [chromeTheme, setChromeTheme] = useState<"dark" | "light">("light");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [handoffOpen, setHandoffOpen] = useState(false);
@@ -375,8 +376,10 @@ export function EditorLayout({
                     onSelectElement={setSelectedElementPath}
                     canvasSelectedId={canvasSelectedId}
                     onCanvasSelectedChange={setCanvasSelectedId}
+                    canvasSelectedIds={canvasSelectedIds}
+                    onCanvasSelectedIdsChange={setCanvasSelectedIds}
                 />
-                {selectedSlide?.type === "canvas" && canvasSelectedId ? (
+                {selectedSlide?.type === "canvas" && canvasSelectedId && canvasSelectedIds.length <= 1 ? (
                     <CanvasPropertiesPanel
                         slide={selectedSlide as CanvasSlide}
                         selectedId={canvasSelectedId}
