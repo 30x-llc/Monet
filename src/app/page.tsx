@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type {
     Deck,
     IntakeAnswers,
@@ -87,6 +87,21 @@ export default function Home() {
     const [generationError, setGenerationError] = useState<string | null>(null);
     const [pendingGen, setPendingGen] = useState<PendingGeneration | null>(null);
 
+    // Undo/redo history for the active deck. Coalesces fast successive
+    // changes (typing) into a single entry: only changes more than
+    // COALESCE_MS apart push a new snapshot. Reset whenever a different
+    // deck loads.
+    const HISTORY_LIMIT = 100;
+    const COALESCE_MS = 1000;
+    const historyRef = useRef<{ undo: Deck[]; redo: Deck[]; lastChangeAt: number }>({
+        undo: [],
+        redo: [],
+        lastChangeAt: 0,
+    });
+    const resetHistory = useCallback(() => {
+        historyRef.current = { undo: [], redo: [], lastChangeAt: 0 };
+    }, []);
+
     useEffect(() => {
         setRecentDecks(getRecentDecks(50));
     }, [refreshKey]);
@@ -107,6 +122,7 @@ export default function Home() {
         // Try local first.
         const local = getDeckById(openId);
         if (local) {
+            resetHistory();
             setDeck(local.deck);
             setCurrentDeckId(openId);
             setView("editor");
@@ -117,6 +133,7 @@ export default function Home() {
             .then((r) => r.json())
             .then((d) => {
                 if (d?.ok && d.deck?.deckJson) {
+                    resetHistory();
                     setDeck(d.deck.deckJson);
                     setCurrentDeckId(openId);
                     setView("editor");
@@ -194,6 +211,7 @@ export default function Home() {
 
                 const id = saveDeck(generatedDeck);
                 setCurrentDeckId(id);
+                resetHistory();
                 setDeck(generatedDeck);
                 setPendingGen(null);
                 setView("editor");
@@ -393,11 +411,12 @@ export default function Home() {
     const handleOpenDeck = useCallback((id: string) => {
         const stored = getDeckById(id);
         if (stored) {
+            resetHistory();
             setDeck(stored.deck);
             setCurrentDeckId(id);
             setView("editor");
         }
-    }, []);
+    }, [resetHistory]);
 
     const handleDeleteDeck = useCallback((id: string) => {
         deleteDeck(id);
@@ -409,21 +428,80 @@ export default function Home() {
         if (template) {
             const cloned: Deck = { ...template.deck, generatedAt: new Date().toISOString() };
             const id = saveDeck(cloned);
+            resetHistory();
             setDeck(cloned);
             setCurrentDeckId(id);
             setView("editor");
             setRefreshKey((k) => k + 1);
         }
-    }, []);
+    }, [resetHistory]);
 
     const handleDeckChange = useCallback(
         (newDeck: Deck) => {
-            setDeck(newDeck);
+            setDeck((prev) => {
+                if (prev) {
+                    const now = Date.now();
+                    const h = historyRef.current;
+                    if (now - h.lastChangeAt >= COALESCE_MS || h.undo.length === 0) {
+                        h.undo.push(structuredClone(prev));
+                        if (h.undo.length > HISTORY_LIMIT) h.undo.shift();
+                    }
+                    h.redo = [];
+                    h.lastChangeAt = now;
+                }
+                return newDeck;
+            });
             if (currentDeckId) saveDeck(newDeck, currentDeckId);
             setRefreshKey((k) => k + 1);
         },
         [currentDeckId],
     );
+
+    const handleUndo = useCallback(() => {
+        const h = historyRef.current;
+        if (h.undo.length === 0) return;
+        setDeck((prev) => {
+            if (!prev) return prev;
+            const target = h.undo.pop()!;
+            h.redo.push(structuredClone(prev));
+            if (h.redo.length > HISTORY_LIMIT) h.redo.shift();
+            h.lastChangeAt = 0;
+            if (currentDeckId) saveDeck(target, currentDeckId);
+            return target;
+        });
+        setRefreshKey((k) => k + 1);
+    }, [currentDeckId]);
+
+    const handleRedo = useCallback(() => {
+        const h = historyRef.current;
+        if (h.redo.length === 0) return;
+        setDeck((prev) => {
+            if (!prev) return prev;
+            const target = h.redo.pop()!;
+            h.undo.push(structuredClone(prev));
+            if (h.undo.length > HISTORY_LIMIT) h.undo.shift();
+            h.lastChangeAt = 0;
+            if (currentDeckId) saveDeck(target, currentDeckId);
+            return target;
+        });
+        setRefreshKey((k) => k + 1);
+    }, [currentDeckId]);
+
+    useEffect(() => {
+        if (view !== "editor" || !deck) return;
+        function onKeyDown(e: KeyboardEvent) {
+            if (!(e.metaKey || e.ctrlKey)) return;
+            if (e.key !== "z" && e.key !== "Z") return;
+            const t = e.target as HTMLElement | null;
+            // Let the browser handle native undo inside an active text edit.
+            if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+            e.preventDefault();
+            if (e.shiftKey) handleRedo();
+            else handleUndo();
+        }
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [view, deck, handleUndo, handleRedo]);
 
     const handleIterate = useCallback(
         async (instruction: string): Promise<{ ok: boolean; summary?: string; error?: string }> => {
@@ -455,7 +533,8 @@ export default function Home() {
         setView("home");
         setDeck(null);
         setCurrentDeckId(null);
-    }, []);
+        resetHistory();
+    }, [resetHistory]);
 
     const handleOpenIntake = useCallback(
         (
