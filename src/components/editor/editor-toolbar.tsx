@@ -8,7 +8,7 @@ import {
     SunIcon,
     MoonIcon,
 } from "@heroicons/react/24/solid";
-import { Logo30x } from "@/components/foundations/logo/30x-logo";
+import { MonetLogo } from "@/components/foundations/logo/monet-logo";
 import { uploadImage } from "@/lib/upload-image";
 
 interface EditorToolbarProps {
@@ -62,9 +62,9 @@ export function EditorToolbar({
                     className="flex items-center gap-3 -mx-1 px-1 py-1 rounded hover:bg-[var(--chrome-hover-bg-soft)] transition-colors"
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
                 >
-                    <Logo30x variant={theme === "light" ? "dark" : "accent"} className="h-4" />
+                    <MonetLogo variant={theme === "light" ? "dark" : "accent"} />
                     <div className="w-px h-4 bg-[var(--chrome-divider)]" />
-                    <span className="text-[11px] font-medium text-[var(--chrome-fg-3)]">Design</span>
+                    <span className="text-[11px] font-medium text-[var(--chrome-fg-3)]">by 30X</span>
                 </button>
                 <div className="w-px h-4 bg-[var(--chrome-divider)]" />
                 <span className="text-[12px] font-medium text-[var(--chrome-fg-3)] truncate max-w-[200px]">

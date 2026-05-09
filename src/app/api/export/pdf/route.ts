@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
             status: 200,
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="${fileName || "30x-design"}.pdf"`,
+                "Content-Disposition": `attachment; filename="${fileName || "monet"}.pdf"`,
                 "Cache-Control": "no-store",
             },
         });

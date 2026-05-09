@@ -243,7 +243,7 @@ export function EditorLayout({
                     .toLowerCase()
                     .replace(/[^a-z0-9]+/g, "-")
                     .replace(/^-+|-+$/g, "")
-                    .slice(0, 80) || "30x-design";
+                    .slice(0, 80) || "monet";
             a.href = url;
             a.download = `${safeName}.pdf`;
             document.body.appendChild(a);

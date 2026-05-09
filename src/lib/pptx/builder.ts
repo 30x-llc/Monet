@@ -68,7 +68,7 @@ export async function buildDeckPptx(
     const pptx = new PptxGenJS();
     pptx.author = "30X";
     pptx.company = "30X";
-    pptx.title = deck.deckTitle ?? "30X Design";
+    pptx.title = deck.deckTitle ?? "Monet";
     pptx.defineLayout({ name: "30x", width: widthIn, height: heightIn });
     pptx.layout = "30x";
 

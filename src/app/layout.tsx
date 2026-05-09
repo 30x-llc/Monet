@@ -11,9 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-    title: "30x Design",
-    description:
-        "Sistema de diseño y generación de propuestas comerciales de 30x, la red ejecutiva más importante de Latinoamérica",
+    title: "Monet — by 30X",
+    description: "El AI designer de 30X. Propuestas, decks y documentos comerciales.",
 };
 
 export default function RootLayout({

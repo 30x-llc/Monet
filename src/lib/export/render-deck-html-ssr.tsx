@@ -160,7 +160,7 @@ export async function renderDeckHtml(deck: Deck, absoluteBase: string): Promise<
 <head>
     <meta charset="utf-8" />
     <base href="${absoluteBase}/" />
-    <title>${escapeHtml(deck.deckTitle ?? "30X Design")}</title>
+    <title>${escapeHtml(deck.deckTitle ?? "Monet")}</title>
     <style>${css}</style>
 </head>
 <body>

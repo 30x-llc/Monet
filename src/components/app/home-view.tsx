@@ -8,7 +8,7 @@ import type { Deck, ProjectFormat } from "@/lib/slide-types";
 import { FORMATS } from "@/lib/slide-types";
 import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
-import { Logo30x } from "@/components/foundations/logo/30x-logo";
+import { MonetLogo } from "@/components/foundations/logo/monet-logo";
 import { BriefingDropZone } from "./briefing-drop-zone";
 import type { SuperPromptFormat } from "@/lib/super-prompt";
 import { AnimatePresence, motion } from "motion/react";
@@ -215,8 +215,8 @@ export function HomeView({
             <header className="sticky top-0 z-20 bg-[#fafafa]/80 backdrop-blur-md border-b border-black/[0.04]">
                 <div className="h-12 flex items-center px-5">
                     <div className="flex items-center gap-2">
-                        <Logo30x variant="dark" className="h-3.5" />
-                        <span className="text-[11px] font-medium text-[#737373]">Design</span>
+                        <MonetLogo variant="dark" />
+                        <span className="text-[11px] font-medium text-[#737373]">by 30X</span>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <SearchInput value={query} onChange={setQuery} />

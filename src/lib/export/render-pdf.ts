@@ -121,7 +121,7 @@ export function absoluteBaseFromRequest(request: Request): string {
 }
 
 export function safeDeckTitle(deck: Deck): string {
-    return (deck.deckTitle ?? "30x-design")
+    return (deck.deckTitle ?? "monet")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
