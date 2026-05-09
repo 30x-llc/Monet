@@ -7,6 +7,7 @@ import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { CanvasSlideView, CanvasCreationToolbar, newImageElement } from "@/components/slides/canvas-slide";
 import type { CanvasElement } from "@/lib/slide-types";
+import { migrateStructuredSlideToCanvas } from "@/lib/canvas-migrate";
 import { FORMATS } from "@/lib/slide-types";
 import { uploadImage } from "@/lib/upload-image";
 
@@ -312,6 +313,33 @@ export function SlideCanvas({
                         <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
                     )}
                 </SlideStage>
+                {!isCanvas && onSlideChange ? (
+                    <button
+                        onClick={() => {
+                            if (!stageWrapRef.current) return;
+                            if (
+                                !window.confirm(
+                                    "Liberar este slide lo convierte en un canvas libre. Pierdes el layout estructurado pero ganas total libertad. ¿Continuar?",
+                                )
+                            )
+                                return;
+                            const canvas = migrateStructuredSlideToCanvas(stageWrapRef.current);
+                            onSlideChange(canvas as Slide);
+                        }}
+                        className="absolute top-4 right-4 z-20 h-8 px-3 rounded-full bg-white/95 shadow-lg ring-1 ring-black/5 text-[11px] font-medium text-[#0a0a0a] hover:bg-white hover:scale-[1.03] active:scale-95 transition flex items-center gap-1.5"
+                        title="Convertir este slide a canvas libre — diseña sin estructura"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path
+                                d="M2 3h8M2 6h8M2 9h5"
+                                stroke="currentColor"
+                                strokeWidth="1.4"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                        Liberar slide
+                    </button>
+                ) : null}
                 {isCanvas && onSlideChange ? (
                     <CanvasCreationToolbar
                         onAdd={(el: CanvasElement) => {
