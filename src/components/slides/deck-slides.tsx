@@ -290,21 +290,21 @@ function CorporateCoverRecognition({
             ) : null}
             <img className="brand-mark" src={LOGO_LIGHT} alt="30X" />
             <div className="content">
-                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
-                <h1 className="headline">{headlineNodes}</h1>
+                {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
+                <h1 className="headline" data-text-path='["headline"]'>{headlineNodes}</h1>
                 {paragraphs.length > 0 ? (
                     <div className="body">
                         {paragraphs.map((p, i) => (
-                            <p key={i}>{p}</p>
+                            <p key={i} data-text-path={JSON.stringify(["bodyParagraphs", i])}>{p}</p>
                         ))}
                     </div>
                 ) : slide.subtitle ? (
                     <div className="body">
-                        <p>{slide.subtitle}</p>
+                        <p data-text-path='["subtitle"]'>{slide.subtitle}</p>
                     </div>
                 ) : null}
             </div>
-            {slide.date ? <div className="date">{slide.date}</div> : null}
+            {slide.date ? <div className="date" data-text-path='["date"]'>{slide.date}</div> : null}
         </section>
     );
 }
@@ -338,11 +338,11 @@ function CorporateCoverBleed({ slide, clientLogoUrl }: { slide: CorporateCoverSl
                 />
             ) : null}
             <div className="title-wrap">
-                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
-                <h1 className="h-cover">{slide.headline}</h1>
-                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
+                {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
+                <h1 className="h-cover" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
             </div>
-            {slide.date ? <div className="date">{slide.date}</div> : null}
+            {slide.date ? <div className="date" data-text-path='["date"]'>{slide.date}</div> : null}
         </section>
     );
 }
@@ -353,10 +353,10 @@ function CorporateCoverSplit({ slide, clientLogoUrl }: { slide: CorporateCoverSl
         <section className="deck-slide s-corp-cover-split">
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="left">
-                {slide.eyebrow ? <div className="eyebrow">{slide.eyebrow}</div> : null}
-                <h1 className="h-cover">{slide.headline}</h1>
-                {slide.subtitle ? <div className="sub">{slide.subtitle}</div> : null}
-                {slide.date ? <div className="date">{slide.date}</div> : null}
+                {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
+                <h1 className="h-cover" data-text-path='["headline"]'>{slide.headline}</h1>
+                {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
+                {slide.date ? <div className="date" data-text-path='["date"]'>{slide.date}</div> : null}
                 {clientLogoUrl ? (
                     <div className="partner-strip">
                         <span className="partner-label">Para</span>
@@ -814,9 +814,9 @@ export function CoverGlobe({ slide, clientLogoUrl }: { slide: CoverGlobeSlide; c
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="content">
                 <img className="logo30" src={LOGO_ACCENT} alt="30X" />
-                <div className="line">{slide.headline || "La mejor educación ejecutiva de Latinoamérica."}</div>
+                <div className="line" data-text-path='["headline"]'>{slide.headline || "La mejor educación ejecutiva de Latinoamérica."}</div>
                 {slide.subtitle ? (
-                    <div className="line" style={{ fontSize: 28, color: "rgba(255,255,255,.6)", marginTop: 18 }}>
+                    <div className="line" style={{ fontSize: 28, color: "rgba(255,255,255,.6)", marginTop: 18 }} data-text-path='["subtitle"]'>
                         {slide.subtitle}
                     </div>
                 ) : null}
