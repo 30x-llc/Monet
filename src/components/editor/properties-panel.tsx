@@ -196,6 +196,33 @@ export function PropertiesPanel({
                             </p>
                         </div>
                     </>
+                ) : hasSelection ? (
+                    <div className="space-y-3">
+                        <div>
+                            <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider mb-1">
+                                Elemento seleccionado
+                            </p>
+                            <p className="text-[12px] font-medium text-[var(--chrome-fg)]">{elementLabel}</p>
+                            <p className="text-[10.5px] font-mono text-[var(--chrome-fg-5)] mt-0.5">
+                                {(selectedPath ?? []).map((p) => String(p)).join(" › ")}
+                            </p>
+                        </div>
+                        <div className="rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] p-2.5 space-y-1.5">
+                            <p className="text-[11px] text-[var(--chrome-fg-3)] leading-relaxed">
+                                <kbd className="font-mono text-[10px]">Doble-click</kbd> sobre el texto para
+                                editarlo inline.
+                            </p>
+                            <p className="text-[10px] text-[var(--chrome-fg-5)] leading-relaxed">
+                                Este elemento es un campo único del slide — no se puede mover ni borrar (solo editar).
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-semibold text-[var(--chrome-fg-5)] uppercase tracking-wider mb-1">
+                                Slide
+                            </p>
+                            <p className="text-[12px] font-mono text-[var(--chrome-accent-fg)]">{slide.type}</p>
+                        </div>
+                    </div>
                 ) : (
                     <div className="space-y-3">
                         <div className="rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-bg)] p-3">
