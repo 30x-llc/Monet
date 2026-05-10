@@ -6,6 +6,12 @@ import type {
     CanvasSlide,
     CanvasTextElement,
 } from "@/lib/slide-types";
+import {
+    TEXT_STYLES,
+    TEXT_STYLE_NAMES,
+    type TextStyleName,
+    inferTextStyle,
+} from "@/lib/text-styles";
 
 /**
  * Right-side properties inspector for canvas elements.
@@ -99,52 +105,54 @@ function TextSection({
     el: CanvasTextElement;
     onPatch: (patch: Partial<CanvasTextElement>) => void;
 }) {
+    // The Monet 8-style set is the canonical typography. The picker snaps
+    // the element to a token and clears any ad-hoc overrides.
+    const currentStyle: TextStyleName = el.textStyle
+        ? el.textStyle
+        : inferTextStyle({ fontSize: el.fontSize, fontWeight: el.fontWeight });
     return (
         <>
-            <Section title="Tipografía">
-                <Row label="Tamaño">
-                    <NumberInput
-                        value={el.fontSize ?? 24}
-                        min={6}
-                        max={400}
-                        step={1}
-                        onChange={(v) => onPatch({ fontSize: v })}
-                    />
-                </Row>
-                <Row label="Peso">
-                    <SelectInput
-                        value={String(el.fontWeight ?? 400)}
-                        options={[
-                            { value: "300", label: "Light" },
-                            { value: "400", label: "Regular" },
-                            { value: "500", label: "Medium" },
-                            { value: "600", label: "Semibold" },
-                            { value: "700", label: "Bold" },
-                            { value: "800", label: "Extrabold" },
-                            { value: "900", label: "Black" },
-                        ]}
-                        onChange={(v) => onPatch({ fontWeight: Number(v) })}
-                    />
-                </Row>
-                <Row label="Línea">
-                    <NumberInput
-                        value={el.lineHeight ?? 1.2}
-                        min={0.8}
-                        max={3}
-                        step={0.05}
-                        onChange={(v) => onPatch({ lineHeight: v })}
-                    />
-                </Row>
-                <Row label="Tracking">
-                    <NumberInput
-                        value={el.letterSpacing ?? 0}
-                        min={-0.1}
-                        max={0.5}
-                        step={0.005}
-                        onChange={(v) => onPatch({ letterSpacing: v })}
-                    />
-                </Row>
+            <Section title="Estilo">
                 <Row label="Estilo">
+                    <SelectInput
+                        value={currentStyle}
+                        options={TEXT_STYLE_NAMES.map((n) => ({
+                            value: n,
+                            label: TEXT_STYLES[n].label,
+                        }))}
+                        onChange={(v) => {
+                            // Apply the named style by clearing per-element
+                            // overrides — the renderer will use the token.
+                            onPatch({
+                                textStyle: v as TextStyleName,
+                                fontSize: undefined,
+                                fontWeight: undefined,
+                                lineHeight: undefined,
+                                letterSpacing: undefined,
+                            });
+                        }}
+                    />
+                </Row>
+            </Section>
+            <Section title="Color y alineación">
+                <Row label="Color">
+                    <ColorInput
+                        value={el.color ?? "#0a0a0a"}
+                        onChange={(v) => onPatch({ color: v })}
+                    />
+                </Row>
+                <Row label="Alinear">
+                    <ToggleGroup
+                        value={el.align ?? "left"}
+                        options={[
+                            { value: "left", label: "⇤" },
+                            { value: "center", label: "↔" },
+                            { value: "right", label: "⇥" },
+                        ]}
+                        onChange={(v) => onPatch({ align: v as "left" | "center" | "right" })}
+                    />
+                </Row>
+                <Row label="Italic">
                     <ToggleGroup
                         value={el.fontStyle ?? "normal"}
                         options={[

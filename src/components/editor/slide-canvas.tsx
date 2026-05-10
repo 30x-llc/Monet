@@ -8,6 +8,7 @@ import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-
 import { CanvasSlideView, CanvasCreationToolbar, newImageElement } from "@/components/slides/canvas-slide";
 import type { CanvasElement } from "@/lib/slide-types";
 import { migrateStructuredSlideToCanvas } from "@/lib/canvas-migrate";
+import { useMonetConfirm } from "./monet-modal";
 import { FORMATS } from "@/lib/slide-types";
 import { uploadImage } from "@/lib/upload-image";
 
@@ -75,6 +76,7 @@ export function SlideCanvas({
     const bgInputRef = useRef<HTMLInputElement>(null);
     const [bgUploading, setBgUploading] = useState(false);
     const [bgError, setBgError] = useState<string | null>(null);
+    const { confirm: monetConfirm, modalElement: confirmModal } = useMonetConfirm();
 
     const supportsBg = BG_CAPABLE_TYPES.has(slide.type);
     const currentBg = (slide as { backgroundImage?: string }).backgroundImage;
@@ -388,14 +390,15 @@ export function SlideCanvas({
                 </SlideStage>
                 {!isCanvas && onSlideChange ? (
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             if (!stageWrapRef.current) return;
-                            if (
-                                !window.confirm(
-                                    "Liberar este slide lo convierte en un canvas libre. Pierdes el layout estructurado pero ganas total libertad. ¿Continuar?",
-                                )
-                            )
-                                return;
+                            const ok = await monetConfirm({
+                                title: "Liberar este slide",
+                                body: "Lo convierto a un canvas libre: el layout actual se mantiene pero cada bloque queda movible. Esta acción no se puede deshacer (puedes ⌘Z igual).",
+                                confirmLabel: "Liberar",
+                                cancelLabel: "Cancelar",
+                            });
+                            if (!ok) return;
                             const canvas = migrateStructuredSlideToCanvas(stageWrapRef.current);
                             onSlideChange(canvas as Slide);
                         }}
@@ -534,6 +537,7 @@ export function SlideCanvas({
                     ) : null}
                 </div>
             ) : null}
+            {confirmModal}
         </div>
     );
 }

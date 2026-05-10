@@ -461,17 +461,29 @@ export interface CanvasElementBase {
 export interface CanvasTextElement extends CanvasElementBase {
     kind: "text";
     text: string;
-    /** Font size in canvas units. Defaults to 24. */
+    /** Named style from the Monet 8-style typography token set. When set,
+     *  the renderer uses the token's fontSize/fontWeight/lineHeight/
+     *  letterSpacing UNLESS an explicit override is set on the element. */
+    textStyle?:
+        | "title"
+        | "header1"
+        | "header2"
+        | "header3"
+        | "body1"
+        | "body2"
+        | "body3"
+        | "note";
+    /** Override: font size in canvas units. Falls back to textStyle's value. */
     fontSize?: number;
-    /** 100-900. Defaults to 400. */
+    /** Override: 100-900. Falls back to textStyle's value. */
     fontWeight?: number;
     /** CSS color string. Defaults to currentColor (theme-aware). */
     color?: string;
     /** "left" | "center" | "right". Defaults to "left". */
     align?: "left" | "center" | "right";
-    /** Line-height multiplier. Defaults to 1.2. */
+    /** Override: line-height multiplier. */
     lineHeight?: number;
-    /** Letter-spacing in em. Defaults to 0. */
+    /** Override: letter-spacing in em. */
     letterSpacing?: number;
     /** "normal" | "italic". Defaults to "normal". */
     fontStyle?: "normal" | "italic";

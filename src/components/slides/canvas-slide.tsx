@@ -10,6 +10,7 @@ import {
     type CanvasSlide,
     type CanvasTextElement,
 } from "@/lib/slide-types";
+import { getTextStyle } from "@/lib/text-styles";
 
 /**
  * Canvas slide renderer — Monet's free-positioning surface.
@@ -50,25 +51,41 @@ export function CanvasSlideView({
     onDropFile,
 }: CanvasSlideViewProps) {
     const wrapRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
+    // `renderScale` is the canvas → wrap-NATURAL ratio (used for the inner
+    // div's CSS transform). `visualScale` is the canvas → SCREEN ratio
+    // (used for drag math). They differ when an ancestor (SlideStage)
+    // applies its own CSS scale: the wrap's natural size matches the
+    // ancestor's design space, but its rendered size is shrunk.
+    //
+    // Using getBoundingClientRect for both produced under-shooting drags
+    // because the inner div was being scaled by the visual ratio when it
+    // should have been scaled by the natural ratio.
+    const [renderScale, setRenderScale] = useState(1);
+    const visualScaleRef = useRef(1);
 
-    // Recompute scale whenever the container resizes so the design-space
-    // canvas always fits inside the editor stage.
     useLayoutEffect(() => {
         const wrap = wrapRef.current;
         if (!wrap) return;
         function compute() {
             if (!wrap) return;
+            const naturalW = wrap.offsetWidth;
+            const naturalH = wrap.offsetHeight;
             const rect = wrap.getBoundingClientRect();
-            const sx = rect.width / CANVAS_WIDTH;
-            const sy = rect.height / CANVAS_HEIGHT;
-            setScale(Math.min(sx, sy));
+            // Render scale: how much to scale the 1280×720 canvas to fit
+            // the wrap's natural box.
+            const renderS = Math.min(naturalW / CANVAS_WIDTH, naturalH / CANVAS_HEIGHT);
+            // Visual scale: how much one canvas unit ends up as on the
+            // screen, including any ancestor CSS transforms.
+            const visualS = naturalW > 0 ? (rect.width / naturalW) * renderS : renderS;
+            setRenderScale(renderS);
+            visualScaleRef.current = visualS;
         }
         compute();
         const ro = new ResizeObserver(compute);
         ro.observe(wrap);
         return () => ro.disconnect();
     }, []);
+    const scale = renderScale; // legacy name still used by the snap-guide rendering
 
     const interactive = !!onChange;
 
@@ -173,8 +190,9 @@ export function CanvasSlideView({
         const cy = wrapRect.top + wrapRect.height / 2;
         const dx = e.clientX - cx;
         const dy = e.clientY - cy;
-        const xCanvas = CANVAS_WIDTH / 2 + dx / scale;
-        const yCanvas = CANVAS_HEIGHT / 2 + dy / scale;
+        const visual = visualScaleRef.current || scale || 1;
+        const xCanvas = CANVAS_WIDTH / 2 + dx / visual;
+        const yCanvas = CANVAS_HEIGHT / 2 + dy / visual;
         onDropFile(file, xCanvas, yCanvas);
     }
 
@@ -214,7 +232,7 @@ export function CanvasSlideView({
                                 key={el.id}
                                 el={el}
                                 siblings={slide.elements.filter((s) => s.id !== el.id)}
-                                scale={scale}
+                                getVisualScale={() => visualScaleRef.current}
                                 interactive={interactive}
                                 selected={inSelection}
                                 groupSelected={isMulti && inSelection}
@@ -250,7 +268,10 @@ export function CanvasSlideView({
 interface ElementViewProps {
     el: CanvasElement;
     siblings: CanvasElement[];
-    scale: number;
+    /** Reads the live canvas → screen ratio. Includes ancestor transforms
+     *  (e.g. SlideStage's own scale), so dividing pointer deltas by this
+     *  yields exact canvas-space deltas no matter how nested the wrap is. */
+    getVisualScale: () => number;
     interactive: boolean;
     selected: boolean;
     /** True only when this element is part of a multi-element selection. */
@@ -322,7 +343,7 @@ function snapBox(
 function ElementView({
     el,
     siblings,
-    scale,
+    getVisualScale,
     interactive,
     selected,
     groupSelected,
@@ -369,6 +390,7 @@ function ElementView({
             const drag = dragRef.current;
             const resize = resizeRef.current;
             const rotate = rotateRef.current;
+            const visual = getVisualScale() || 1;
             if (rotate) {
                 const angleNow = Math.atan2(e.clientY - rotate.centerY, e.clientX - rotate.centerX);
                 let deg = rotate.baseAngle + ((angleNow - rotate.pointerStart) * 180) / Math.PI;
@@ -378,8 +400,8 @@ function ElementView({
                 return;
             }
             if (drag) {
-                const dx = (e.clientX - drag.startX) / scale;
-                const dy = (e.clientY - drag.startY) / scale;
+                const dx = (e.clientX - drag.startX) / visual;
+                const dy = (e.clientY - drag.startY) / visual;
                 if (groupSelected && groupSelectedIds && groupSelectedIds.length > 1) {
                     // Group drag — move ALL selected by the cumulative delta.
                     // We apply the delta relative to the last frame so the
@@ -400,8 +422,8 @@ function ElementView({
                 onGuides({ v: snap.vGuides, h: snap.hGuides });
                 onPatch({ x: snap.x, y: snap.y });
             } else if (resize) {
-                const dx = (e.clientX - resize.startX) / scale;
-                const dy = (e.clientY - resize.startY) / scale;
+                const dx = (e.clientX - resize.startX) / visual;
+                const dy = (e.clientY - resize.startY) / visual;
                 let nx = resize.baseX;
                 let ny = resize.baseY;
                 let nw = resize.baseW;
@@ -426,7 +448,7 @@ function ElementView({
                 onPatch({ x: Math.round(nx), y: Math.round(ny), w: Math.round(nw), h: Math.round(nh) });
             }
         },
-        [scale, onPatch, el.w, el.h, el.x, el.y, siblings, onGuides, groupSelected, groupSelectedIds, onGroupMove],
+        [getVisualScale, onPatch, el.w, el.h, el.x, el.y, siblings, onGuides, groupSelected, groupSelectedIds, onGroupMove],
     );
 
     const onPointerUp = useCallback(
@@ -566,15 +588,17 @@ function TextElementBody({
         sel?.addRange(range);
     }, [editing]);
 
+    // Resolve textStyle token defaults, then let explicit overrides win.
+    const tok = getTextStyle(el.textStyle);
     const style: React.CSSProperties = {
         width: "100%",
         height: "100%",
-        fontSize: el.fontSize ?? 24,
-        fontWeight: el.fontWeight ?? 400,
+        fontSize: el.fontSize ?? tok.fontSize,
+        fontWeight: el.fontWeight ?? tok.fontWeight,
         color: el.color ?? "#0a0a0a",
         textAlign: el.align ?? "left",
-        lineHeight: el.lineHeight ?? 1.2,
-        letterSpacing: el.letterSpacing ? `${el.letterSpacing}em` : undefined,
+        lineHeight: el.lineHeight ?? tok.lineHeight,
+        letterSpacing: `${el.letterSpacing ?? tok.letterSpacing}em`,
         fontStyle: el.fontStyle ?? "normal",
         outline: "none",
         cursor: editing ? "text" : "inherit",
@@ -739,6 +763,7 @@ function ResizeHandle({
 /** Factory: a fresh empty canvas slide with one starter text element. */
 export function newCanvasSlide(): CanvasSlide {
     const id = Math.random().toString(36).slice(2, 10);
+    const title = getTextStyle("title");
     return {
         type: "canvas",
         background: "#ffffff",
@@ -748,11 +773,10 @@ export function newCanvasSlide(): CanvasSlide {
                 kind: "text",
                 text: "Doble click para editar",
                 x: 80,
-                y: 320,
+                y: 296,
                 w: 1120,
-                h: 80,
-                fontSize: 56,
-                fontWeight: 700,
+                h: Math.round(title.fontSize * title.lineHeight),
+                textStyle: "title",
                 color: "#0a0a0a",
                 align: "left",
             },
@@ -772,16 +796,15 @@ function centeredBox(w: number, h: number): { x: number; y: number; w: number; h
 }
 
 export function newTextElement(): CanvasTextElement {
+    const tok = getTextStyle("header2");
     return {
         id: newCanvasElementId(),
         kind: "text",
         text: "Texto",
-        ...centeredBox(360, 56),
-        fontSize: 32,
-        fontWeight: 500,
+        ...centeredBox(540, Math.round(tok.fontSize * tok.lineHeight)),
+        textStyle: "header2",
         color: "#0a0a0a",
         align: "left",
-        lineHeight: 1.2,
     };
 }
 
