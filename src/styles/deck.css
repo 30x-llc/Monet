@@ -2351,14 +2351,15 @@
    ============================================================ */
 .proto-rail {
     flex-shrink: 0;
-    border-top: 1px solid var(--chrome-border);
+    width: 196px;
+    border-right: 1px solid var(--chrome-border);
     background: var(--chrome-bg);
-    padding: 14px 16px 16px;
-    overflow-x: auto;
-    overflow-y: hidden;
+    padding: 14px 14px 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 .proto-rail::-webkit-scrollbar {
-    height: 6px;
+    width: 6px;
 }
 .proto-rail::-webkit-scrollbar-track {
     background: transparent;
@@ -2368,10 +2369,10 @@
     border-radius: 999px;
 }
 .proto-rail-inner {
-    display: inline-flex;
-    align-items: flex-end;
-    gap: 12px;
-    min-width: max-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
     padding-bottom: 4px;
 }
 
@@ -2484,9 +2485,6 @@
     cursor: pointer;
     display: grid;
     place-items: center;
-    align-self: flex-start;
-    margin-top: 0;
-    aspect-ratio: 16 / 9;
     transition: background 150ms, border-color 150ms, color 150ms;
 }
 .proto-rail-add:hover {

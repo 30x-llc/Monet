@@ -7,8 +7,6 @@ import { SlideStage } from "@/components/slides/slide-stage";
 import { SlideRendererClient as SlideRenderer } from "@/components/slides/slide-renderer-client";
 import { CanvasSlideView, CanvasCreationToolbar, newImageElement } from "@/components/slides/canvas-slide";
 import type { CanvasElement } from "@/lib/slide-types";
-import { migrateStructuredSlideToCanvas } from "@/lib/canvas-migrate";
-import { useMonetConfirm } from "./monet-modal";
 import { FORMATS } from "@/lib/slide-types";
 import { uploadImage } from "@/lib/upload-image";
 
@@ -76,7 +74,6 @@ export function SlideCanvas({
     const bgInputRef = useRef<HTMLInputElement>(null);
     const [bgUploading, setBgUploading] = useState(false);
     const [bgError, setBgError] = useState<string | null>(null);
-    const { confirm: monetConfirm, modalElement: confirmModal } = useMonetConfirm();
 
     const supportsBg = BG_CAPABLE_TYPES.has(slide.type);
     const currentBg = (slide as { backgroundImage?: string }).backgroundImage;
@@ -388,34 +385,6 @@ export function SlideCanvas({
                         <SlideRenderer slide={slide} clientLogoUrl={clientLogoUrl} pageIndex={slideIndex + 1} />
                     )}
                 </SlideStage>
-                {!isCanvas && onSlideChange ? (
-                    <button
-                        onClick={async () => {
-                            if (!stageWrapRef.current) return;
-                            const ok = await monetConfirm({
-                                title: "Liberar este slide",
-                                body: "Lo convierto a un canvas libre: el layout actual se mantiene pero cada bloque queda movible. Esta acción no se puede deshacer (puedes ⌘Z igual).",
-                                confirmLabel: "Liberar",
-                                cancelLabel: "Cancelar",
-                            });
-                            if (!ok) return;
-                            const canvas = migrateStructuredSlideToCanvas(stageWrapRef.current);
-                            onSlideChange(canvas as Slide);
-                        }}
-                        className="absolute top-4 right-4 z-20 h-8 px-3 rounded-full bg-white/95 shadow-lg ring-1 ring-black/5 text-[11px] font-medium text-[#0a0a0a] hover:bg-white hover:scale-[1.03] active:scale-95 transition flex items-center gap-1.5"
-                        title="Convertir este slide a canvas libre — diseña sin estructura"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path
-                                d="M2 3h8M2 6h8M2 9h5"
-                                stroke="currentColor"
-                                strokeWidth="1.4"
-                                strokeLinecap="round"
-                            />
-                        </svg>
-                        Liberar slide
-                    </button>
-                ) : null}
                 {isCanvas && onSlideChange ? (
                     <CanvasCreationToolbar
                         onAdd={(el: CanvasElement) => {
@@ -537,7 +506,6 @@ export function SlideCanvas({
                     ) : null}
                 </div>
             ) : null}
-            {confirmModal}
         </div>
     );
 }

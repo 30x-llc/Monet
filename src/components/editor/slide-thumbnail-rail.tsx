@@ -57,9 +57,10 @@ export function SlideThumbnailRail({
 
     const spec = FORMATS[format];
     const aspect = `${spec.width} / ${spec.height}`;
-    // Thumbnail target height; width derived from aspect ratio.
-    // Story (9:16) gets narrower thumbs, doc (A4) too. Most are 16:9.
-    const thumbHeight = format === "story-ig" || format === "doc" ? 88 : 72;
+    // Thumbnail target WIDTH (rail is now vertical); height follows aspect.
+    // Doc/story formats are taller, so we narrow them so a few rows fit.
+    const thumbWidth = format === "story-ig" ? 96 : format === "doc" ? 116 : 156;
+    const thumbHeight = thumbWidth / (spec.width / spec.height);
 
     const canDelete = !!onDelete && slides.length > 1;
 
@@ -134,7 +135,7 @@ export function SlideThumbnailRail({
                                 className="proto-rail-thumb-canvas"
                                 style={{
                                     aspectRatio: aspect,
-                                    height: thumbHeight,
+                                    width: thumbWidth,
                                 }}
                             >
                                 <SlideStage format={format} theme={theme}>
@@ -175,7 +176,7 @@ export function SlideThumbnailRail({
                         className="proto-rail-add"
                         aria-label="Duplicar slide actual"
                         title="Duplicar slide actual"
-                        style={{ height: thumbHeight }}
+                        style={{ width: thumbWidth, height: thumbHeight }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path
@@ -193,7 +194,7 @@ export function SlideThumbnailRail({
                         className="proto-rail-add"
                         aria-label="Agregar canvas vacío"
                         title="Canvas vacío — diseño libre"
-                        style={{ height: thumbHeight }}
+                        style={{ width: thumbWidth, height: thumbHeight }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />

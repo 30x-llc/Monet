@@ -14,7 +14,8 @@ import { CanvasPropertiesPanel } from "./canvas-properties-panel";
 import { CanvasLayersPanel } from "./canvas-layers-panel";
 import type { CanvasElement, CanvasSlide } from "@/lib/slide-types";
 import { EditorToolbar } from "./editor-toolbar";
-import { ChatPanel, type ChatMessage } from "./chat-panel";
+import { type ChatMessage } from "./chat-panel";
+import { ChatBar } from "./chat-bar";
 import { HandoffModal } from "./handoff-modal";
 import { SlideThumbnailRail } from "./slide-thumbnail-rail";
 import { PropertiesPanel } from "./properties-panel";
@@ -327,11 +328,30 @@ export function EditorLayout({
             />
 
             <div className="flex flex-1 min-h-0">
-                <ChatPanel
-                    messages={messages}
-                    onSend={handleSend}
-                    isLoading={isIterating}
-                    chromeTheme={chromeTheme}
+                <SlideThumbnailRail
+                    slides={deck.slides}
+                    selectedIndex={selectedIndex}
+                    onSelect={setSelectedIndex}
+                    onAdd={() => {
+                        const current = deck.slides[selectedIndex];
+                        if (!current) return;
+                        const cloned = JSON.parse(JSON.stringify(current));
+                        const newSlides = [...deck.slides];
+                        newSlides.splice(selectedIndex + 1, 0, cloned);
+                        onDeckChange({ ...deck, slides: newSlides });
+                        setSelectedIndex(selectedIndex + 1);
+                    }}
+                    onAddCanvas={() => {
+                        const newSlides = [...deck.slides];
+                        newSlides.splice(selectedIndex + 1, 0, newCanvasSlide());
+                        onDeckChange({ ...deck, slides: newSlides });
+                        setSelectedIndex(selectedIndex + 1);
+                    }}
+                    onDelete={handleDeleteSlide}
+                    onReorder={handleReorderSlide}
+                    clientLogoUrl={deck.clientLogoUrl}
+                    format={deck.format ?? "proposal"}
+                    theme={slideTheme}
                 />
                 {selectedSlide?.type === "canvas" ? (
                     <CanvasLayersPanel
@@ -345,6 +365,7 @@ export function EditorLayout({
                         }}
                     />
                 ) : null}
+                <div className="flex-1 min-w-0 relative flex flex-col">
                 <SlideCanvas
                     slide={selectedSlide}
                     slideIndex={selectedIndex}
@@ -379,6 +400,12 @@ export function EditorLayout({
                     canvasSelectedIds={canvasSelectedIds}
                     onCanvasSelectedIdsChange={setCanvasSelectedIds}
                 />
+                <ChatBar
+                    messages={messages}
+                    onSend={handleSend}
+                    isLoading={isIterating}
+                />
+                </div>
                 {selectedSlide?.type === "canvas" && canvasSelectedId && canvasSelectedIds.length <= 1 ? (
                     <CanvasPropertiesPanel
                         slide={selectedSlide as CanvasSlide}
@@ -460,32 +487,6 @@ export function EditorLayout({
                     />
                 ) : null}
             </div>
-
-            <SlideThumbnailRail
-                slides={deck.slides}
-                selectedIndex={selectedIndex}
-                onSelect={setSelectedIndex}
-                onAdd={() => {
-                    const current = deck.slides[selectedIndex];
-                    if (!current) return;
-                    const cloned = JSON.parse(JSON.stringify(current));
-                    const newSlides = [...deck.slides];
-                    newSlides.splice(selectedIndex + 1, 0, cloned);
-                    onDeckChange({ ...deck, slides: newSlides });
-                    setSelectedIndex(selectedIndex + 1);
-                }}
-                onAddCanvas={() => {
-                    const newSlides = [...deck.slides];
-                    newSlides.splice(selectedIndex + 1, 0, newCanvasSlide());
-                    onDeckChange({ ...deck, slides: newSlides });
-                    setSelectedIndex(selectedIndex + 1);
-                }}
-                onDelete={handleDeleteSlide}
-                onReorder={handleReorderSlide}
-                clientLogoUrl={deck.clientLogoUrl}
-                format={deck.format ?? "proposal"}
-                theme={slideTheme}
-            />
 
             {handoffOpen && (
                 <HandoffModal deck={deck} onClose={() => setHandoffOpen(false)} />
