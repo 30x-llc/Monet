@@ -106,8 +106,7 @@ export function migrateStructuredSlideToCanvas(stageRoot: HTMLElement): CanvasSl
             continue;
         const cs = window.getComputedStyle(el);
         const fontSizePx = parseFloat(cs.fontSize) || 16;
-        const fontSizeDesign = fontSizePx * screenToDesign;
-        const fontSizeCanvas = fontSizeDesign * designToCanvas;
+        const fontSizeCanvas = Math.max(8, Math.round(fontSizePx * screenToDesign * designToCanvas));
         const fontWeight = parseFontWeight(cs.fontWeight);
         const lineHeightPx = parseFloat(cs.lineHeight);
         const lineHeight =
@@ -121,13 +120,17 @@ export function migrateStructuredSlideToCanvas(stageRoot: HTMLElement): CanvasSl
             kind: "text",
             text,
             ...box,
-            // Snap to the closest Monet text style — the user's system
-            // says everything must live in those 8 tokens.
+            // Mark the closest Monet style for the Estilo picker, but keep
+            // the EXACT original font metrics as overrides so the migrated
+            // text fits in the captured box. Picking a style in the panel
+            // clears these overrides and snaps the element to the token.
             textStyle: inferTextStyle({ fontSize: fontSizeCanvas, fontWeight }),
-            color: cs.color,
-            align: align === "center" ? "center" : align === "right" ? "right" : "left",
+            fontSize: fontSizeCanvas,
+            fontWeight,
             lineHeight: round2(lineHeight),
             letterSpacing: round3(letterSpacing),
+            color: cs.color,
+            align: align === "center" ? "center" : align === "right" ? "right" : "left",
             fontStyle: cs.fontStyle === "italic" ? "italic" : "normal",
         };
         elements.push(txt);
