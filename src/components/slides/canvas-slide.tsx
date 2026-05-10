@@ -5,6 +5,7 @@ import {
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     type CanvasElement,
+    type CanvasFrameElement,
     type CanvasImageElement,
     type CanvasShapeElement,
     type CanvasSlide,
@@ -540,8 +541,10 @@ function ElementView({
                 />
             ) : el.kind === "image" ? (
                 <ImageElementBody el={el as CanvasImageElement} />
-            ) : (
+            ) : el.kind === "shape" ? (
                 <ShapeElementBody el={el as CanvasShapeElement} />
+            ) : (
+                <FrameElementBody el={el as CanvasFrameElement} />
             )}
             {selected && interactive && !editing ? (
                 <>
@@ -590,9 +593,14 @@ function TextElementBody({
 
     // Resolve textStyle token defaults, then let explicit overrides win.
     const tok = getTextStyle(el.textStyle);
+    const vAlign = el.verticalAlign ?? "top";
     const style: React.CSSProperties = {
         width: "100%",
         height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent:
+            vAlign === "middle" ? "center" : vAlign === "bottom" ? "flex-end" : "flex-start",
         fontSize: el.fontSize ?? tok.fontSize,
         fontWeight: el.fontWeight ?? tok.fontWeight,
         color: el.color ?? "#0a0a0a",
@@ -606,6 +614,11 @@ function TextElementBody({
         wordBreak: "break-word",
     };
 
+    // List rendering — when listStyle is set and we're NOT editing, render
+    // each line as a styled list item. Editing mode falls back to plain
+    // contenteditable on the raw text so the user can type freely.
+    const lines = el.text.split(/\r?\n/);
+    const showList = !editing && el.listStyle && lines.some((l) => l.trim().length > 0);
     return (
         <div
             ref={ref}
@@ -628,9 +641,162 @@ function TextElementBody({
                 onCommit(e.currentTarget.textContent ?? "");
             }}
         >
-            {el.text}
+            {showList ? (
+                <ListLines lines={lines} ordered={el.listStyle === "ordered"} />
+            ) : (
+                el.text
+            )}
         </div>
     );
+}
+
+function ListLines({ lines, ordered }: { lines: string[]; ordered: boolean }) {
+    let n = 0;
+    return (
+        <>
+            {lines.map((line, i) => {
+                const trimmed = line.trim();
+                if (trimmed.length === 0) {
+                    return (
+                        <span key={i}>
+                            <br />
+                        </span>
+                    );
+                }
+                n++;
+                const prefix = ordered ? `${n}. ` : "•  ";
+                return (
+                    <span key={i} style={{ display: "block" }}>
+                        <span style={{ opacity: 0.55, marginRight: "0.4em" }}>{prefix}</span>
+                        {line}
+                    </span>
+                );
+            })}
+        </>
+    );
+}
+
+function FrameElementBody({ el }: { el: CanvasFrameElement }) {
+    const justifyMap: Record<string, string> = {
+        start: "flex-start",
+        center: "center",
+        end: "flex-end",
+        between: "space-between",
+        around: "space-around",
+    };
+    const alignMap: Record<string, string> = {
+        start: "flex-start",
+        center: "center",
+        end: "flex-end",
+        stretch: "stretch",
+    };
+    return (
+        <div
+            style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: el.direction === "row" ? "row" : "column",
+                gap: el.gap ?? 16,
+                paddingTop: el.paddingTop ?? 24,
+                paddingRight: el.paddingRight ?? 24,
+                paddingBottom: el.paddingBottom ?? 24,
+                paddingLeft: el.paddingLeft ?? 24,
+                justifyContent: justifyMap[el.alignMain ?? "start"],
+                alignItems: alignMap[el.alignCross ?? "stretch"],
+                background: el.background ?? "transparent",
+                borderRadius: el.radius ?? 0,
+                overflow: "hidden",
+                boxSizing: "border-box",
+            }}
+        >
+            {(el.children ?? []).map((child) => (
+                <FrameChildView key={child.id} child={child} parentDirection={el.direction} />
+            ))}
+        </div>
+    );
+}
+
+/**
+ * A child of a frame is rendered with flex (no x/y). It still has w/h
+ * which we use as preferred sizes; the parent's align/justify decides
+ * the actual layout. For now frame children are display-only — clicking
+ * doesn't select them. Selection inside frames lands in a future iteration.
+ */
+function FrameChildView({ child, parentDirection }: { child: CanvasElement; parentDirection: "row" | "column" }) {
+    if (child.hidden) return null;
+    const baseStyle: React.CSSProperties = {
+        width: parentDirection === "column" ? "100%" : child.w,
+        height: parentDirection === "row" ? "100%" : child.h,
+        flex: "0 0 auto",
+        position: "relative",
+    };
+    if (child.kind === "text") {
+        const tok = getTextStyle(child.textStyle);
+        const vAlign = child.verticalAlign ?? "top";
+        const lines = child.text.split(/\r?\n/);
+        const showList = child.listStyle && lines.some((l) => l.trim().length > 0);
+        return (
+            <div
+                style={{
+                    ...baseStyle,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent:
+                        vAlign === "middle" ? "center" : vAlign === "bottom" ? "flex-end" : "flex-start",
+                    fontSize: child.fontSize ?? tok.fontSize,
+                    fontWeight: child.fontWeight ?? tok.fontWeight,
+                    color: child.color ?? "#0a0a0a",
+                    textAlign: child.align ?? "left",
+                    lineHeight: child.lineHeight ?? tok.lineHeight,
+                    letterSpacing: `${child.letterSpacing ?? tok.letterSpacing}em`,
+                    fontStyle: child.fontStyle ?? "normal",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                }}
+            >
+                {showList ? (
+                    <ListLines lines={lines} ordered={child.listStyle === "ordered"} />
+                ) : (
+                    child.text
+                )}
+            </div>
+        );
+    }
+    if (child.kind === "image") {
+        return (
+            <img
+                src={child.src}
+                alt={child.alt ?? ""}
+                draggable={false}
+                style={{
+                    ...baseStyle,
+                    objectFit: child.fit ?? "cover",
+                    borderRadius: child.radius ?? 0,
+                    userSelect: "none",
+                }}
+            />
+        );
+    }
+    if (child.kind === "shape") {
+        const fill = child.fill ?? "#E9FF7B";
+        const isEllipse = child.shape === "ellipse";
+        return (
+            <div
+                style={{
+                    ...baseStyle,
+                    background: fill,
+                    border:
+                        child.stroke && (child.strokeWidth ?? 0) > 0
+                            ? `${child.strokeWidth}px solid ${child.stroke}`
+                            : undefined,
+                    borderRadius: isEllipse ? "50%" : child.radius ?? 0,
+                }}
+            />
+        );
+    }
+    // Nested frame.
+    return <div style={baseStyle}><FrameElementBody el={child} /></div>;
 }
 
 function ShapeElementBody({ el }: { el: CanvasShapeElement }) {
@@ -839,6 +1005,38 @@ export function newEllipseElement(): CanvasShapeElement {
     };
 }
 
+export function newFrameElement(direction: "row" | "column" = "column"): CanvasFrameElement {
+    return {
+        id: newCanvasElementId(),
+        kind: "frame",
+        direction,
+        gap: 24,
+        paddingTop: 32,
+        paddingRight: 32,
+        paddingBottom: 32,
+        paddingLeft: 32,
+        alignMain: "start",
+        alignCross: "stretch",
+        background: "#f4f4f5",
+        radius: 16,
+        ...centeredBox(direction === "row" ? 800 : 480, direction === "row" ? 320 : 480),
+        children: [
+            {
+                id: newCanvasElementId(),
+                kind: "text",
+                text: "Frame",
+                x: 0,
+                y: 0,
+                w: 200,
+                h: 60,
+                textStyle: "header3",
+                color: "#0a0a0a",
+                align: "left",
+            },
+        ],
+    };
+}
+
 // ─── Floating creation toolbar ─────────────────────────────────────
 
 interface CanvasCreationToolbarProps {
@@ -863,6 +1061,18 @@ export function CanvasCreationToolbar({ onAdd, onUploadImage }: CanvasCreationTo
             <ToolbarButton label="Elipse" onClick={() => onAdd(newEllipseElement())}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <ellipse cx="8" cy="8" rx="5.5" ry="5.5" stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+            </ToolbarButton>
+            <ToolbarButton label="Frame vertical" onClick={() => onAdd(newFrameElement("column"))}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="3" y="2" width="10" height="12" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+            </ToolbarButton>
+            <ToolbarButton label="Frame horizontal" onClick={() => onAdd(newFrameElement("row"))}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="2" y="3" width="12" height="10" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M5 6v4M8 6v4M11 6v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
             </ToolbarButton>
             <span className="w-px h-5 bg-black/10 mx-0.5" />

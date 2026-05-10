@@ -487,6 +487,10 @@ export interface CanvasTextElement extends CanvasElementBase {
     letterSpacing?: number;
     /** "normal" | "italic". Defaults to "normal". */
     fontStyle?: "normal" | "italic";
+    /** Vertical alignment within the bounding box. Defaults to "top". */
+    verticalAlign?: "top" | "middle" | "bottom";
+    /** When set, wraps each line break of `text` as a list item. */
+    listStyle?: "bullet" | "ordered";
 }
 
 export interface CanvasImageElement extends CanvasElementBase {
@@ -513,7 +517,40 @@ export interface CanvasShapeElement extends CanvasElementBase {
     radius?: number;
 }
 
-export type CanvasElement = CanvasTextElement | CanvasImageElement | CanvasShapeElement;
+/**
+ * A Frame is an auto-layout container — its children are positioned by
+ * flex layout (direction, gap, padding, align) instead of by their own
+ * x/y. Conceptually equivalent to a Figma frame with auto-layout. The
+ * frame itself is positioned absolutely on the canvas; children inside
+ * are siblings rendered in flex order.
+ *
+ * Frames can nest (a frame's child can be another frame).
+ */
+export interface CanvasFrameElement extends CanvasElementBase {
+    kind: "frame";
+    direction: "row" | "column";
+    /** Gap between children, in canvas units. */
+    gap?: number;
+    paddingTop?: number;
+    paddingRight?: number;
+    paddingBottom?: number;
+    paddingLeft?: number;
+    /** Justify children along the main axis (direction). */
+    alignMain?: "start" | "center" | "end" | "between" | "around";
+    /** Align children along the cross axis. */
+    alignCross?: "start" | "center" | "end" | "stretch";
+    /** Frame surface fill. */
+    background?: string;
+    /** Border radius in canvas units. */
+    radius?: number;
+    children: CanvasElement[];
+}
+
+export type CanvasElement =
+    | CanvasTextElement
+    | CanvasImageElement
+    | CanvasShapeElement
+    | CanvasFrameElement;
 
 export interface CanvasSlide {
     type: "canvas";

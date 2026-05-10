@@ -2,6 +2,7 @@
 
 import type {
     CanvasElement,
+    CanvasFrameElement,
     CanvasImageElement,
     CanvasSlide,
     CanvasTextElement,
@@ -45,7 +46,13 @@ export function CanvasPropertiesPanel({
         <aside className="w-[280px] shrink-0 border-l border-[var(--chrome-border)] bg-[var(--chrome-bg)] flex flex-col text-[var(--chrome-fg)]">
             <header className="h-10 px-3 flex items-center justify-between border-b border-[var(--chrome-border)]">
                 <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--chrome-fg-3)]">
-                    {el.kind === "text" ? "Texto" : "Imagen"}
+                    {el.kind === "text"
+                        ? "Texto"
+                        : el.kind === "image"
+                          ? "Imagen"
+                          : el.kind === "shape"
+                            ? "Forma"
+                            : "Frame"}
                 </span>
                 <button
                     onClick={onClose}
@@ -59,9 +66,11 @@ export function CanvasPropertiesPanel({
             <div className="flex-1 overflow-y-auto">
                 {el.kind === "text" ? (
                     <TextSection el={el} onPatch={(p) => onPatch(el.id, p)} />
-                ) : (
+                ) : el.kind === "image" ? (
                     <ImageSection el={el as CanvasImageElement} onPatch={(p) => onPatch(el.id, p)} />
-                )}
+                ) : el.kind === "frame" ? (
+                    <FrameSection el={el as CanvasFrameElement} onPatch={(p) => onPatch(el.id, p)} />
+                ) : null}
                 <GeometrySection el={el} onPatch={(p) => onPatch(el.id, p)} />
             </div>
 
@@ -162,6 +171,34 @@ function TextSection({
                         onChange={(v) => onPatch({ fontStyle: v as "normal" | "italic" })}
                     />
                 </Row>
+                <Row label="V-Align">
+                    <ToggleGroup
+                        value={el.verticalAlign ?? "top"}
+                        options={[
+                            { value: "top", label: "⤒" },
+                            { value: "middle", label: "—" },
+                            { value: "bottom", label: "⤓" },
+                        ]}
+                        onChange={(v) =>
+                            onPatch({ verticalAlign: v as "top" | "middle" | "bottom" })
+                        }
+                    />
+                </Row>
+                <Row label="Lista">
+                    <ToggleGroup
+                        value={el.listStyle ?? "none"}
+                        options={[
+                            { value: "none", label: "—" },
+                            { value: "bullet", label: "•" },
+                            { value: "ordered", label: "1." },
+                        ]}
+                        onChange={(v) =>
+                            onPatch({
+                                listStyle: v === "none" ? undefined : (v as "bullet" | "ordered"),
+                            })
+                        }
+                    />
+                </Row>
             </Section>
 
             <Section title="Color y alineación">
@@ -180,6 +217,128 @@ function TextSection({
                             { value: "right", label: "⇥" },
                         ]}
                         onChange={(v) => onPatch({ align: v as "left" | "center" | "right" })}
+                    />
+                </Row>
+            </Section>
+        </>
+    );
+}
+
+function FrameSection({
+    el,
+    onPatch,
+}: {
+    el: CanvasFrameElement;
+    onPatch: (patch: Partial<CanvasFrameElement>) => void;
+}) {
+    return (
+        <>
+            <Section title="Auto-layout">
+                <Row label="Dirección">
+                    <ToggleGroup
+                        value={el.direction}
+                        options={[
+                            { value: "column", label: "↓" },
+                            { value: "row", label: "→" },
+                        ]}
+                        onChange={(v) => onPatch({ direction: v as "row" | "column" })}
+                    />
+                </Row>
+                <Row label="Gap">
+                    <NumberInput
+                        value={el.gap ?? 16}
+                        min={0}
+                        max={400}
+                        step={2}
+                        onChange={(v) => onPatch({ gap: v })}
+                    />
+                </Row>
+                <Row label="Padding ↑">
+                    <NumberInput
+                        value={el.paddingTop ?? 24}
+                        min={0}
+                        max={400}
+                        step={2}
+                        onChange={(v) => onPatch({ paddingTop: v })}
+                    />
+                </Row>
+                <Row label="Padding →">
+                    <NumberInput
+                        value={el.paddingRight ?? 24}
+                        min={0}
+                        max={400}
+                        step={2}
+                        onChange={(v) => onPatch({ paddingRight: v })}
+                    />
+                </Row>
+                <Row label="Padding ↓">
+                    <NumberInput
+                        value={el.paddingBottom ?? 24}
+                        min={0}
+                        max={400}
+                        step={2}
+                        onChange={(v) => onPatch({ paddingBottom: v })}
+                    />
+                </Row>
+                <Row label="Padding ←">
+                    <NumberInput
+                        value={el.paddingLeft ?? 24}
+                        min={0}
+                        max={400}
+                        step={2}
+                        onChange={(v) => onPatch({ paddingLeft: v })}
+                    />
+                </Row>
+            </Section>
+            <Section title="Alineación">
+                <Row label="Main">
+                    <SelectInput
+                        value={el.alignMain ?? "start"}
+                        options={[
+                            { value: "start", label: "Inicio" },
+                            { value: "center", label: "Centro" },
+                            { value: "end", label: "Fin" },
+                            { value: "between", label: "Distribuir" },
+                            { value: "around", label: "Alrededor" },
+                        ]}
+                        onChange={(v) =>
+                            onPatch({
+                                alignMain: v as "start" | "center" | "end" | "between" | "around",
+                            })
+                        }
+                    />
+                </Row>
+                <Row label="Cross">
+                    <SelectInput
+                        value={el.alignCross ?? "stretch"}
+                        options={[
+                            { value: "start", label: "Inicio" },
+                            { value: "center", label: "Centro" },
+                            { value: "end", label: "Fin" },
+                            { value: "stretch", label: "Estirar" },
+                        ]}
+                        onChange={(v) =>
+                            onPatch({
+                                alignCross: v as "start" | "center" | "end" | "stretch",
+                            })
+                        }
+                    />
+                </Row>
+            </Section>
+            <Section title="Apariencia">
+                <Row label="Fondo">
+                    <ColorInput
+                        value={el.background ?? "#f4f4f5"}
+                        onChange={(v) => onPatch({ background: v })}
+                    />
+                </Row>
+                <Row label="Radio">
+                    <NumberInput
+                        value={el.radius ?? 0}
+                        min={0}
+                        max={400}
+                        step={1}
+                        onChange={(v) => onPatch({ radius: v })}
                     />
                 </Row>
             </Section>

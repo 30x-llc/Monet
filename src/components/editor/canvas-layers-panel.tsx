@@ -142,6 +142,9 @@ function labelFor(el: CanvasElement): string {
         return t.length > 0 ? t.slice(0, 32) : "Texto";
     }
     if (el.kind === "image") return "Imagen";
+    if (el.kind === "frame") {
+        return el.direction === "row" ? "Frame ↔" : "Frame ↕";
+    }
     return el.shape === "ellipse" ? "Elipse" : "Rectángulo";
 }
 
@@ -160,6 +163,13 @@ function ElementKindIcon({ el }: { el: CanvasElement }) {
                 <rect x="1.5" y="2.5" width="9" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" />
                 <circle cx="4.5" cy="5" r="0.8" fill="currentColor" />
                 <path d="M2 8.5l2.5-2 2 1.5L9 6.5l1.5 1.5" stroke="currentColor" strokeWidth="1.2" fill="none" />
+            </svg>
+        );
+    }
+    if (el.kind === "frame") {
+        return (
+            <svg viewBox="0 0 12 12" className={cn} fill="none">
+                <rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.5 1" />
             </svg>
         );
     }
