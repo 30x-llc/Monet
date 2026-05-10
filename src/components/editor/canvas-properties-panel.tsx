@@ -41,56 +41,91 @@ export function CanvasPropertiesPanel({
     onClose,
 }: CanvasPropertiesPanelProps) {
     const el = selectedId ? slide.elements.find((e) => e.id === selectedId) : null;
-    if (!el) return null;
     return (
         <aside className="w-[280px] shrink-0 border-l border-[var(--chrome-border)] bg-[var(--chrome-bg)] flex flex-col text-[var(--chrome-fg)]">
             <header className="h-10 px-3 flex items-center justify-between border-b border-[var(--chrome-border)]">
                 <span className="text-[11px] font-semibold tracking-[0.06em] uppercase text-[var(--chrome-fg-3)]">
-                    {el.kind === "text"
-                        ? "Texto"
-                        : el.kind === "image"
-                          ? "Imagen"
-                          : el.kind === "shape"
-                            ? "Forma"
-                            : "Frame"}
+                    {el
+                        ? el.kind === "text"
+                            ? "Texto"
+                            : el.kind === "image"
+                              ? "Imagen"
+                              : el.kind === "shape"
+                                ? "Forma"
+                                : "Frame"
+                        : "Canvas"}
                 </span>
-                <button
-                    onClick={onClose}
-                    className="text-[var(--chrome-fg-5)] hover:text-[var(--chrome-fg)] text-[11px]"
-                    aria-label="Cerrar"
-                >
-                    ✕
-                </button>
+                {el ? (
+                    <button
+                        onClick={onClose}
+                        className="text-[var(--chrome-fg-5)] hover:text-[var(--chrome-fg)] text-[11px]"
+                        aria-label="Cerrar"
+                    >
+                        ✕
+                    </button>
+                ) : null}
             </header>
 
             <div className="flex-1 overflow-y-auto">
-                {el.kind === "text" ? (
-                    <TextSection el={el} onPatch={(p) => onPatch(el.id, p)} />
-                ) : el.kind === "image" ? (
-                    <ImageSection el={el as CanvasImageElement} onPatch={(p) => onPatch(el.id, p)} />
-                ) : el.kind === "frame" ? (
-                    <FrameSection el={el as CanvasFrameElement} onPatch={(p) => onPatch(el.id, p)} />
-                ) : null}
-                <GeometrySection el={el} onPatch={(p) => onPatch(el.id, p)} />
+                {el ? (
+                    <>
+                        {el.kind === "text" ? (
+                            <TextSection el={el} onPatch={(p) => onPatch(el.id, p)} />
+                        ) : el.kind === "image" ? (
+                            <ImageSection el={el as CanvasImageElement} onPatch={(p) => onPatch(el.id, p)} />
+                        ) : el.kind === "frame" ? (
+                            <FrameSection el={el as CanvasFrameElement} onPatch={(p) => onPatch(el.id, p)} />
+                        ) : null}
+                        <GeometrySection el={el} onPatch={(p) => onPatch(el.id, p)} />
+                    </>
+                ) : (
+                    <SlideEmptySection slide={slide} count={slide.elements.length} />
+                )}
             </div>
 
-            <footer className="border-t border-[var(--chrome-border)] p-2 flex gap-1">
-                <button
-                    onClick={() => onDuplicate(el.id)}
-                    className="flex-1 h-8 rounded text-[11px] font-medium bg-[var(--chrome-hover-bg-soft)] hover:bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)]"
-                    title="Duplicar (⌘D)"
-                >
-                    Duplicar
-                </button>
-                <button
-                    onClick={() => onDelete(el.id)}
-                    className="flex-1 h-8 rounded text-[11px] font-medium bg-red-500/10 hover:bg-red-500/20 text-red-300"
-                    title="Borrar (⌫)"
-                >
-                    Borrar
-                </button>
-            </footer>
+            {el ? (
+                <footer className="border-t border-[var(--chrome-border)] p-2 flex gap-1">
+                    <button
+                        onClick={() => onDuplicate(el.id)}
+                        className="flex-1 h-8 rounded text-[11px] font-medium bg-[var(--chrome-hover-bg-soft)] hover:bg-[var(--chrome-hover-bg)] text-[var(--chrome-fg)]"
+                        title="Duplicar (⌘D)"
+                    >
+                        Duplicar
+                    </button>
+                    <button
+                        onClick={() => onDelete(el.id)}
+                        className="flex-1 h-8 rounded text-[11px] font-medium bg-red-500/10 hover:bg-red-500/20 text-red-300"
+                        title="Borrar (⌫)"
+                    >
+                        Borrar
+                    </button>
+                </footer>
+            ) : null}
         </aside>
+    );
+}
+
+function SlideEmptySection({ slide, count }: { slide: CanvasSlide; count: number }) {
+    return (
+        <div className="px-3 py-4 flex flex-col gap-3">
+            <div className="text-[11px] text-[var(--chrome-fg-3)] tracking-[-0.005em] leading-[1.45]">
+                Selecciona un elemento del canvas para editarlo, o usa la barra de inserción para agregar contenido.
+            </div>
+            <div className="border-t border-[var(--chrome-border)] pt-3 flex flex-col gap-2">
+                <div className="text-[10px] font-semibold tracking-[0.08em] uppercase text-[var(--chrome-fg-5)]">
+                    Slide
+                </div>
+                <Row label="Elementos">
+                    <span className="text-[12px] text-[var(--chrome-fg)] tabular-nums">{count}</span>
+                </Row>
+                <Row label="Fondo">
+                    <span
+                        className="inline-block w-7 h-7 rounded border border-[var(--chrome-border)]"
+                        style={{ background: slide.background ?? "#ffffff" }}
+                    />
+                </Row>
+            </div>
+        </div>
     );
 }
 

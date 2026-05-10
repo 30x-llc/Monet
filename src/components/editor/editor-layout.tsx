@@ -406,7 +406,7 @@ export function EditorLayout({
                     isLoading={isIterating}
                 />
                 </div>
-                {selectedSlide?.type === "canvas" && canvasSelectedId && canvasSelectedIds.length <= 1 ? (
+                {selectedSlide?.type === "canvas" && canvasSelectedIds.length <= 1 ? (
                     <CanvasPropertiesPanel
                         slide={selectedSlide as CanvasSlide}
                         selectedId={canvasSelectedId}
@@ -455,7 +455,7 @@ export function EditorLayout({
                         onClose={() => setCanvasSelectedId(null)}
                     />
                 ) : null}
-                {selectedElementPath && selectedSlide?.type !== "canvas" ? (
+                {selectedSlide?.type !== "canvas" ? (
                     <PropertiesPanel
                         slide={selectedSlide}
                         slideIndex={selectedIndex}
