@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monet
 
-## Getting Started
+> AI designer del equipo de 30X. Genera, edita y exporta propuestas
+> comerciales con un canvas estilo Figma.
 
-First, run the development server:
+Vive en **[monet.30x.com](https://monet.30x.com)** (alias activo:
+[design.30x.com](https://design.30x.com)).
+
+---
+
+## Qué hace
+
+- **Genera** propuestas comerciales de 30X a partir de un briefing
+  corto, usando el sistema de diseño 30X (typography, colors, mentor
+  database, logos curados).
+- **Edita** las slides en un canvas estilo Figma — selección de
+  elementos, drag/resize, snap a guías, multi-select, properties
+  panel, layers panel, undo/redo, atajos de teclado.
+- **Exporta** a PDF (alta fidelidad, web-renderer) y a Canva
+  (templates + autofill).
+
+## Stack
+
+- Next.js (App Router, RSC, Cache Components)
+- React 19
+- TypeScript
+- Tailwind
+- Neon Postgres (decks + identity)
+- Vercel Blob (image uploads)
+- Anthropic Claude (generation + iteration)
+- Perplexity / Exa (research)
+- Canva Connect API (export pipeline)
+
+## Local dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local  # fill in keys
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App corre en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Auto-deploy a Vercel en cada `push` a `main`. Producción:
+[monet.30x.com](https://monet.30x.com).
 
-## Learn More
+## Estructura
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app` — Next.js App Router (pages + API routes)
+- `src/components/editor` — chrome del editor (toolbar, rail, panels,
+  chat bar, properties panel)
+- `src/components/slides` — renderers de slides (structured + canvas)
+- `src/lib` — auth, db, exports, prompts, text styles, AI clients
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Brand
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Wordmark: **Monet** con la "t" en lima (`#E9FF7B`) — visual rhyme
+  con la X de 30X
+- Tipografía canónica: Inter, 8 estilos (Title 96 / Header 1-3 /
+  Body 1-3 / Note 20) — ver `src/lib/text-styles.ts`
+- El mark "30X" que aparece DENTRO de los slides es la marca de
+  partnership para los decks comerciales del cliente — sigue siendo
+  30X. Monet es la herramienta; los decks son de 30X.
 
-## Deploy on Vercel
+## Integración con 30X Hub
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Monet acepta identidad del usuario vía headers:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+x-30x-user-email: pepito@30x.com
+x-30x-user-name: Pepito Pérez
+```
+
+Cuando el Hub embeba a Monet, debe pasar estos headers. En acceso
+directo (sin Hub), Monet usa la identidad "anonymous@30x.com" como
+fallback.
