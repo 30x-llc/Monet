@@ -59,18 +59,10 @@ interface SlashCommandPayload {
 
 async function handleSlashCommand(p: SlashCommandPayload): Promise<void> {
     console.log("[slack/commands] dispatching", p);
-    const { postMessage, openDM } = await import("@/lib/slack/client");
-    // For now, DM the user a placeholder confirming receipt. The real
-    // generation pipeline (research + generate + render + approval flow)
-    // lands in the next slice.
-    try {
-        const dm = await openDM(p.userId);
-        await postMessage({
-            channel: dm,
-            text:
-                `Recibí tu solicitud:\n>${p.text}\n\nEstoy en modo de configuración. La generación real se activa cuando estén cableados los prompts y el catálogo. Por ahora puedes editar manualmente en https://monet.30x.com.`,
-        });
-    } catch (err) {
-        console.error("[slack/commands] DM failed", err);
-    }
+    const { orchestrateProposalFromSlack } = await import("@/lib/slack/orchestrator");
+    await orchestrateProposalFromSlack({
+        rawText: p.text,
+        requester: { userId: p.userId },
+        originChannel: p.channelId,
+    });
 }

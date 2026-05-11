@@ -84,31 +84,48 @@ async function handleEvent(event: SlackEvent): Promise<void> {
 }
 
 async function handleAppMention(event: SlackEvent): Promise<void> {
-    // For now, log + acknowledge. Generation pipeline lands in the next pass.
-    console.log("[slack/events] app_mention", {
-        user: event.user,
-        channel: event.channel,
-        text: event.text,
-    });
-    const { postMessage } = await import("@/lib/slack/client");
-    await postMessage({
-        channel: event.channel!,
-        thread_ts: event.thread_ts ?? event.ts,
-        text:
-            "👋 Monet recibido. Estoy en modo de configuración inicial — la generación de propuestas se activa cuando el equipo termine de cablear los prompts. Mientras tanto, escribe `/monet` para más info.",
+    console.log("[slack/events] app_mention", event);
+    if (!event.user || !event.channel) return;
+    // Strip the @Monet token from the text. Slack sends "<@U…> propuesta…".
+    const text = (event.text ?? "").replace(/^\s*<@[A-Z0-9]+>\s*/i, "").trim();
+    if (!text) {
+        const { postMessage } = await import("@/lib/slack/client");
+        await postMessage({
+            channel: event.channel,
+            thread_ts: event.thread_ts ?? event.ts,
+            text:
+                "👋 Pídeme una propuesta: `@Monet propuesta para Bavaria, 4 sedes, AI Sales`.",
+        });
+        return;
+    }
+    const { orchestrateProposalFromSlack } = await import("@/lib/slack/orchestrator");
+    await orchestrateProposalFromSlack({
+        rawText: text,
+        requester: { userId: event.user },
+        originChannel: event.channel,
+        originThreadTs: event.thread_ts ?? event.ts,
     });
 }
 
 async function handleDirectMessage(event: SlackEvent): Promise<void> {
-    console.log("[slack/events] message.im", {
-        user: event.user,
-        channel: event.channel,
-        text: event.text,
-    });
-    const { postMessage } = await import("@/lib/slack/client");
-    await postMessage({
-        channel: event.channel!,
-        text:
-            "Hola 👋 Soy Monet, el AI designer de 30X. Pídeme una propuesta con `/monet propuesta para Bavaria, 4 sedes, AI Sales` o menciona @Monet en cualquier canal.",
+    console.log("[slack/events] message.im", event);
+    if (!event.user || !event.channel || !event.text) return;
+    const text = event.text.trim();
+    // Short greetings get a quick welcome.
+    if (/^(hola|hi|hey|hello|holi|que tal|qué tal)[!.?]*$/i.test(text)) {
+        const { postMessage } = await import("@/lib/slack/client");
+        await postMessage({
+            channel: event.channel,
+            text:
+                "Hola 👋 Soy Monet, el AI designer de 30X. Pídeme una propuesta con `/monet propuesta para Bavaria, 4 sedes, AI Sales` o menciona @Monet en cualquier canal.",
+        });
+        return;
+    }
+    // Anything else: treat as an intake request.
+    const { orchestrateProposalFromSlack } = await import("@/lib/slack/orchestrator");
+    await orchestrateProposalFromSlack({
+        rawText: text,
+        requester: { userId: event.user },
+        originChannel: event.channel,
     });
 }

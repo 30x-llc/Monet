@@ -62,7 +62,71 @@ async function handleAction(
     action: { action_id: string; value?: string },
     payload: InteractivityPayload,
 ): Promise<void> {
-    console.log("[slack/interactivity] action", action.action_id, action.value);
-    // Wire up Send / Edit / Reject in the next slice, once the generation
-    // pipeline produces decks worth approving.
+    console.log("[slack/interactivity] action", action.action_id);
+    let parsed: { action: string; deckId?: string; channel?: string; threadTs?: string } = { action: "" };
+    try {
+        parsed = JSON.parse(action.value ?? "{}");
+    } catch {
+        // No payload — best-effort handle by action_id alone.
+    }
+
+    const { postMessage, updateMessage } = await import("@/lib/slack/client");
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com";
+    const dmChannel = payload.channel?.id;
+    const dmTs = payload.message?.ts;
+
+    if (action.action_id === "monet_send") {
+        // Post the deck to the original channel where the user pinged us.
+        if (!parsed.deckId || !parsed.channel) return;
+        const deckUrl = `${origin}/?open=${parsed.deckId}`;
+        try {
+            await postMessage({
+                channel: parsed.channel,
+                thread_ts: parsed.threadTs,
+                text: `📎 Propuesta lista: ${deckUrl}`,
+            });
+            if (dmChannel && dmTs) {
+                await updateMessage({
+                    channel: dmChannel,
+                    ts: dmTs,
+                    text: `✅ Enviado al canal · <${deckUrl}|Abrir propuesta>`,
+                });
+            }
+        } catch (err) {
+            console.error("[slack/interactivity] send failed", err);
+        }
+        return;
+    }
+
+    if (action.action_id === "monet_edit") {
+        // The button itself has a `url` so Slack already opened the editor
+        // in the user's browser. We acknowledge by collapsing the DM.
+        if (dmChannel && dmTs && parsed.deckId) {
+            try {
+                await updateMessage({
+                    channel: dmChannel,
+                    ts: dmTs,
+                    text: `✏️ Abriste el editor — <${origin}/?open=${parsed.deckId}|Volver al deck>. Cuando guardes los cambios, vuelve a este DM y dame "/monet send ${parsed.deckId}" si quieres mandarlo al canal.`,
+                });
+            } catch (err) {
+                console.error("[slack/interactivity] edit ack failed", err);
+            }
+        }
+        return;
+    }
+
+    if (action.action_id === "monet_reject") {
+        if (dmChannel && dmTs) {
+            try {
+                await updateMessage({
+                    channel: dmChannel,
+                    ts: dmTs,
+                    text: `🗑️ Draft rechazado. Pídeme otra propuesta cuando quieras.`,
+                });
+            } catch (err) {
+                console.error("[slack/interactivity] reject ack failed", err);
+            }
+        }
+        return;
+    }
 }
