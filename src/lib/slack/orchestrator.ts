@@ -15,6 +15,7 @@ import { openDM, postMessage, updateMessage } from "@/lib/slack/client";
 import { parseSlackIntake, describeIntake } from "@/lib/slack/intake";
 import { generatePlantillaMonetVariables, preferResearchAssets } from "@/lib/proposals/generate-variables";
 import type { PlantillaMonetVariables } from "@/lib/proposals/plantilla-monet";
+import { findHeroCandidates, type HeroCandidate } from "@/lib/proposals/hero-candidates";
 
 const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com";
 
@@ -88,6 +89,13 @@ export async function orchestrateProposalFromSlack(
         const cachedClient = intake.clientName?.toLowerCase().trim();
         const known = cachedClient ? KNOWN_PROPOSALS[cachedClient] : null;
         if (known) {
+            // Even for cached clients, surface a hero picker so the
+            // salesperson can swap the cover photo if Monet's pick
+            // doesn't fit the meeting. Best-effort: no candidates ≠ fail.
+            const knownCandidates = await tryFindHeroCandidates(
+                intake.clientName,
+                undefined,
+            );
             await updateMessage({
                 channel: dmChannel,
                 ts: initial.ts,
@@ -95,6 +103,7 @@ export async function orchestrateProposalFromSlack(
                 blocks: buildKnownProposalBlocks({
                     intake,
                     known,
+                    heroCandidates: knownCandidates,
                     requester: input.requester,
                     originChannel: input.originChannel,
                     originThreadTs: input.originThreadTs,
@@ -119,14 +128,14 @@ export async function orchestrateProposalFromSlack(
             }
         }
 
-        // 3. Run two generators in parallel:
-        //    (a) Monet-native deck via /api/generate — the current fallback
-        //        that always works.
+        // 3. Run three generators in parallel:
+        //    (a) Monet-native deck via /api/generate — always-works fallback.
         //    (b) Plantilla Monet variables for the Canva runtime — fills
         //        the 24 variable slots in the Aeroméxico-derived template.
-        //        Best-effort: if it fails, we still ship the Monet draft.
+        //    (c) Hero image candidates — 3-5 cover photo options the
+        //        salesperson picks from in the DM.
         const program = intake.programs[0]?.slug;
-        const [generatedDeck, plantillaVariables] = await Promise.all([
+        const [generatedDeck, plantillaVariables, heroCandidates] = await Promise.all([
             runGenerate({
                 research,
                 program,
@@ -139,6 +148,7 @@ export async function orchestrateProposalFromSlack(
                 hints: intake.hints,
                 research,
             }),
+            tryFindHeroCandidates(intake.clientName, research),
         ]);
         if (!generatedDeck) {
             throw new Error("La generación devolvió un deck vacío");
@@ -166,6 +176,7 @@ export async function orchestrateProposalFromSlack(
             deckId,
             deckUrl,
             plantillaVariables,
+            heroCandidates,
             requester: input.requester,
             originChannel: input.originChannel,
             originThreadTs: input.originThreadTs,
@@ -254,6 +265,27 @@ async function runGenerate(input: GenerateInput): Promise<Deck | null> {
 }
 
 /**
+ * Best-effort wrapper around the hero-candidates finder. Returns at
+ * most 5 candidates; on failure or empty result returns [].
+ */
+async function tryFindHeroCandidates(
+    clientName: string | null,
+    research?: ResearchResult,
+): Promise<HeroCandidate[]> {
+    if (!clientName) return [];
+    try {
+        return await findHeroCandidates({
+            clientName,
+            research,
+            limit: 5,
+        });
+    } catch (err) {
+        console.error("[slack/orchestrator] hero candidates failed", err);
+        return [];
+    }
+}
+
+/**
  * Best-effort wrapper around the Plantilla Monet variable generator.
  * Swallows errors and missing client name so the parent Promise.all
  * never short-circuits the deck generation path.
@@ -289,9 +321,60 @@ interface PreviewArgs {
     deckId: string;
     deckUrl: string;
     plantillaVariables: PlantillaMonetVariables | null;
+    heroCandidates: HeroCandidate[];
     requester: SlackRequester;
     originChannel: string;
     originThreadTs?: string;
+}
+
+/**
+ * Build a hero-picker section: thumbnails for each candidate stacked
+ * vertically (Slack Block Kit has no horizontal grid), plus an actions
+ * row of "Usar 1", "Usar 2", … buttons. Click → interactivity handler
+ * `monet_pick_hero` captures the choice.
+ */
+function buildHeroPickerBlocks(
+    candidates: HeroCandidate[],
+    deckId: string,
+): unknown[] {
+    if (candidates.length === 0) return [];
+    const blocks: unknown[] = [
+        {
+            type: "section",
+            text: {
+                type: "mrkdwn",
+                text:
+                    "*🖼️ Escoge la foto de portada*\n_Monet sugiere estas, ordenadas por mejor match. Click para confirmar._",
+            },
+        },
+    ];
+    for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i];
+        blocks.push({
+            type: "image",
+            image_url: c.url,
+            alt_text: c.caption ?? `Candidato ${i + 1}: ${c.source}`,
+            title: { type: "plain_text", text: `${i + 1}. ${c.source}` },
+        });
+    }
+    const buttons = candidates.slice(0, 5).map((c, i) => ({
+        type: "button",
+        action_id: `monet_pick_hero_${i + 1}`,
+        text: { type: "plain_text", text: `Usar ${i + 1}` },
+        value: JSON.stringify({
+            action: "pick_hero",
+            deckId,
+            heroUrl: c.url,
+            heroSource: c.source,
+            index: i + 1,
+        }),
+    }));
+    blocks.push({
+        type: "actions",
+        block_id: "monet-hero-picker",
+        elements: buttons,
+    });
+    return blocks;
 }
 
 /**
@@ -302,6 +385,7 @@ interface PreviewArgs {
 function buildKnownProposalBlocks(args: {
     intake: ReturnType<typeof parseSlackIntake>;
     known: { viewUrl: string; designId: string; title: string };
+    heroCandidates: HeroCandidate[];
     requester: SlackRequester;
     originChannel: string;
     originThreadTs?: string;
@@ -314,7 +398,7 @@ function buildKnownProposalBlocks(args: {
         channel: args.originChannel,
         threadTs: args.originThreadTs,
     });
-    return [
+    const blocks: unknown[] = [
         {
             type: "section",
             text: {
@@ -322,6 +406,9 @@ function buildKnownProposalBlocks(args: {
                 text: `*${args.known.title}*\n7 slides — generadas vía Plantilla Monet con identidad de marca completa.\n\n<${args.known.viewUrl}|🖼️ Ver en Canva> · <${editUrl}|✏️ Editar> · _Exporta PDF directo desde Canva con Share → Download → PDF Standard._`,
             },
         },
+    ];
+    blocks.push(...buildHeroPickerBlocks(args.heroCandidates, args.known.designId));
+    blocks.push(
         {
             type: "actions",
             block_id: "monet-known-approve",
@@ -342,7 +429,8 @@ function buildKnownProposalBlocks(args: {
                 },
             ],
         },
-    ];
+    );
+    return blocks;
 }
 
 function buildPreviewBlocks(args: PreviewArgs): unknown[] {
@@ -377,6 +465,10 @@ function buildPreviewBlocks(args: PreviewArgs): unknown[] {
             text: { type: "mrkdwn", text: "```\n" + slideSummary + "\n```" },
         },
     ];
+
+    // Hero picker — grid of cover photo candidates for the salesperson
+    // to choose from. Empty array → no picker shown.
+    blocks.push(...buildHeroPickerBlocks(args.heroCandidates, args.deckId));
 
     // If Plantilla Monet variables were generated successfully, append
     // a section describing what the Canva-bound proposal would look

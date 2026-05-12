@@ -115,6 +115,28 @@ async function handleAction(
         return;
     }
 
+    // Hero picker — action_id is `monet_pick_hero_{1..5}`.
+    if (action.action_id.startsWith("monet_pick_hero_")) {
+        let pick: { deckId?: string; heroUrl?: string; heroSource?: string; index?: number } = {};
+        try {
+            pick = JSON.parse(action.value ?? "{}");
+        } catch {
+            /* ignore */
+        }
+        if (dmChannel && dmTs && pick.heroUrl) {
+            try {
+                await updateMessage({
+                    channel: dmChannel,
+                    ts: dmTs,
+                    text: `🖼️ Foto de portada #${pick.index ?? "?"} confirmada · ${pick.heroSource ?? ""}\n\nMonet aplicará esta foto al hero cuando el deck se edite en Canva. Por ahora, abre el design en Canva y reemplaza la portada manualmente con: ${pick.heroUrl}`,
+                });
+            } catch (err) {
+                console.error("[slack/interactivity] pick_hero ack failed", err);
+            }
+        }
+        return;
+    }
+
     if (action.action_id === "monet_reject") {
         if (dmChannel && dmTs) {
             try {
