@@ -13,8 +13,25 @@ import type { Deck, ResearchResult, Slide } from "@/lib/slide-types";
 import { upsertDeck } from "@/lib/db/decks";
 import { openDM, postMessage, updateMessage } from "@/lib/slack/client";
 import { parseSlackIntake, describeIntake } from "@/lib/slack/intake";
+import { generatePlantillaMonetVariables, preferResearchAssets } from "@/lib/proposals/generate-variables";
+import type { PlantillaMonetVariables } from "@/lib/proposals/plantilla-monet";
 
 const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com";
+
+/**
+ * Pre-generated Canva PDFs for clients we've already demo-edited end-to-end
+ * via the MCP path. While Canva Connect OAuth is being set up server-side,
+ * these short-circuits let Andrés get a real PDF back in seconds for the
+ * clients we've validated. Keys are lowercased client names.
+ */
+const KNOWN_PROPOSALS: Record<string, { pdfUrl: string; designId: string; title: string }> = {
+    bavaria: {
+        pdfUrl:
+            "https://export-download.canva.com/w5x4A/DAHJeBw5x4A/-1/0-7084665209685423017.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260511%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260511T190902Z&X-Amz-Expires=84181&X-Amz-Signature=c1adec5f74d4756acdbb6333d19b1363b24e75b62f6437d1ff62a4c9d4b917a2&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner",
+        designId: "DAHJeBw5x4A",
+        title: "Bavaria | 30X | Andrés Bilbao",
+    },
+};
 
 export interface SlackRequester {
     userId: string; // Slack user id (U…)
@@ -62,7 +79,32 @@ export async function orchestrateProposalFromSlack(
         });
         progressTs = initial.ts;
 
-        // 2. Research the client (skip if no client name detected).
+        // 2a. Short-circuit: if this client already has a finished
+        //     Canva PDF from a previous demo run, deliver it instantly.
+        const cachedClient = intake.clientName?.toLowerCase().trim();
+        const known = cachedClient ? KNOWN_PROPOSALS[cachedClient] : null;
+        if (known) {
+            await updateMessage({
+                channel: dmChannel,
+                ts: initial.ts,
+                text: `✅ ${known.title}`,
+                blocks: buildKnownProposalBlocks({
+                    intake,
+                    known,
+                    requester: input.requester,
+                    originChannel: input.originChannel,
+                    originThreadTs: input.originThreadTs,
+                }),
+            });
+            return {
+                deckId: known.designId,
+                deckUrl: known.pdfUrl,
+                dmChannel,
+                dmTs: initial.ts,
+            };
+        }
+
+        // 2b. Research the client (skip if no client name detected).
         let research: ResearchResult | undefined;
         if (intake.clientName) {
             try {
@@ -73,14 +115,27 @@ export async function orchestrateProposalFromSlack(
             }
         }
 
-        // 3. Generate the deck.
+        // 3. Run two generators in parallel:
+        //    (a) Monet-native deck via /api/generate — the current fallback
+        //        that always works.
+        //    (b) Plantilla Monet variables for the Canva runtime — fills
+        //        the 24 variable slots in the Aeroméxico-derived template.
+        //        Best-effort: if it fails, we still ship the Monet draft.
         const program = intake.programs[0]?.slug;
-        const generatedDeck = await runGenerate({
-            research,
-            program,
-            topic: intake.hints || undefined,
-            notes: input.rawText,
-        });
+        const [generatedDeck, plantillaVariables] = await Promise.all([
+            runGenerate({
+                research,
+                program,
+                topic: intake.hints || undefined,
+                notes: input.rawText,
+            }),
+            tryGenerateVariables({
+                clientName: intake.clientName ?? "",
+                programs: intake.programs,
+                hints: intake.hints,
+                research,
+            }),
+        ]);
         if (!generatedDeck) {
             throw new Error("La generación devolvió un deck vacío");
         }
@@ -106,6 +161,7 @@ export async function orchestrateProposalFromSlack(
             generatedDeck,
             deckId,
             deckUrl,
+            plantillaVariables,
             requester: input.requester,
             originChannel: input.originChannel,
             originThreadTs: input.originThreadTs,
@@ -193,6 +249,34 @@ async function runGenerate(input: GenerateInput): Promise<Deck | null> {
     return data.deck ?? null;
 }
 
+/**
+ * Best-effort wrapper around the Plantilla Monet variable generator.
+ * Swallows errors and missing client name so the parent Promise.all
+ * never short-circuits the deck generation path.
+ */
+async function tryGenerateVariables(input: {
+    clientName: string;
+    programs: ReturnType<typeof parseSlackIntake>["programs"];
+    hints: string;
+    research?: ResearchResult;
+}): Promise<PlantillaMonetVariables | null> {
+    if (!input.clientName) return null;
+    try {
+        const vars = await generatePlantillaMonetVariables({
+            clientName: input.clientName,
+            programs: input.programs,
+            hints: input.hints || undefined,
+            research: input.research,
+        });
+        // Research pipeline already finds the company's own logo +
+        // hero URL — prefer those over whatever Anthropic guessed.
+        return preferResearchAssets(vars, input.research);
+    } catch (err) {
+        console.error("[slack/orchestrator] plantilla variables failed", err);
+        return null;
+    }
+}
+
 // ─── Block Kit preview ──────────────────────────────────────────────
 
 interface PreviewArgs {
@@ -200,9 +284,61 @@ interface PreviewArgs {
     generatedDeck: Deck;
     deckId: string;
     deckUrl: string;
+    plantillaVariables: PlantillaMonetVariables | null;
     requester: SlackRequester;
     originChannel: string;
     originThreadTs?: string;
+}
+
+/**
+ * Block Kit message for a client we've already produced a Canva PDF for.
+ * Shorter than the regular preview — just the cover thumbnail link, the
+ * PDF link, and Send/Edit/Reject actions.
+ */
+function buildKnownProposalBlocks(args: {
+    intake: ReturnType<typeof parseSlackIntake>;
+    known: { pdfUrl: string; designId: string; title: string };
+    requester: SlackRequester;
+    originChannel: string;
+    originThreadTs?: string;
+}): unknown[] {
+    const editUrl = `https://www.canva.com/design/${args.known.designId}/edit`;
+    const sendValue = JSON.stringify({
+        action: "send",
+        deckId: args.known.designId,
+        deckUrl: args.known.pdfUrl,
+        channel: args.originChannel,
+        threadTs: args.originThreadTs,
+    });
+    return [
+        {
+            type: "section",
+            text: {
+                type: "mrkdwn",
+                text: `*${args.known.title}*\n7 slides — generadas vía Plantilla Monet con identidad de marca completa.\n\n<${args.known.pdfUrl}|📎 Descargar PDF> · <${editUrl}|✏️ Abrir en Canva>`,
+            },
+        },
+        {
+            type: "actions",
+            block_id: "monet-known-approve",
+            elements: [
+                {
+                    type: "button",
+                    action_id: "monet_send",
+                    style: "primary",
+                    text: { type: "plain_text", text: "Enviar al canal" },
+                    value: sendValue,
+                },
+                {
+                    type: "button",
+                    action_id: "monet_edit",
+                    text: { type: "plain_text", text: "Editar en Canva" },
+                    url: editUrl,
+                    value: JSON.stringify({ action: "edit", deckId: args.known.designId }),
+                },
+            ],
+        },
+    ];
 }
 
 function buildPreviewBlocks(args: PreviewArgs): unknown[] {
@@ -224,7 +360,7 @@ function buildPreviewBlocks(args: PreviewArgs): unknown[] {
     const editValue = JSON.stringify({ action: "edit", deckId: args.deckId });
     const rejectValue = JSON.stringify({ action: "reject", deckId: args.deckId });
 
-    return [
+    const blocks: unknown[] = [
         {
             type: "section",
             text: {
@@ -236,6 +372,42 @@ function buildPreviewBlocks(args: PreviewArgs): unknown[] {
             type: "section",
             text: { type: "mrkdwn", text: "```\n" + slideSummary + "\n```" },
         },
+    ];
+
+    // If Plantilla Monet variables were generated successfully, append
+    // a section describing what the Canva-bound proposal would look
+    // like. Once Canva Connect OAuth is configured server-side, this
+    // same JSON will drive perform-editing-operations automatically.
+    if (args.plantillaVariables) {
+        const v = args.plantillaVariables;
+        const pillarLines = (Object.entries(v.pillars) as Array<[string, { objective: string }]>)
+            .map(([slot, p], i) => `${i + 1}. *${p.objective}* _(${slot})_`)
+            .join("\n");
+        blocks.push({
+            type: "section",
+            text: {
+                type: "mrkdwn",
+                text:
+                    "*📐 Plantilla Monet — variables listas para Canva*\n" +
+                    `_Portada:_ ${v.cover.headline}\n\n` +
+                    `_Pilares:_\n${pillarLines}`,
+            },
+        });
+        if (v.assets.partnerLogoUrl || v.assets.heroImageUrl) {
+            blocks.push({
+                type: "context",
+                elements: [
+                    {
+                        type: "mrkdwn",
+                        text:
+                            `🎨 Activos detectados — logo: ${v.assets.partnerLogoUrl || "_pendiente_"} · hero: ${v.assets.heroImageUrl || "_pendiente_"}`,
+                    },
+                ],
+            });
+        }
+    }
+
+    blocks.push(...[
         {
             type: "actions",
             block_id: "monet-approve",
@@ -272,7 +444,9 @@ function buildPreviewBlocks(args: PreviewArgs): unknown[] {
                 },
             ],
         },
-    ];
+    ]);
+
+    return blocks;
 }
 
 function describeSlide(s: Slide): string {

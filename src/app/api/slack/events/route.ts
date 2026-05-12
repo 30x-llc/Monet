@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { checkSlackRequest } from "@/lib/slack/verify";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * POST /api/slack/events
