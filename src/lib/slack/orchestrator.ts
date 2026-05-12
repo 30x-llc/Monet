@@ -19,15 +19,19 @@ import type { PlantillaMonetVariables } from "@/lib/proposals/plantilla-monet";
 const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com";
 
 /**
- * Pre-generated Canva PDFs for clients we've already demo-edited end-to-end
- * via the MCP path. While Canva Connect OAuth is being set up server-side,
- * these short-circuits let Andrés get a real PDF back in seconds for the
- * clients we've validated. Keys are lowercased client names.
+ * Pre-generated Canva designs for clients we've already demo-edited
+ * end-to-end via the MCP path. While Canva Connect OAuth is being set
+ * up server-side, these short-circuits let Andrés get a real
+ * Bavaria-style proposal back in seconds for the clients we've
+ * validated. Keys are lowercased client names.
+ *
+ * `viewUrl` is a stable Canva design link that doesn't expire (the
+ * signed export-download URLs only last 24h, so we can't bake those
+ * in). The DM lets the user export-as-PDF from inside Canva.
  */
-const KNOWN_PROPOSALS: Record<string, { pdfUrl: string; designId: string; title: string }> = {
+const KNOWN_PROPOSALS: Record<string, { viewUrl: string; designId: string; title: string }> = {
     bavaria: {
-        pdfUrl:
-            "https://export-download.canva.com/w5x4A/DAHJeBw5x4A/-1/0-7084665209685423017.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260511%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260511T190902Z&X-Amz-Expires=84181&X-Amz-Signature=c1adec5f74d4756acdbb6333d19b1363b24e75b62f6437d1ff62a4c9d4b917a2&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner",
+        viewUrl: "https://www.canva.com/design/DAHJeBw5x4A/view",
         designId: "DAHJeBw5x4A",
         title: "Bavaria | 30X | Andrés Bilbao",
     },
@@ -98,7 +102,7 @@ export async function orchestrateProposalFromSlack(
             });
             return {
                 deckId: known.designId,
-                deckUrl: known.pdfUrl,
+                deckUrl: known.viewUrl,
                 dmChannel,
                 dmTs: initial.ts,
             };
@@ -297,7 +301,7 @@ interface PreviewArgs {
  */
 function buildKnownProposalBlocks(args: {
     intake: ReturnType<typeof parseSlackIntake>;
-    known: { pdfUrl: string; designId: string; title: string };
+    known: { viewUrl: string; designId: string; title: string };
     requester: SlackRequester;
     originChannel: string;
     originThreadTs?: string;
@@ -306,7 +310,7 @@ function buildKnownProposalBlocks(args: {
     const sendValue = JSON.stringify({
         action: "send",
         deckId: args.known.designId,
-        deckUrl: args.known.pdfUrl,
+        deckUrl: args.known.viewUrl,
         channel: args.originChannel,
         threadTs: args.originThreadTs,
     });
@@ -315,7 +319,7 @@ function buildKnownProposalBlocks(args: {
             type: "section",
             text: {
                 type: "mrkdwn",
-                text: `*${args.known.title}*\n7 slides — generadas vía Plantilla Monet con identidad de marca completa.\n\n<${args.known.pdfUrl}|📎 Descargar PDF> · <${editUrl}|✏️ Abrir en Canva>`,
+                text: `*${args.known.title}*\n7 slides — generadas vía Plantilla Monet con identidad de marca completa.\n\n<${args.known.viewUrl}|🖼️ Ver en Canva> · <${editUrl}|✏️ Editar> · _Exporta PDF directo desde Canva con Share → Download → PDF Standard._`,
             },
         },
         {
