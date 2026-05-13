@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { after } from "next/server";
 import { checkSlackRequest } from "@/lib/slack/verify";
 
 export const runtime = "nodejs";
@@ -43,12 +44,23 @@ export async function POST(request: NextRequest) {
         });
     }
 
-    // 2. Event callbacks.
+    // 2. Event callbacks. We MUST respond 200 within 3s or Slack
+    //    retries the event up to 3 times. Use `after()` to schedule
+    //    the actual work AFTER the response is flushed — the previous
+    //    `handleEvent(event).catch(...)` pattern is unreliable on
+    //    Vercel because the function instance can be terminated as
+    //    soon as the response is returned, killing the background
+    //    promise before openDM/postMessage complete.
     if (payload.type === "event_callback" && payload.event) {
         const event = payload.event;
-        // Fire-and-forget — process in background, return 200 fast.
-        handleEvent(event).catch((err) => {
-            console.error("[slack/events] background handler failed", err);
+        after(async () => {
+            console.log("[slack/events] after() handler starting", { type: event.type });
+            try {
+                await handleEvent(event);
+                console.log("[slack/events] after() handler completed");
+            } catch (err) {
+                console.error("[slack/events] after() handler failed", err);
+            }
         });
         return NextResponse.json({ ok: true });
     }

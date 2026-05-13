@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { after } from "next/server";
 import { checkSlackRequest } from "@/lib/slack/verify";
 
 export const runtime = "nodejs";
@@ -38,12 +39,24 @@ export async function POST(request: NextRequest) {
         });
     }
 
-    // Fire-and-forget processing.
-    handleSlashCommand({ text, userId, channelId, responseUrl }).catch((err) => {
-        console.error("[slack/commands] background handler failed", err);
+    // Slack needs a response within 3s — we return the ephemeral ack
+    // immediately and use `after()` to run the orchestrator AFTER the
+    // response is flushed. This is the Vercel-idiomatic way to schedule
+    // post-response work; the plain `handleSlashCommand(...).catch(...)`
+    // pattern is NOT reliable on Vercel — the function instance can be
+    // terminated as soon as the response is sent, killing the background
+    // promise before it completes. That's exactly why the ephemeral ack
+    // arrived but the follow-up DM never did.
+    after(async () => {
+        console.log("[slack/commands] after() handler starting", { text: text.slice(0, 80), userId });
+        try {
+            await handleSlashCommand({ text, userId, channelId, responseUrl });
+            console.log("[slack/commands] after() handler completed");
+        } catch (err) {
+            console.error("[slack/commands] after() handler failed", err);
+        }
     });
 
-    // Acknowledge fast.
     return NextResponse.json({
         response_type: "ephemeral",
         text: `🎨 Recibí: "${text.slice(0, 80)}". Trabajando en la propuesta — vas a recibir un DM cuando esté lista.`,

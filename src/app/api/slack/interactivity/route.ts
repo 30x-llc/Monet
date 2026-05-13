@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { after } from "next/server";
 import { checkSlackRequest } from "@/lib/slack/verify";
 
 export const runtime = "nodejs";
@@ -39,8 +40,17 @@ export async function POST(request: NextRequest) {
     if (payload.type === "block_actions") {
         const action = payload.actions?.[0];
         if (action) {
-            handleAction(action, payload).catch((err) => {
-                console.error("[slack/interactivity] handler failed", err);
+            // Use `after()` so Vercel keeps the function alive after we
+            // return — the plain Promise + .catch pattern was killing
+            // the background work before it could DM the user.
+            after(async () => {
+                console.log("[slack/interactivity] after() starting", { action_id: action.action_id });
+                try {
+                    await handleAction(action, payload);
+                    console.log("[slack/interactivity] after() completed");
+                } catch (err) {
+                    console.error("[slack/interactivity] after() failed", err);
+                }
             });
         }
         return NextResponse.json({});
