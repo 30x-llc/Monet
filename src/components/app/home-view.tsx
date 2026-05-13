@@ -631,7 +631,7 @@ function ProposalForm({
                 <TextInput
                     value={projectName}
                     onChange={setProjectName}
-                    placeholder="Ej: Propuesta Colsubsidio Q2 · Speaker LATAM · Partnership Bavaria…"
+                    placeholder="Ej: Propuesta Mastercard · Speaker LATAM · Partnership Colsubsidio…"
                     autoFocus
                 />
             </Field>

@@ -94,7 +94,7 @@ async function handleAppMention(event: SlackEvent): Promise<void> {
             channel: event.channel,
             thread_ts: event.thread_ts ?? event.ts,
             text:
-                "👋 Pídeme una propuesta: `@Monet propuesta para Bavaria, 4 sedes, AI Sales`.",
+                "👋 Pídeme una propuesta: `@Monet propuesta para Mastercard, Sales Machine`.",
         });
         return;
     }
@@ -117,7 +117,7 @@ async function handleDirectMessage(event: SlackEvent): Promise<void> {
         await postMessage({
             channel: event.channel,
             text:
-                "Hola 👋 Soy Monet, el AI designer de 30X. Pídeme una propuesta con `/monet propuesta para Bavaria, 4 sedes, AI Sales` o menciona @Monet en cualquier canal.",
+                "Hola 👋 Soy Monet, el AI designer de 30X. Pídeme una propuesta con `/monet propuesta para Mastercard, Sales Machine` o menciona @Monet en cualquier canal.",
         });
         return;
     }

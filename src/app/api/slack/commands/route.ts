@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (!text.trim()) {
         return NextResponse.json({
             response_type: "ephemeral",
-            text: "Usa `/monet propuesta para {cliente}, {detalles}`. Ejemplo: `/monet propuesta Bavaria, 4 sedes, AI Sales`.",
+            text: "Usa `/monet propuesta para {cliente}, {detalles}`. Ejemplo: `/monet propuesta Mastercard, Sales Machine`.",
         });
     }
 

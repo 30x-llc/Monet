@@ -68,34 +68,64 @@ export interface OrchestrateResult {
 export async function orchestrateProposalFromSlack(
     input: OrchestrateInput,
 ): Promise<OrchestrateResult | null> {
+    // Trace-id makes correlating logs across the fire-and-forget
+    // background task easy. Echo it on every line.
+    const trace = Math.random().toString(36).slice(2, 8);
+    const t0 = Date.now();
+    const log = (step: string, meta?: Record<string, unknown>) => {
+        const ms = Date.now() - t0;
+        const metaStr = meta ? ` ${JSON.stringify(meta)}` : "";
+        console.log(`[orchestrator ${trace} +${ms}ms] ${step}${metaStr}`);
+    };
+    const fail = (step: string, err: unknown) => {
+        const ms = Date.now() - t0;
+        const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        console.error(`[orchestrator ${trace} +${ms}ms] FAIL ${step}: ${msg}`, stack);
+    };
+    log("start", {
+        userId: input.requester.userId,
+        rawText: input.rawText.slice(0, 120),
+        origin: PUBLIC_ORIGIN,
+        envFlags: {
+            anthropic: !!process.env.ANTHROPIC_API_KEY,
+            exa: !!process.env.EXA_API_KEY,
+            slackBot: !!process.env.SLACK_BOT_TOKEN,
+        },
+    });
+
     let progressTs: string | null = null;
     let progressChannel: string | null = null;
     try {
         // 0. Parse intake.
         const intake = parseSlackIntake(input.rawText);
+        log("intake parsed", {
+            clientName: intake.clientName,
+            programs: intake.programs.map((p) => p.slug),
+            intent: intake.intent,
+            hints: intake.hints.slice(0, 80),
+        });
 
         // 1. Open a DM and post a progress message immediately so the
         //    user sees activity. We update it as we go.
         const dmChannel = await openDM(input.requester.userId);
+        log("dm opened", { dmChannel });
         progressChannel = dmChannel;
         const initial = await postMessage({
             channel: dmChannel,
             text: `🎨 Trabajando en tu propuesta…\n\n${describeIntake(intake)}\n\n_Esto toma 1-3 minutos. Te aviso cuando esté lista._`,
         });
         progressTs = initial.ts;
+        log("progress posted", { ts: initial.ts });
 
         // 2a. Short-circuit: if this client already has a finished
         //     Canva PDF from a previous demo run, deliver it instantly.
         const cachedClient = intake.clientName?.toLowerCase().trim();
         const known = cachedClient ? KNOWN_PROPOSALS[cachedClient] : null;
         if (known) {
-            // Even for cached clients, surface a hero picker so the
-            // salesperson can swap the cover photo if Monet's pick
-            // doesn't fit the meeting. Best-effort: no candidates ≠ fail.
-            const knownCandidates = await tryFindHeroCandidates(
-                intake.clientName,
-                undefined,
-            );
+            log("known proposal hit", { client: cachedClient, designId: known.designId });
+            const knownCandidates = await tryFindHeroCandidates(intake.clientName, undefined);
+            log("candidates found (known path)", { count: knownCandidates.length });
             await updateMessage({
                 channel: dmChannel,
                 ts: initial.ts,
@@ -109,6 +139,7 @@ export async function orchestrateProposalFromSlack(
                     originThreadTs: input.originThreadTs,
                 }),
             });
+            log("known DM updated — done", { totalMs: Date.now() - t0 });
             return {
                 deckId: known.designId,
                 deckUrl: known.viewUrl,
@@ -120,22 +151,30 @@ export async function orchestrateProposalFromSlack(
         // 2b. Research the client (skip if no client name detected).
         let research: ResearchResult | undefined;
         if (intake.clientName) {
+            log("research starting", { clientName: intake.clientName });
             try {
                 research = await runResearch(intake.clientName, intake.hints);
+                log("research done", {
+                    haveResult: !!research,
+                    industry: research?.industry,
+                    haveHero: !!research?.heroImageUrl,
+                    haveLogo: !!research?.logoUrl,
+                });
             } catch (err) {
-                console.error("[slack/orchestrator] research failed", err);
+                fail("research", err);
                 // Soft failure — generation can still produce a generic deck.
             }
+        } else {
+            log("research skipped — no client name");
         }
 
-        // 3. Run three generators in parallel:
-        //    (a) Monet-native deck via /api/generate — always-works fallback.
-        //    (b) Plantilla Monet variables for the Canva runtime — fills
-        //        the 24 variable slots in the Aeroméxico-derived template.
-        //    (c) Hero image candidates — 3-5 cover photo options the
-        //        salesperson picks from in the DM.
+        // 3. Run three generators in parallel. tryGenerate* are
+        //    individually wrapped — runGenerate is the only hard
+        //    dependency. We unwrap to inspect each future's outcome
+        //    instead of failing the whole flow on one throw.
         const program = intake.programs[0]?.slug;
-        const [generatedDeck, plantillaVariables, heroCandidates] = await Promise.all([
+        log("parallel generation starting", { program });
+        const [genRes, varsRes, candidatesRes] = await Promise.allSettled([
             runGenerate({
                 research,
                 program,
@@ -150,26 +189,49 @@ export async function orchestrateProposalFromSlack(
             }),
             tryFindHeroCandidates(intake.clientName, research),
         ]);
+
+        if (genRes.status === "rejected") {
+            fail("runGenerate", genRes.reason);
+            throw genRes.reason instanceof Error
+                ? genRes.reason
+                : new Error(String(genRes.reason));
+        }
+        const generatedDeck = genRes.value;
+        log("runGenerate done", {
+            haveDeck: !!generatedDeck,
+            slideCount: generatedDeck?.slides?.length,
+            title: generatedDeck?.deckTitle,
+        });
         if (!generatedDeck) {
             throw new Error("La generación devolvió un deck vacío");
         }
 
-        // 4. Save to DB. Identity = synthetic Slack user (matches the
-        //    Hub-header contract).
+        const plantillaVariables = varsRes.status === "fulfilled" ? varsRes.value : null;
+        if (varsRes.status === "rejected") fail("tryGenerateVariables", varsRes.reason);
+        else log("variables done", { have: !!plantillaVariables });
+
+        const heroCandidates = candidatesRes.status === "fulfilled" ? candidatesRes.value : [];
+        if (candidatesRes.status === "rejected") fail("tryFindHeroCandidates", candidatesRes.reason);
+        else log("candidates done", { count: heroCandidates.length });
+
+        // 4. Save to DB.
         const deckId = nanoid();
         const userEmail = `slack-${input.requester.userId}@30x.com`;
         const userName =
             input.requester.realName ?? input.requester.userName ?? "Slack User";
+        log("upserting deck", { deckId, userEmail });
         await upsertDeck({
             id: deckId,
             userEmail,
             userName,
             deck: generatedDeck,
         });
+        log("deck saved");
 
         const deckUrl = `${PUBLIC_ORIGIN}/?open=${deckId}`;
 
         // 5. Replace the progress DM with a preview + approve buttons.
+        log("updating final DM");
         const previewBlocks = buildPreviewBlocks({
             intake,
             generatedDeck,
@@ -187,10 +249,11 @@ export async function orchestrateProposalFromSlack(
             text: `✅ Propuesta lista — ${generatedDeck.deckTitle ?? "deck"}`,
             blocks: previewBlocks,
         });
+        log("DONE", { totalMs: Date.now() - t0, deckId, dmChannel, dmTs: initial.ts });
 
         return { deckId, deckUrl, dmChannel, dmTs: initial.ts };
     } catch (err) {
-        console.error("[slack/orchestrator] failed", err);
+        fail("outer catch", err);
         const message = err instanceof Error ? err.message : String(err);
         try {
             if (progressChannel && progressTs) {
@@ -199,15 +262,17 @@ export async function orchestrateProposalFromSlack(
                     ts: progressTs,
                     text: `❌ No pude generar la propuesta: ${message}\n\nIntenta de nuevo o pásame más detalles.`,
                 });
+                log("error notified via existing DM");
             } else {
                 const dm = await openDM(input.requester.userId);
                 await postMessage({
                     channel: dm,
                     text: `❌ No pude generar la propuesta para "${input.rawText.slice(0, 80)}": ${message}\n\nIntenta de nuevo.`,
                 });
+                log("error notified via fresh DM");
             }
         } catch (notifyErr) {
-            console.error("[slack/orchestrator] failed to notify user", notifyErr);
+            fail("notify user", notifyErr);
         }
         return null;
     }
@@ -216,7 +281,10 @@ export async function orchestrateProposalFromSlack(
 // ─── Wrappers around the existing /api routes ────────────────────────
 
 async function runResearch(companyName: string, notes: string): Promise<ResearchResult | undefined> {
-    const res = await fetch(`${PUBLIC_ORIGIN}/api/research`, {
+    const url = `${PUBLIC_ORIGIN}/api/research`;
+    console.log(`[orchestrator] POST ${url} companyName="${companyName}"`);
+    const t0 = Date.now();
+    const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -227,7 +295,12 @@ async function runResearch(companyName: string, notes: string): Promise<Research
         },
         body: JSON.stringify({ companyName, notes }),
     });
-    if (!res.ok) throw new Error(`research returned ${res.status}`);
+    const ms = Date.now() - t0;
+    console.log(`[orchestrator] /api/research ← ${res.status} in ${ms}ms`);
+    if (!res.ok) {
+        const body = await res.text().catch(() => "(could not read body)");
+        throw new Error(`research returned ${res.status}: ${body.slice(0, 200)}`);
+    }
     const data = (await res.json()) as { ok?: boolean; research?: ResearchResult };
     if (!data.ok || !data.research) return undefined;
     return data.research;
@@ -242,7 +315,10 @@ interface GenerateInput {
 
 async function runGenerate(input: GenerateInput): Promise<Deck | null> {
     const slideCount = 7;
-    const res = await fetch(`${PUBLIC_ORIGIN}/api/generate`, {
+    const url = `${PUBLIC_ORIGIN}/api/generate`;
+    console.log(`[orchestrator] POST ${url} program=${input.program ?? "(none)"} haveResearch=${!!input.research}`);
+    const t0 = Date.now();
+    const res = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -259,7 +335,12 @@ async function runGenerate(input: GenerateInput): Promise<Deck | null> {
             corporateMode: true,
         }),
     });
-    if (!res.ok) throw new Error(`generate returned ${res.status}`);
+    const ms = Date.now() - t0;
+    console.log(`[orchestrator] /api/generate ← ${res.status} in ${ms}ms`);
+    if (!res.ok) {
+        const body = await res.text().catch(() => "(could not read body)");
+        throw new Error(`generate returned ${res.status}: ${body.slice(0, 200)}`);
+    }
     const data = (await res.json()) as { ok?: boolean; deck?: Deck };
     return data.deck ?? null;
 }

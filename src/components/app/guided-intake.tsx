@@ -116,7 +116,7 @@ const Q_PROPOSAL: Question[] = [
         type: "text",
         label: "¿Para quién es?",
         helper: "Cliente, marca, empresa o persona — lo que aparezca en la portada.",
-        placeholder: "Ej: Colsubsidio · Bavaria · Clinton Foundation · Dylan Rosemberg",
+        placeholder: "Ej: Mastercard · Colsubsidio · Clinton Foundation · Dylan Rosemberg",
     },
     {
         id: "programName",
