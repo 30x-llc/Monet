@@ -310,6 +310,131 @@ export async function uploadAssetFromUrl(opts: {
     throw new Error(`Canva asset upload timeout after 60s for ${opts.sourceUrl}`);
 }
 
+// ─────────────────────────────────────────────────────────────
+// EXPORTS API — export a design as PDF (or PNG/JPG/PPTX) and
+// download it server-side via Bearer auth.
+//
+// Unlike the /export-download.canva.com signed URLs that come out of
+// the MCP server, Canva Connect's /v1/exports endpoint returns URLs
+// that work with the `Authorization: Bearer <access_token>` header —
+// no AWS signature dance, no Slack-redirector-mangling, no 24h TTL
+// games. This is the path to "command → PDF in DM" end-to-end.
+//
+// Docs: https://www.canva.com/developers/docs/connect-api/api-reference/exports/
+// ─────────────────────────────────────────────────────────────
+
+export type CanvaExportFormat =
+    | { type: "pdf"; size?: "a4" | "a3" | "letter" | "legal" }
+    | { type: "png"; size?: "a4" | "a3" | "letter" | "legal" }
+    | { type: "jpg"; quality?: number };
+
+export interface CanvaExportJobStatus {
+    status: "in_progress" | "success" | "failed";
+    /** Set when status === "success". Each entry is a downloadable URL,
+     *  one per page for image formats, one total for PDFs. */
+    urls?: string[];
+    error?: string;
+}
+
+/**
+ * Kick off an export. Returns the job id to poll. Default format is
+ * a single-PDF-per-design.
+ */
+export async function exportDesign(opts: {
+    accessToken: string;
+    designId: string;
+    format?: CanvaExportFormat;
+}): Promise<string> {
+    const format = opts.format ?? { type: "pdf" };
+    const res = await fetch(`${CANVA_API_BASE}/rest/v1/exports`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${opts.accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            design_id: opts.designId,
+            format,
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Canva export start failed: ${res.status} ${err.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { job: { id: string } };
+    return data.job.id;
+}
+
+export async function pollExport(
+    accessToken: string,
+    jobId: string,
+): Promise<CanvaExportJobStatus> {
+    const res = await fetch(`${CANVA_API_BASE}/rest/v1/exports/${jobId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Canva export poll failed: ${res.status} ${err.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as {
+        job: {
+            status: "in_progress" | "success" | "failed";
+            error?: { message?: string };
+            urls?: string[];
+        };
+    };
+    const job = data.job;
+    if (job.status === "failed") {
+        return { status: "failed", error: job.error?.message ?? "Export failed" };
+    }
+    if (job.status === "success") {
+        return { status: "success", urls: job.urls ?? [] };
+    }
+    return { status: "in_progress" };
+}
+
+/**
+ * End-to-end: export the design, poll until ready, fetch the resulting
+ * file as a Buffer (suitable for Slack files.uploadV2). Throws on any
+ * step that fails — caller decides whether to fall back to a link.
+ */
+export async function exportAndDownload(opts: {
+    accessToken: string;
+    designId: string;
+    format?: CanvaExportFormat;
+    /** Max time to wait for the export job. Default 120s. */
+    timeoutMs?: number;
+}): Promise<{ buffer: Buffer; mimeType: string; url: string }> {
+    const jobId = await exportDesign({
+        accessToken: opts.accessToken,
+        designId: opts.designId,
+        format: opts.format,
+    });
+    const deadline = Date.now() + (opts.timeoutMs ?? 120_000);
+    let status: CanvaExportJobStatus;
+    while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 1500));
+        status = await pollExport(opts.accessToken, jobId);
+        if (status.status === "success") {
+            const url = status.urls?.[0];
+            if (!url) throw new Error("Canva export returned no URL");
+            const file = await fetch(url, {
+                headers: { Authorization: `Bearer ${opts.accessToken}` },
+            });
+            if (!file.ok) {
+                throw new Error(`Canva file download failed: ${file.status}`);
+            }
+            const mimeType = file.headers.get("content-type") ?? "application/octet-stream";
+            const buffer = Buffer.from(await file.arrayBuffer());
+            return { buffer, mimeType, url };
+        }
+        if (status.status === "failed") {
+            throw new Error(`Canva export failed: ${status.error ?? "unknown"}`);
+        }
+    }
+    throw new Error(`Canva export timeout after ${opts.timeoutMs ?? 120_000}ms`);
+}
+
 export interface BrandTemplateSummary {
     id: string;
     title: string;

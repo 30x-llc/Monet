@@ -11,7 +11,9 @@
 
 import type { Deck, ResearchResult, Slide } from "@/lib/slide-types";
 import { upsertDeck } from "@/lib/db/decks";
-import { openDM, postMessage, updateMessage } from "@/lib/slack/client";
+import { openDM, postMessage, updateMessage, uploadFile } from "@/lib/slack/client";
+import { exportAndDownload } from "@/lib/canva/client";
+import { getServiceCanvaAccessToken } from "@/lib/canva/service-token";
 import { parseSlackIntake, describeIntake } from "@/lib/slack/intake";
 import { generatePlantillaMonetVariables, preferResearchAssets } from "@/lib/proposals/generate-variables";
 import type { PlantillaMonetVariables } from "@/lib/proposals/plantilla-monet";
@@ -133,8 +135,36 @@ export async function orchestrateProposalFromSlack(
         const known = cachedClient ? KNOWN_PROPOSALS[cachedClient] : null;
         if (known) {
             log("known proposal hit", { client: cachedClient, designId: known.designId });
+
+            // First try the gold path: export PDF via Canva Connect, fetch
+            // it server-side with Bearer auth, and upload as a real Slack
+            // file attachment. If anything fails, fall back to posting the
+            // signed-URL link button.
+            const pdfUploaded = await tryExportAndAttachPdf({
+                designId: known.designId,
+                dmChannel,
+                progressTs: initial.ts,
+                title: known.title,
+                trace,
+                t0,
+                log,
+                fail,
+            });
+
+            if (pdfUploaded) {
+                log("known DM done via PDF attachment", { totalMs: Date.now() - t0 });
+                return {
+                    deckId: known.designId,
+                    deckUrl: known.pdfUrl,
+                    dmChannel,
+                    dmTs: initial.ts,
+                };
+            }
+
+            // Fallback: link-button DM.
+            log("PDF attach unavailable — falling back to link button");
             const knownCandidates = await tryFindHeroCandidates(intake.clientName, undefined);
-            log("candidates found (known path)", { count: knownCandidates.length });
+            log("candidates found (known path fallback)", { count: knownCandidates.length });
             await updateMessage({
                 channel: dmChannel,
                 ts: initial.ts,
@@ -148,7 +178,7 @@ export async function orchestrateProposalFromSlack(
                     originThreadTs: input.originThreadTs,
                 }),
             });
-            log("known DM updated — done", { totalMs: Date.now() - t0 });
+            log("known DM updated via fallback link — done", { totalMs: Date.now() - t0 });
             return {
                 deckId: known.designId,
                 deckUrl: known.viewUrl,
@@ -352,6 +382,81 @@ async function runGenerate(input: GenerateInput): Promise<Deck | null> {
     }
     const data = (await res.json()) as { ok?: boolean; deck?: Deck };
     return data.deck ?? null;
+}
+
+/**
+ * Try the gold path: export the design as PDF via Canva Connect using
+ * the bot's service-account access token, fetch the PDF server-side
+ * with Bearer auth, and upload it to the user's DM as a real file
+ * attachment. Returns true on success, false if any step fails (the
+ * caller falls back to a link-button DM).
+ *
+ * Failure modes that bail to fallback:
+ *   - CANVA_REFRESH_TOKEN env not set
+ *   - Canva refresh-token exchange fails (token revoked/expired)
+ *   - Canva export job fails or times out
+ *   - Slack files.uploadV2 rejects the file
+ *
+ * On success we delete the original "Trabajando…" progress message
+ * because Slack's files.uploadV2 posts a NEW message in the channel
+ * with the file attached — leaving the progress message orphaned.
+ */
+async function tryExportAndAttachPdf(args: {
+    designId: string;
+    dmChannel: string;
+    progressTs: string;
+    title: string;
+    trace: string;
+    t0: number;
+    log: (step: string, meta?: Record<string, unknown>) => void;
+    fail: (step: string, err: unknown) => void;
+}): Promise<boolean> {
+    const { designId, dmChannel, progressTs, title, log, fail } = args;
+    const accessToken = await getServiceCanvaAccessToken();
+    if (!accessToken) {
+        log("PDF path skipped — no CANVA_REFRESH_TOKEN in env");
+        return false;
+    }
+    log("export starting", { designId });
+    let download: Awaited<ReturnType<typeof exportAndDownload>>;
+    try {
+        download = await exportAndDownload({
+            accessToken,
+            designId,
+            format: { type: "pdf" },
+            timeoutMs: 90_000,
+        });
+        log("export done", {
+            bytes: download.buffer.length,
+            mime: download.mimeType,
+        });
+    } catch (err) {
+        fail("canva export", err);
+        return false;
+    }
+    try {
+        // Replace the progress message with a "subiendo PDF" status,
+        // then upload the file. The upload itself posts a NEW message
+        // with the file — we leave the status message in place as a
+        // marker of when generation completed.
+        await updateMessage({
+            channel: dmChannel,
+            ts: progressTs,
+            text: `✅ *${title}* — PDF listo, subiendo a Slack…`,
+        });
+        await uploadFile({
+            channel: dmChannel,
+            filename: `${title.replace(/[^a-zA-Z0-9._-]+/g, "_")}.pdf`,
+            title,
+            initial_comment: `📥 *${title}* — 7 slides, listas para enviar.`,
+            fileBuffer: download.buffer,
+        });
+        log("slack uploadFile done");
+        return true;
+    } catch (err) {
+        fail("slack uploadFile", err);
+        return false;
+    }
 }
 
 /**
