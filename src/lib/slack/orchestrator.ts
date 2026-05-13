@@ -31,10 +31,10 @@ const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com"
  * in). The DM lets the user export-as-PDF from inside Canva.
  */
 const KNOWN_PROPOSALS: Record<string, { viewUrl: string; designId: string; title: string }> = {
-    bavaria: {
+    mastercard: {
         viewUrl: "https://www.canva.com/design/DAHJeBw5x4A/view",
         designId: "DAHJeBw5x4A",
-        title: "Bavaria | 30X | Andrés Bilbao",
+        title: "Mastercard | 30X | Andrés Bilbao",
     },
 };
 
