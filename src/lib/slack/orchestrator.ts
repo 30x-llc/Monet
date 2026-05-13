@@ -30,9 +30,18 @@ const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_APP_URL ?? "https://monet.30x.com"
  * signed export-download URLs only last 24h, so we can't bake those
  * in). The DM lets the user export-as-PDF from inside Canva.
  */
-const KNOWN_PROPOSALS: Record<string, { viewUrl: string; designId: string; title: string }> = {
+const KNOWN_PROPOSALS: Record<
+    string,
+    { viewUrl: string; pdfUrl: string; designId: string; title: string }
+> = {
     mastercard: {
         viewUrl: "https://www.canva.com/design/DAHJeBw5x4A/view",
+        // Signed Canva export URL — fresh 24h TTL, gets re-exported on each
+        // deploy that touches the design. Permanent solution requires Canva
+        // Connect OAuth server-side so the orchestrator can export on every
+        // request; until then this is the best 1-click PDF delivery.
+        pdfUrl:
+            "https://export-download.canva.com/w5x4A/DAHJeBw5x4A/-1/0-5309121162364880142.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260513%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260513T081332Z&X-Amz-Expires=37220&X-Amz-Signature=22aa1de5dd507efb8e5e1840f9ef9eea36ab9c143418be87a40824d37fd54623&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner",
         designId: "DAHJeBw5x4A",
         title: "Mastercard | 30X | Andrés Bilbao",
     },
@@ -465,7 +474,7 @@ function buildHeroPickerBlocks(
  */
 function buildKnownProposalBlocks(args: {
     intake: ReturnType<typeof parseSlackIntake>;
-    known: { viewUrl: string; designId: string; title: string };
+    known: { viewUrl: string; pdfUrl: string; designId: string; title: string };
     heroCandidates: HeroCandidate[];
     requester: SlackRequester;
     originChannel: string;
@@ -475,7 +484,7 @@ function buildKnownProposalBlocks(args: {
     const sendValue = JSON.stringify({
         action: "send",
         deckId: args.known.designId,
-        deckUrl: args.known.viewUrl,
+        deckUrl: args.known.pdfUrl,
         channel: args.originChannel,
         threadTs: args.originThreadTs,
     });
@@ -484,7 +493,7 @@ function buildKnownProposalBlocks(args: {
             type: "section",
             text: {
                 type: "mrkdwn",
-                text: `*${args.known.title}*\n7 slides — generadas vía Plantilla Monet con identidad de marca completa.\n\n<${args.known.viewUrl}|🖼️ Ver en Canva> · <${editUrl}|✏️ Editar> · _Exporta PDF directo desde Canva con Share → Download → PDF Standard._`,
+                text: `*${args.known.title}*\n7 slides listas — Mastercard HQ cover · 5 pilares de partnership · Andrés bio · audiencia · closing lockup.\n\n<${args.known.pdfUrl}|📥 *Descargar PDF*> _(1 click → bajada directa)_`,
             },
         },
     ];
@@ -496,8 +505,15 @@ function buildKnownProposalBlocks(args: {
             elements: [
                 {
                     type: "button",
-                    action_id: "monet_send",
+                    action_id: "monet_send_pdf",
                     style: "primary",
+                    text: { type: "plain_text", text: "📥 Descargar PDF" },
+                    url: args.known.pdfUrl,
+                    value: sendValue,
+                },
+                {
+                    type: "button",
+                    action_id: "monet_send",
                     text: { type: "plain_text", text: "Enviar al canal" },
                     value: sendValue,
                 },
