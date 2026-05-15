@@ -1,6 +1,6 @@
 ---
 name: propuesta-comercial
-description: Compongo una propuesta comercial de 30X para un cliente específico, usando Canva Connect API directa para clonar la plantilla brand template, autofill los slots (logo, fondo, nombre, sector), y exportar PDF.
+description: Compongo una propuesta comercial de 30X para un cliente específico, usando Canva Connect API para clonar el brand template, autofill los componentes (logo, headline, body, hero), y exportar PDF.
 trigger: "propuesta para [cliente]", "armame una propuesta para [cliente]", "necesito propuesta de [cliente]"
 inputs:
   - Nombre del cliente (obligatorio).
@@ -12,12 +12,12 @@ outputs:
   - PDF descargado y enviado en el canal.
   - Resumen corto de qué reemplacé y dónde.
 escalation:
-  - Si la plantilla maestra (Design ID DAHJeGfEHOk) no está marcada como brand template en Canva.
+  - Si la plantilla maestra no tiene componentes marcados (autofill devuelve "design_not_fillable").
   - Si no encuentro logo del cliente con calidad suficiente (resolución < 500px o fondo no transparente).
   - Si el cliente requiere ángulo nuevo no documentado.
   - Si confianza < 8/10 en el output.
-version: 0.2.0
-status: draft — pendiente Juan Diego pegue credenciales Canva y marque la plantilla como brand template
+version: 0.3.0
+status: ready — auth OAuth completada, API conectada con scopes correctos. Pendiente paso manual una vez: convertir elementos del brand template Aeroméxico (EAHH5r6KZD8) en componentes nombrados.
 ---
 
 # Propuesta comercial
@@ -28,34 +28,82 @@ Skill operativa central. Esta es la primera. Si esta funciona, el patrón se rep
 
 ## Filosofía
 
-Composición sobre generación. No diseño la propuesta. Uso Canva Connect API para clonar la plantilla maestra que JD ya diseñó (configurada como brand template), autofill los slots con datos del cliente, exporto PDF, devuelvo.
+Composición sobre generación. No diseño la propuesta. Uso Canva Connect API para clonar la plantilla maestra que JD ya diseñó (configurada como brand template), autofill los componentes con datos del cliente, exporto PDF, devuelvo.
 
-Si lo que me piden requiere salir de la plantilla (ángulo nuevo, formato no estándar, contenido que no encaja en los slots), escalo a JD antes de improvisar.
+Si lo que me piden requiere salir de la plantilla (ángulo nuevo, formato no estándar, contenido que no encaja en los componentes), escalo a JD antes de improvisar.
 
 ---
 
-## Arquitectura técnica
+## Arquitectura técnica (validada end-to-end)
 
-- **No usamos MCP.** El MCP de Canva requiere OAuth con browser callback a localhost. Hermes corre headless en Hostinger sin browser. Inviable.
+- **NO usamos MCP.** El MCP de Canva requiere OAuth con browser callback a localhost. Hermes corre headless en Hostinger sin browser. Inviable.
 - **Usamos Canva Connect API directa.** Cliente Python en `agent/canva_client.py` con service-account refresh token. Sin browser, sin túneles, funciona desde el server.
-- **Auth: long-lived refresh token + access tokens de 4h auto-refrescados.**
-- **Capacidad clave: Brand Template Autofill.** La plantilla maestra debe estar configurada como brand template en Canva con sus slots editables (logo, fondo, nombre, sector). Una vez configurada, podemos clonarla y autofill por API.
+- **Auth: long-lived refresh token + access tokens de 4h auto-refrescados.** Canva rota el refresh token en cada exchange, el cliente lo persiste automáticamente en `/opt/data/.hermes/secrets/canva.env`.
+- **Capacidad clave: Brand Template Autofill vía componentes.** En la UI moderna de Canva (2025+), los slots autofillables se llaman "componentes". Se crean en el editor del template marcando un elemento → botón derecho → "Crea un componente" (atajo `Opt+Cmd+K`). Cada componente recibe un nombre snake_case que aparece como key en `get_brand_template_dataset()`.
 
 ---
 
-## Pre-requisitos (estado al crear v0.2.0)
+## Estado actual (al cierre de bootstrap, 15 mayo 2026)
 
-- [x] Plantilla maestra catalogada: Canva `DAHJeGfEHOk` (`stack/canva.md`).
-- [x] Reglas de marca cargadas: `brand/30x-rules.md` y `soul/SOUL.md`.
-- [x] Cliente Python Canva listo en `agent/canva_client.py`.
-- [x] Cliente Python Figma listo en `agent/figma_client.py`.
-- [ ] Credenciales Canva en `/opt/data/.hermes/secrets/canva.env`. **Pendiente JD via SSH.** Setup: `agent/README.md`.
-- [ ] Plantilla `DAHJeGfEHOk` configurada como **Brand Template** en Canva, con slots marcados. **Pendiente JD en Canva web.**
-- [ ] Inventario de slots de la plantilla. Se llena automáticamente vía `canva_client.get_brand_template_dataset(template_id)` una vez que la plantilla esté como brand template.
+- [x] Plantilla maestra de propuestas catalogada: Canva `EAHH5r6KZD8` ("Plantilla de Propuestas Comerciales Aeroméxico | 30X | Andrés Bilbao"), 7 páginas.
+- [x] Templates adicionales descubiertos en el team workspace 30X (team_id `oBYi_2N8nLUIydcWtFP6sc`):
+  - `EAHH5r6KZD8` — Plantilla de Propuestas Comerciales (Aeroméxico)
+  - `EAHH5XMNYhY` — 30x Plantilla Presentaciones
+  - `EAHH5JU6Fgg` — 30x BMS Proposal
+  - `EAHH5LEW30w` — Speaking Engagements 30X Andrés Bilbao
+- [x] Reglas de marca cargadas: `brand/30x-rules.md` y `/opt/data/.hermes/SOUL.md`.
+- [x] Cliente Python Canva listo y validado: `agent/canva_client.py` (con auto-persistencia de refresh token rotado).
+- [x] Cliente Python Figma listo: `agent/figma_client.py`.
+- [x] Credenciales Canva en `/opt/data/.hermes/secrets/canva.env`. Permisos 600, owner hermes.
+- [x] OAuth Canva probado end-to-end: `/api/canva/connect` → consent screen con 7 scopes → callback → bootstrap-bot devuelve refresh token.
+- [x] Scopes correctos en código (legacy/monet-app/src/lib/canva/config.ts) y en el developer portal de Canva: design:meta:read, design:content:write, design:content:read, asset:write, brandtemplate:meta:read, brandtemplate:content:read, profile:read.
+- [x] `list_brand_templates()` funcional, retorna 4 templates del team.
+- [x] `get_brand_template_dataset()` funcional pero retorna `{}` para los 4 templates — ninguno tiene componentes marcados todavía.
+- [ ] **Bloqueo único restante:** convertir elementos del template `EAHH5r6KZD8` en componentes nombrados (paso manual en Canva web, una vez por template). Sin esto, `create_autofill()` falla con `design_not_fillable: Design does not have any autofill capable elements`.
 
 ---
 
-## Workflow (versión 0.2 — sobre API directa)
+## Cómo marcar componentes en Canva (paso manual, una vez por template)
+
+Abre el brand template en Canva web (ejemplo: `https://www.canva.com/brand/brand-templates/EAHH5r6KZD8`).
+
+Para cada elemento que cambie entre clientes (logos, textos del cliente, hero image, números customizados), repite:
+
+1. **Click sobre el elemento** para seleccionarlo (queda con borde de selección).
+2. **Click derecho** → menú contextual.
+3. **"Crea un componente"** (atajo `Opt + Cmd + K` en Mac, `Alt + Ctrl + K` en Windows).
+4. Canva pide un nombre. **Usar snake_case descriptivo**. La key que pongas aquí es exactamente la que aparece en el dataset y la que el cliente Python usa como parámetro en autofill.
+
+### Naming convention obligatorio para Plantilla Propuestas Comerciales (EAHH5r6KZD8)
+
+Estos son los nombres que el orquestador espera. Mantenerlos exactos:
+
+**Página 1 (portada):**
+- `logo_cliente` (image) — el logo del cliente (donde está "AEROMEXICO" en la versión actual)
+- `headline_principal` (text) — el bloque "30X reconoce a la aerolínea..."
+- `headline_accent` (text) — la parte amarilla "construir una..."
+- `body_propuesta` (text) — el párrafo "Buscamos una alianza..."
+- `hero_image` (image) — la imagen de fondo (el avión)
+
+**Página 2 ("Lo que cada uno pone sobre la mesa"):**
+- `mesa_titulo` (text)
+- `mesa_subtitulo` (text)
+
+**Página 3 (KPIs "5M USD / 25% / 80%"):**
+- `kpi_1_valor` (text), `kpi_1_label` (text)
+- `kpi_2_valor` (text), `kpi_2_label` (text)
+- `kpi_3_valor` (text), `kpi_3_label` (text)
+
+**Páginas 4-7:** Estructura fija (mentores, audiencia, cierre). NO marcar como componentes — quedan iguales para todas las propuestas. El header/logo 30X y el footer no se tocan nunca.
+
+### Importante:
+- Los componentes son por elemento, no por slide. Una sola página puede tener múltiples componentes.
+- El nombre del componente NO debe cambiar después de marcarlo, o se rompen las llamadas a la API.
+- Si Canva te pide elegir entre "componente local" y "componente compartido", elige el que persista a nivel de brand template (es decir, que sí aparezca cuando otros editen el template).
+
+---
+
+## Workflow operativo (una vez marcados los componentes)
 
 ### 1. Recibo el pedido
 

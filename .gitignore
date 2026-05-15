@@ -18,3 +18,6 @@ references/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local npm install artifacts in legacy app (not deployed via npm install -- Vercel rebuilds)
+legacy/monet-app/package-lock.json
