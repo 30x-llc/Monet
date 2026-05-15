@@ -84,7 +84,7 @@ export async function renderDeckToPdfBuffer(
         });
 
         await page.setContent(html, {
-            waitUntil: "networkidle0",
+            waitUntil: "load",
             timeout: 60_000,
         });
 
@@ -180,7 +180,7 @@ export async function renderDeckToSlideScreenshots(
         });
 
         await page.setContent(html, {
-            waitUntil: "networkidle0",
+            waitUntil: "load",
             timeout: 60_000,
         });
 
