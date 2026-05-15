@@ -34,6 +34,9 @@ export const CANVA_SCOPES = [
     "design:content:write",
     "design:content:read",
     "asset:write",
+    "brandtemplate:meta:read",
+    "brandtemplate:content:read",
+    "profile:read",
 ];
 
 /**
