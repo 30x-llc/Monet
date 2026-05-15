@@ -1,6 +1,6 @@
 ---
 name: propuesta-comercial
-description: Compongo una propuesta comercial de 30X para un cliente específico, duplicando la plantilla maestra en Canva, reemplazando slots (logo, fondo, copy del cliente), y exportando PDF.
+description: Compongo una propuesta comercial de 30X para un cliente específico, usando Canva Connect API directa para clonar la plantilla brand template, autofill los slots (logo, fondo, nombre, sector), y exportar PDF.
 trigger: "propuesta para [cliente]", "armame una propuesta para [cliente]", "necesito propuesta de [cliente]"
 inputs:
   - Nombre del cliente (obligatorio).
@@ -8,16 +8,16 @@ inputs:
   - Ángulo específico de la propuesta (opcional, si no lo sé uso el genérico de la plantilla).
   - Assets del cliente: logo, imagen de fondo (opcional, si no me los pasan los busco).
 outputs:
-  - Link al diseño Canva duplicado y editado.
+  - Link al diseño Canva clonado y autofilled.
   - PDF descargado y enviado en el canal.
   - Resumen corto de qué reemplacé y dónde.
 escalation:
-  - Si la plantilla maestra (Design ID DAHJeGfEHOk) no responde o cambió.
+  - Si la plantilla maestra (Design ID DAHJeGfEHOk) no está marcada como brand template en Canva.
   - Si no encuentro logo del cliente con calidad suficiente (resolución < 500px o fondo no transparente).
   - Si el cliente requiere ángulo nuevo no documentado.
   - Si confianza < 8/10 en el output.
-version: 0.1.0
-status: draft — pendiente material de JD para llenar slots
+version: 0.2.0
+status: draft — pendiente Juan Diego pegue credenciales Canva y marque la plantilla como brand template
 ---
 
 # Propuesta comercial
@@ -28,23 +28,34 @@ Skill operativa central. Esta es la primera. Si esta funciona, el patrón se rep
 
 ## Filosofía
 
-Composición sobre generación. No diseño la propuesta. Duplico la plantilla maestra que JD ya diseñó, cambio lo mínimo necesario, devuelvo.
+Composición sobre generación. No diseño la propuesta. Uso Canva Connect API para clonar la plantilla maestra que JD ya diseñó (configurada como brand template), autofill los slots con datos del cliente, exporto PDF, devuelvo.
 
 Si lo que me piden requiere salir de la plantilla (ángulo nuevo, formato no estándar, contenido que no encaja en los slots), escalo a JD antes de improvisar.
 
 ---
 
-## Pre-requisitos (estado al crear esta skill)
+## Arquitectura técnica
 
-- [x] Plantilla maestra catalogada: Canva `DAHJeGfEHOk` (`stack/canva.md`).
-- [x] Reglas de marca cargadas: `brand/30x-rules.md` y `soul/SOUL.md`.
-- [ ] MCP Canva conectado a esta instancia de Hermes. **Pendiente: setup MCP.**
-- [ ] Inventario de slots de la plantilla. **Pendiente: JD abre la plantilla y me lista qué elementos son reemplazables y su naming.**
-- [ ] Convención de assets del cliente (dónde busco logo: web oficial, brand assets pages, Clearbit Logo API; dónde busco imagen de fondo: Unsplash con filtro de calidad, sitio del cliente). **Pendiente: definir con JD.**
+- **No usamos MCP.** El MCP de Canva requiere OAuth con browser callback a localhost. Hermes corre headless en Hostinger sin browser. Inviable.
+- **Usamos Canva Connect API directa.** Cliente Python en `agent/canva_client.py` con service-account refresh token. Sin browser, sin túneles, funciona desde el server.
+- **Auth: long-lived refresh token + access tokens de 4h auto-refrescados.**
+- **Capacidad clave: Brand Template Autofill.** La plantilla maestra debe estar configurada como brand template en Canva con sus slots editables (logo, fondo, nombre, sector). Una vez configurada, podemos clonarla y autofill por API.
 
 ---
 
-## Workflow (versión 0 — borrador, falta validación)
+## Pre-requisitos (estado al crear v0.2.0)
+
+- [x] Plantilla maestra catalogada: Canva `DAHJeGfEHOk` (`stack/canva.md`).
+- [x] Reglas de marca cargadas: `brand/30x-rules.md` y `soul/SOUL.md`.
+- [x] Cliente Python Canva listo en `agent/canva_client.py`.
+- [x] Cliente Python Figma listo en `agent/figma_client.py`.
+- [ ] Credenciales Canva en `/opt/data/.hermes/secrets/canva.env`. **Pendiente JD via SSH.** Setup: `agent/README.md`.
+- [ ] Plantilla `DAHJeGfEHOk` configurada como **Brand Template** en Canva, con slots marcados. **Pendiente JD en Canva web.**
+- [ ] Inventario de slots de la plantilla. Se llena automáticamente vía `canva_client.get_brand_template_dataset(template_id)` una vez que la plantilla esté como brand template.
+
+---
+
+## Workflow (versión 0.2 — sobre API directa)
 
 ### 1. Recibo el pedido
 
@@ -63,81 +74,90 @@ Si el pedido viene sin más contexto: asumo ángulo genérico (educación ejecut
 
 Respondo en el canal:
 ```
-Recibido. Armando propuesta para [Cliente]. Estimado: ~3 minutos.
-Voy a usar la plantilla DAHJeGfEHOk. Si querés algo diferente, frename.
+Recibido. Armando propuesta para [Cliente]. ~3 minutos.
+Voy a clonar la plantilla DAHJeGfEHOk. Si querés algo diferente, frename.
 ```
 
-(15 segundos de ventana de cancelación. Si no me frenan, ejecuto.)
+### 3. Research del cliente
 
-### 3. Research mínimo del cliente
-
-Solo lo necesario:
-- Logo del cliente (versión vectorial preferida, transparente).
-- Sector (si JD no me lo dio).
-- Una imagen de fondo representativa (oficina, producto, contexto sectorial).
+Necesario:
+- Logo (vector preferido, transparente, ≥500px).
+- Sector.
+- Imagen de fondo representativa.
 
 Fuentes en orden:
-1. Sitio oficial del cliente (extraer logo SVG/PNG de `/brand`, `/press`, `/media`).
+1. Sitio oficial: `/brand`, `/press`, `/media`.
 2. Clearbit Logo API: `https://logo.clearbit.com/[dominio].com`.
 3. Búsqueda directa con filtro de calidad.
 
 Si nada da resultado limpio: escalo a JD pidiéndole los assets.
 
-### 4. Operación en Canva (vía MCP)
+### 4. Operación Canva (Python)
 
-> **Pendiente:** detalle exacto del flujo MCP. Se llena cuando MCP Canva esté conectado a Hermes y JD valide el primer end-to-end. Por ahora documento la intención.
+```python
+from agent import canva_client as canva
 
-Pasos esperados:
+# 1. Subir assets del cliente (logo, fondo) a Canva
+logo_asset = canva.upload_asset_from_url(logo_url, name=f"{cliente}-logo")
+fondo_asset = canva.upload_asset_from_url(fondo_url, name=f"{cliente}-fondo")
 
-1. `canva.designs.get({ designId: "DAHJeGfEHOk" })` — leer plantilla maestra.
-2. `canva.designs.duplicate(...)` — duplicar.
-3. Identificar slots de reemplazo (ver sección "Slots", pendiente de llenar).
-4. Para cada slot:
-   - `logo_cliente`: reemplazar imagen.
-   - `fondo_cliente`: reemplazar imagen.
-   - `nombre_cliente`: reemplazar texto.
-   - `sector` (si aplica): reemplazar texto.
-   - `angulo` (si aplica): reemplazar texto.
-5. Validar que todos los slots quedaron con contenido (no dejé un placeholder vacío).
-6. `canva.designs.export({ format: "pdf" })` — exportar PDF.
-7. Subir PDF a Slack como archivo.
+# 2. Leer schema de la brand template (qué slots tiene)
+schema = canva.get_brand_template_dataset(TEMPLATE_ID)
+# slots típicos esperados: "logo_cliente", "fondo_cliente",
+#                          "nombre_cliente", "sector_cliente"
+
+# 3. Crear autofill con los datos
+job = canva.create_autofill(TEMPLATE_ID, data={
+    "logo_cliente": {"type": "image", "asset_id": logo_asset["asset"]["id"]},
+    "fondo_cliente": {"type": "image", "asset_id": fondo_asset["asset"]["id"]},
+    "nombre_cliente": {"type": "text", "text": cliente_nombre},
+    "sector_cliente": {"type": "text", "text": cliente_sector},
+})
+
+# 4. Esperar a que termine el autofill
+done = canva.poll_autofill(job["job"]["id"])
+design_id = done["job"]["result"]["design"]["id"]
+edit_url = done["job"]["result"]["design"]["url"]
+
+# 5. Exportar a PDF
+pdf_urls = canva.export_design_to_pdf_url(design_id)
+```
 
 ### 5. Entrega
 
-Mensaje en Slack:
+Mensaje en Slack con PDF adjunto (vía descarga + upload a Slack):
 ```
 Listo, [Cliente].
 
-Canva: [link]
-PDF adjunto.
+Canva: [edit_url]
+PDF: [adjunto]
 
-Slots reemplazados: logo, fondo, nombre, sector.
-Slots con contenido genérico de la plantilla: [si quedó alguno].
-
+Slots llenados: logo, fondo, nombre, sector.
 Tiempo total: [X] segundos.
 ```
 
-### 6. Iteración (si JD pide cambios)
+### 6. Iteración
 
-Si JD responde con cambios:
-- "cambiá el fondo" → research nueva imagen, reemplazar slot, re-exportar.
-- "el sector está mal, es banca" → reemplazar texto, re-exportar.
-- "no me gusta el ángulo" → escalo: "¿qué ángulo querés en su lugar?".
+Si JD pide cambios:
+- "cambiá el fondo" → research nueva imagen, subir a Canva, re-autofill (genera nuevo design), re-exportar.
+- "el sector está mal, es banca" → re-autofill con sector corregido.
+- "no me gusta el ángulo" → escalo: "¿qué ángulo querés?".
 
-No re-genero desde cero. Edito el duplicado existente.
+Cada autofill crea un design nuevo. La plantilla maestra `DAHJeGfEHOk` nunca se modifica.
 
 ---
 
-## Slots de reemplazo en la plantilla maestra
+## Slots de reemplazo (auto-descubierto via API)
 
-> **PENDIENTE:** JD abre el design `DAHJeGfEHOk` y me dicta:
-> - Qué frames/elementos son reemplazables.
-> - Cómo se llama cada uno en el panel de capas (naming convention).
-> - Qué tipo es cada uno (imagen, texto, fill, etc.).
->
-> Esto se completa en sesión de catalogación de la plantilla. Hasta entonces, trabajo "a ojo" duplicando y reemplazando lo obvio, pero el output no es production-grade.
+Una vez que `DAHJeGfEHOk` esté como brand template, el código corre:
 
-Estructura esperada (a confirmar):
+```python
+print(canva.get_brand_template_dataset("DAHJeGfEHOk"))
+```
+
+Y obtiene el schema real. Se documenta acá después de la primera ejecución.
+
+Esquema esperado (a confirmar):
 
 | Slot | Tipo | Convención | Notas |
 |---|---|---|---|
