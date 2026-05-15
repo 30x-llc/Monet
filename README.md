@@ -1,78 +1,70 @@
 # Monet
 
-> AI designer del equipo de 30X. Genera, edita y exporta propuestas
-> comerciales con un canvas estilo Figma.
+Mano derecha de Juan Diego De La Ossa Serrano, Head of Design de 30X.
 
-Vive en **[monet.30x.com](https://monet.30x.com)** (alias activo:
-[design.30x.com](https://design.30x.com)).
+Este repo es el cerebro de Monet. No es una app. Es la identidad, las reglas, las skills, el design system y los workflows que ejecuta un agente conversacional viviendo en Slack 24/7, con acceso a Figma, Canva, Framer y todo el stack de diseño de Juan Diego.
+
+El agente toma plantillas y diseños existentes (que Juan Diego ya produjo), las duplica vía MCP, reemplaza variables (cliente, copy, assets) y devuelve el output terminado. Composición sobre generación.
 
 ---
 
-## Qué hace
-
-- **Genera** propuestas comerciales de 30X a partir de un briefing
-  corto, usando el sistema de diseño 30X (typography, colors, mentor
-  database, logos curados).
-- **Edita** las slides en un canvas estilo Figma — selección de
-  elementos, drag/resize, snap a guías, multi-select, properties
-  panel, layers panel, undo/redo, atajos de teclado.
-- **Exporta** a PDF (alta fidelidad, web-renderer) y a Canva
-  (templates + autofill).
-
-## Stack
-
-- Next.js (App Router, RSC, Cache Components)
-- React 19
-- TypeScript
-- Tailwind
-- Neon Postgres (decks + identity)
-- Vercel Blob (image uploads)
-- Anthropic Claude (generation + iteration)
-- Perplexity / Exa (research)
-- Canva Connect API (export pipeline)
-
-## Local dev
-
-```bash
-pnpm install
-cp .env.example .env.local  # fill in keys
-pnpm dev
-```
-
-App corre en `http://localhost:3000`.
-
-## Deploy
-
-Auto-deploy a Vercel en cada `push` a `main`. Producción:
-[monet.30x.com](https://monet.30x.com).
-
 ## Estructura
 
-- `src/app` — Next.js App Router (pages + API routes)
-- `src/components/editor` — chrome del editor (toolbar, rail, panels,
-  chat bar, properties panel)
-- `src/components/slides` — renderers de slides (structured + canvas)
-- `src/lib` — auth, db, exports, prompts, text styles, AI clients
-
-## Brand
-
-- Wordmark: **Monet** con la "t" en lima (`#E9FF7B`) — visual rhyme
-  con la X de 30X
-- Tipografía canónica: Inter, 8 estilos (Title 96 / Header 1-3 /
-  Body 1-3 / Note 20) — ver `src/lib/text-styles.ts`
-- El mark "30X" que aparece DENTRO de los slides es la marca de
-  partnership para los decks comerciales del cliente — sigue siendo
-  30X. Monet es la herramienta; los decks son de 30X.
-
-## Integración con 30X Hub
-
-Monet acepta identidad del usuario vía headers:
-
 ```
-x-30x-user-email: pepito@30x.com
-x-30x-user-name: Pepito Pérez
+Monet/
+├── soul/
+│   └── SOUL.md                   Identidad del agente (Monet)
+├── brand/
+│   ├── 30x-rules.md              Reglas operativas destiladas
+│   ├── 30x-design-system/        Design system completo (Untitled UI customizada 30X)
+│   └── logos/                    SVGs oficiales (dark, light, accent)
+├── skills/
+│   ├── operativas/               Workflows end-to-end (propuesta-comercial, etc.)
+│   └── craft/                    27 skills de filosofía de diseño
+├── stack/
+│   ├── figma.md                  Inventario de archivos Figma
+│   ├── canva.md                  Inventario de plantillas Canva
+│   └── otros.md                  Framer, Notion, Slack, Drive, Tally, Calendar
+├── references/                   untitled-ui-react, heroicons, shadcn, gstack, taste
+├── projects/                     Estado vivo de proyectos en curso
+├── templates/                    Plantillas markdown para outputs
+└── legacy/
+    ├── monet-app/                App Next.js anterior (monet.30x.com)
+    └── juan-diego-30x-design-*   CLAUDE.md y README originales
 ```
 
-Cuando el Hub embeba a Monet, debe pasar estos headers. En acceso
-directo (sin Hub), Monet usa la identidad "anonymous@30x.com" como
-fallback.
+---
+
+## Historia
+
+Este repo pasó por dos iteraciones antes de su forma actual.
+
+1. **Monet-app** (`legacy/monet-app/`). App Next.js que generaba decks desde brief, deployada en `monet.30x.com`. Buen prototipo, pero la generación pura no llegaba al estándar de Juan Diego.
+
+2. **juan-diego-30x-design** (repo separado, ahora absorbido aquí). Design system + 27 skills + references. Era el cerebro de marca.
+
+3. **Monet (este)**. Hermes Agent con SOUL.md, skills operativas, todo el design system absorbido, MCP de Figma y Canva. Vive en Slack. Compone sobre el trabajo ya hecho.
+
+El repo `juandiegodlo/juan-diego-30x-design` queda archivado tras la migración.
+
+---
+
+## Cómo opera Monet
+
+1. Alguien del equipo escribe en Slack: "Monet, necesito una propuesta para Mastercard".
+2. Monet identifica la skill operativa (`skills/operativas/propuesta-comercial/`).
+3. Lee `stack/canva.md` o `stack/figma.md` para encontrar la plantilla correcta.
+4. Abre la plantilla via MCP (Canva o Figma), duplica.
+5. Reemplaza variables (logo cliente, fondo, copy).
+6. Exporta PDF.
+7. Devuelve link Canva/Figma + PDF en Slack.
+
+Si falla en cualquier paso, escala a Juan Diego con la pregunta específica.
+
+---
+
+## Contribución
+
+Solo Juan Diego mergea a `main`. Monet trabaja en branches `feat/*` y abre PRs.
+
+Cambios al brand, a las skills, o al stack quedan versionados aquí. La memoria del agente vive en el repo, no en la sesión.
