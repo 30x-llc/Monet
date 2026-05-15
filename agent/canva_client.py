@@ -134,7 +134,49 @@ def get_access_token(force_refresh: bool = False) -> str:
     _cache.access_token = data["access_token"]
     expires_in = int(data.get("expires_in", 14400))
     _cache.expires_at = now + expires_in
+
+    # Canva uses refresh token rotation: each refresh returns a NEW
+    # refresh_token and revokes the old one. We must persist the new
+    # value or the next refresh call fails with "Refresh token used
+    # twice. All access tokens granted from this flow are now revoked."
+    new_refresh = data.get("refresh_token")
+    if new_refresh and new_refresh != refresh_token:
+        _persist_refresh_token(new_refresh)
+        os.environ["CANVA_REFRESH_TOKEN"] = new_refresh
+
     return _cache.access_token
+
+
+def _persist_refresh_token(new_value: str) -> None:
+    """Rewrite the CANVA_REFRESH_TOKEN line in canva.env, preserving everything else.
+
+    The .env file may live at /opt/data/.hermes/secrets/canva.env (VPS prod)
+    or alongside the package as agent/canva.env (local dev). We look for both
+    and rewrite whichever exists. Silently no-ops if neither is writeable,
+    so this works in stateless deploys too (orchestrator just keeps the new
+    token in process memory via os.environ).
+    """
+    candidates = [
+        Path("/opt/data/.hermes/secrets/canva.env"),
+        Path(__file__).resolve().parent / "canva.env",
+    ]
+    for path in candidates:
+        if not path.exists():
+            continue
+        try:
+            lines = path.read_text().splitlines()
+            replaced = False
+            for i, line in enumerate(lines):
+                if line.startswith("CANVA_REFRESH_TOKEN="):
+                    lines[i] = f"CANVA_REFRESH_TOKEN={new_value}"
+                    replaced = True
+                    break
+            if not replaced:
+                lines.append(f"CANVA_REFRESH_TOKEN={new_value}")
+            path.write_text("\n".join(lines) + "\n")
+            return
+        except (OSError, PermissionError):
+            continue
 
 
 # ─── Canva Connect operations ─────────────────────────────────────────────
