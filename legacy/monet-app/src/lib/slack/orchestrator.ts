@@ -38,12 +38,11 @@ const KNOWN_PROPOSALS: Record<
 > = {
     mastercard: {
         viewUrl: "https://www.canva.com/design/DAHJeBw5x4A/view",
-        // Signed Canva export URL — fresh 24h TTL, gets re-exported on each
-        // deploy that touches the design. Permanent solution requires Canva
-        // Connect OAuth server-side so the orchestrator can export on every
-        // request; until then this is the best 1-click PDF delivery.
-        pdfUrl:
-            "https://export-download.canva.com/w5x4A/DAHJeBw5x4A/-1/0-5309121162364880142.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260513%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260513T081332Z&X-Amz-Expires=37220&X-Amz-Signature=22aa1de5dd507efb8e5e1840f9ef9eea36ab9c143418be87a40824d37fd54623&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner",
+        // A Canva PDF export needs a fresh per-request signed URL (Canva
+        // Connect OAuth, server-side). We do NOT hardcode a signed URL here —
+        // it embeds credentials and expires in 24h. Fall back to the stable
+        // design link; the user exports the PDF from inside Canva.
+        pdfUrl: "https://www.canva.com/design/DAHJeBw5x4A/view",
         designId: "DAHJeBw5x4A",
         title: "Mastercard | 30X | Andrés Bilbao",
     },
