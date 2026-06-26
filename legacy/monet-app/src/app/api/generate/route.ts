@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient, type ClaudeClient } from "@/lib/llm/vertex-client";
 import { getGeneratorPrompt } from "@/lib/prompts/generator";
 import type {
     ResearchResult,
@@ -8,7 +9,13 @@ import type {
     Deck,
     Slide,
 } from "@/lib/slide-types";
-import { enrichCompany } from "@/lib/company-enrichment";
+import { enrichCompany, guessDomain } from "@/lib/company-enrichment";
+import { isReachableImage } from "@/lib/proposals/og-image";
+import {
+    resolveCompanyImagery,
+    resolveMentorPhotos,
+    type ImageryResult,
+} from "@/lib/proposals/company-imagery";
 import { pickReferenceImages } from "@/lib/reference-decks";
 import { sanitizeDeck } from "@/lib/sanitize-deck";
 
@@ -73,7 +80,7 @@ const DECK_TOOL: Anthropic.Messages.Tool = {
 };
 
 async function generateDeck(
-    client: Anthropic,
+    client: ClaudeClient,
     systemPrompt: string,
     userMessage: string,
     referenceImages: Awaited<ReturnType<typeof pickReferenceImages>>,
@@ -204,31 +211,83 @@ function expectedSlideTypesFor(
  * We do this server-side instead of trusting the model because Claude
  * consistently forgets to pass research URLs back into the deck schema.
  */
-function postProcessDeck(
+async function postProcessDeck(
     deck: Deck,
     research: ResearchResult | undefined,
     format: ProjectFormat,
     intake: IntakeAnswers | undefined,
-): Deck {
+): Promise<Deck> {
     const slides: Slide[] = Array.isArray(deck.slides) ? [...deck.slides] : [];
 
-    // 1. Client logo on every slide (via deck root). If research didn't
-    //    return one, enrich from the company name.
-    let clientLogoUrl = deck.clientLogoUrl || research?.logoUrl;
+    // Company logo/banner scraping only applies to client-facing formats
+    // (proposals & docs). Carousels, stories and "other" use a topic, not a
+    // real company — scraping a logo there would be irrelevant and slow.
+    const isClientFormat = format === "proposal" || format === "doc";
+    const domain =
+        isClientFormat && deck.companyName && deck.companyName !== "30X"
+            ? guessDomain(deck.companyName)
+            : undefined;
+
+    // Gather mentors needing a photo so we can scrape company imagery and
+    // mentor headshots CONCURRENTLY (both are Gemini + Google Search calls).
+    type MentorLike = { name?: string; role?: string; imageUrl?: string };
+    const needPhotos: Array<{ name: string; role?: string }> = [];
+    for (const s of slides) {
+        const ss = s as { mentors?: MentorLike[]; mentor?: MentorLike };
+        const list = Array.isArray(ss.mentors) ? ss.mentors : [];
+        if (ss.mentor) list.push(ss.mentor);
+        for (const m of list) {
+            if (m?.name && !m.imageUrl) needPhotos.push({ name: m.name, role: m.role });
+        }
+    }
+
+    // Logo + banner + mentor photos are scraped from the web by Gemini
+    // (Google Search grounding) based on the company / person names, then
+    // validated to be real, non-watermarked images. See company-imagery.ts.
+    const [imagery, photoMap] = await Promise.all([
+        domain
+            ? resolveCompanyImagery(deck.companyName, domain)
+            : Promise.resolve({} as ImageryResult),
+        needPhotos.length > 0
+            ? resolveMentorPhotos(needPhotos)
+            : Promise.resolve({} as Record<string, string>),
+    ]);
+
+    // 1. Client logo on every slide (via deck root). Explicit deck/research
+    //    value wins; otherwise the Gemini-scraped logo (which already falls
+    //    back to apple-touch-icon / favicon internally).
+    let clientLogoUrl = deck.clientLogoUrl || research?.logoUrl || imagery.logoUrl;
     if (!clientLogoUrl && deck.companyName && deck.companyName !== "30X") {
         clientLogoUrl = enrichCompany(deck.companyName).logoUrl;
     }
 
-    // 2. First cover slide gets the hero image. Corporate-cover is the
-    //    canonical flattering layout; cover-hero also accepts it.
-    const heroImage = research?.heroImageUrl;
-    if (heroImage && slides.length > 0) {
-        const first = slides[0] as { type?: string; backgroundImage?: string };
-        if (
-            (first.type === "corporate-cover" || first.type === "cover-hero") &&
-            !first.backgroundImage
-        ) {
-            slides[0] = { ...first, backgroundImage: heroImage } as Slide;
+    // 2. First cover slide gets the hero/banner. A validated research/model
+    //    URL wins; otherwise the Gemini-scraped banner. Never a dead URL —
+    //    falls through to a clean dark cover.
+    const first0 = slides[0] as { type?: string; backgroundImage?: string } | undefined;
+    if (
+        first0 &&
+        (first0.type === "corporate-cover" || first0.type === "cover-hero")
+    ) {
+        const candidate = research?.heroImageUrl || first0.backgroundImage;
+        const heroImage =
+            candidate && (await isReachableImage(candidate)) ? candidate : imagery.bannerUrl;
+        slides[0] = { ...first0, backgroundImage: heroImage } as Slide;
+    }
+
+    // 2b. Apply scraped mentor headshots; mentors without a usable result
+    //     keep their initials avatar.
+    if (Object.keys(photoMap).length > 0) {
+        const withPhoto = (m: MentorLike): MentorLike =>
+            m?.name && photoMap[m.name] ? { ...m, imageUrl: photoMap[m.name] } : m;
+        for (let i = 0; i < slides.length; i++) {
+            const ss = slides[i] as { mentors?: MentorLike[]; mentor?: MentorLike };
+            if (!Array.isArray(ss.mentors) && !ss.mentor) continue;
+            slides[i] = {
+                ...ss,
+                ...(Array.isArray(ss.mentors) ? { mentors: ss.mentors.map(withPhoto) } : {}),
+                ...(ss.mentor ? { mentor: withPhoto(ss.mentor) } : {}),
+            } as Slide;
         }
     }
 
@@ -278,7 +337,7 @@ export async function POST(request: NextRequest) {
         // partnership generic) skips the /api/research step entirely and
         // uses the intake + topic instead.
 
-        const client = new Anthropic();
+        const client = createClaudeClient();
         const systemPrompt = getGeneratorPrompt({
             format: resolvedFormat,
             programId: program,
@@ -328,7 +387,7 @@ export async function POST(request: NextRequest) {
             userMessage,
             referenceImages,
         );
-        const processed = postProcessDeck(deck, research, resolvedFormat, intake);
+        const processed = await postProcessDeck(deck, research, resolvedFormat, intake);
         const finalDeck = sanitizeDeck(processed);
         return Response.json({ ok: true, deck: finalDeck });
     } catch (error) {

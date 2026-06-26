@@ -221,8 +221,13 @@ export function enrichCompany(
     return {
         name: companyName,
         domain,
-        logoUrl: clearbitLogoUrl(domain),
-        logoFallbackUrl: googleFaviconUrl(domain),
+        // Clearbit's free Logo API was shut down (HubSpot acquisition) and now
+        // 403s, so we fall back to Google's favicon service, which always
+        // returns an image. The higher-quality logo, when found, comes from
+        // the research step (Gemini + Google Search) and is preferred upstream
+        // in postProcessDeck.
+        logoUrl: googleFaviconUrl(domain, 256),
+        logoFallbackUrl: googleFaviconUrl(domain, 128),
         heroKeyword: inferHeroKeyword(companyName, industry),
     };
 }

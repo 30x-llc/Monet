@@ -176,9 +176,9 @@ const TAB_DEFS: TabDef[] = [
     { id: "proposal", label: "Propuesta", icon: <IconSlide /> },
     { id: "doc", label: "Documento", icon: <IconDoc /> },
     { id: "prototype", label: "App", icon: <IconPrototype /> },
-    { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel />, comingSoon: true },
-    { id: "story-ig", label: "Historia", icon: <IconStory />, comingSoon: true },
-    { id: "other", label: "Otro", icon: <IconSpark />, comingSoon: true },
+    { id: "carousel-ig", label: "Carrusel", icon: <IconCarousel /> },
+    { id: "story-ig", label: "Historia", icon: <IconStory /> },
+    { id: "other", label: "Otro", icon: <IconSpark /> },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -229,12 +229,6 @@ export function HomeView({
             <section className="pt-14 pb-16 px-6">
                 <div className="max-w-[960px] mx-auto">
                     <div className="text-center mb-9">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.02)] mb-4">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
-                            <span className="text-[11px] font-medium tracking-[-0.005em] text-[#525252]">
-                                Diseñando con Claude Opus 4.7
-                            </span>
-                        </div>
                         <h1 className="text-[44px] font-semibold tracking-[-0.035em] leading-[1.02] text-[#0a0a0a]">
                             ¿Qué vamos a diseñar hoy?
                         </h1>

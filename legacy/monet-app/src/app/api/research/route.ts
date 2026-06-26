@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient, type ClaudeClient } from "@/lib/llm/vertex-client";
 import { RESEARCH_SYSTEM_PROMPT } from "@/lib/prompts/research";
 import type { ResearchResult } from "@/lib/slide-types";
 import { enrichCompany } from "@/lib/company-enrichment";
@@ -85,7 +86,7 @@ const WEB_SEARCH_TOOL = {
 } as unknown as Anthropic.Messages.Tool;
 
 async function runResearch(
-    client: Anthropic,
+    client: ClaudeClient,
     userMessage: string,
     useWebSearch: boolean,
 ): Promise<ResearchResult> {
@@ -316,7 +317,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        const client = new Anthropic();
+        const client = createClaudeClient();
         const userMessage = notes
             ? `Investiga la empresa "${companyName}" para preparar una presentación comercial de 30x. Usa web_search para información Y para encontrar un logoUrl directo (PNG/SVG) y un heroImageUrl (foto representativa del mundo de la empresa). Luego llama save_research con todos los datos.\n\nNotas del vendedor:\n${notes}`
             : `Investiga la empresa "${companyName}" para preparar una presentación comercial de 30x. Usa web_search para información Y para encontrar un logoUrl directo (PNG/SVG) y un heroImageUrl (foto representativa del mundo de la empresa). Luego llama save_research con todos los datos.`;

@@ -125,6 +125,33 @@ async function handleAction(
         return;
     }
 
+    // Approval flow — Aprobar / Rechazar from the #propuestas channel.
+    // Writes the deck's status to the DB (same source of truth the in-app
+    // /ops dashboard uses) and rewrites the channel message with the verdict.
+    if (action.action_id === "monet_approve" || action.action_id === "monet_reject_approval") {
+        if (!parsed.deckId) return;
+        const approved = action.action_id === "monet_approve";
+        const who = payload.user?.id ? `<@${payload.user.id}>` : "el equipo";
+        try {
+            const { ensureSchema } = await import("@/lib/db/schema");
+            const { setDeckStatus } = await import("@/lib/db/decks");
+            await ensureSchema();
+            await setDeckStatus(parsed.deckId, approved ? "approved" : "rejected");
+            if (dmChannel && dmTs) {
+                await updateMessage({
+                    channel: dmChannel,
+                    ts: dmTs,
+                    text: approved
+                        ? `✅ Propuesta *aprobada* por ${who} · <${origin}/?open=${parsed.deckId}|Abrir en Monet>`
+                        : `❌ Propuesta *rechazada* por ${who} · <${origin}/?open=${parsed.deckId}|Abrir en Monet>`,
+                });
+            }
+        } catch (err) {
+            console.error("[slack/interactivity] approval failed", err);
+        }
+        return;
+    }
+
     // Hero picker — action_id is `monet_pick_hero_{1..5}`.
     if (action.action_id.startsWith("monet_pick_hero_")) {
         let pick: { deckId?: string; heroUrl?: string; heroSource?: string; index?: number } = {};

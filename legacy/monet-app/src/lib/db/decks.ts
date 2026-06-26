@@ -11,7 +11,7 @@
 
 import "server-only";
 import { sql } from "./client";
-import { ensureSchema, type DeckStatus } from "./schema";
+import { ensureSchema, DECK_STATUSES, type DeckStatus } from "./schema";
 import type { Deck } from "@/lib/slide-types";
 
 export interface DeckRow {
@@ -229,13 +229,9 @@ export async function deckStats(): Promise<{
         LIMIT 20
     `) as Array<{ user_email: string; user_name: string; n: number }>;
 
-    const byStatus: Record<DeckStatus, number> = {
-        draft: 0,
-        sent: 0,
-        won: 0,
-        lost: 0,
-        archived: 0,
-    };
+    const byStatus = Object.fromEntries(
+        DECK_STATUSES.map((s) => [s, 0]),
+    ) as Record<DeckStatus, number>;
     for (const r of statusRows) byStatus[r.status] = r.n;
 
     return {

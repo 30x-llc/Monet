@@ -13,9 +13,27 @@ export const runtime = "edge";
  * sidesteps ORB entirely. Cached aggressively because logos rarely
  * change.
  */
+// Empty 1x1 transparent SVG. Returned (HTTP 200) whenever the upstream logo
+// can't be fetched, so a dead/blocked logo URL renders as nothing instead of a
+// broken-image icon. An SVG with no painted content stays invisible even under
+// the deck's `filter: brightness(0) invert(1)` (which would turn an opaque
+// raster placeholder into a white block). Critical for the PDF/SSR render path,
+// where React's onError handler never runs (static markup).
+const EMPTY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
+function transparentPixel(): Response {
+    return new Response(EMPTY_SVG, {
+        status: 200,
+        headers: {
+            "content-type": "image/svg+xml",
+            "cache-control": "public, max-age=300",
+            "access-control-allow-origin": "*",
+        },
+    });
+}
+
 export async function GET(request: NextRequest) {
     const src = new URL(request.url).searchParams.get("url");
-    if (!src) return new Response("missing url", { status: 400 });
+    if (!src) return transparentPixel();
 
     let target: URL;
     try {
@@ -36,13 +54,13 @@ export async function GET(request: NextRequest) {
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
                 accept: "image/svg+xml,image/*,*/*;q=0.8",
             },
-            // 10s upper bound — slow logo CDNs are not worth waiting for
-            signal: AbortSignal.timeout(10_000),
+            // Fail fast: a dead/slow logo CDN must not stall the headless PDF
+            // render (page.setContent waits for every <img> to load). On
+            // timeout we fall through to the transparent pixel.
+            signal: AbortSignal.timeout(3_500),
         });
         if (!upstream.ok) {
-            return new Response(`upstream ${upstream.status}`, {
-                status: 502,
-            });
+            return transparentPixel();
         }
         const contentType =
             upstream.headers.get("content-type") ?? "application/octet-stream";
@@ -56,10 +74,7 @@ export async function GET(request: NextRequest) {
                 "access-control-allow-origin": "*",
             },
         });
-    } catch (err) {
-        return new Response(
-            `proxy failed: ${err instanceof Error ? err.message : String(err)}`,
-            { status: 502 },
-        );
+    } catch {
+        return transparentPixel();
     }
 }

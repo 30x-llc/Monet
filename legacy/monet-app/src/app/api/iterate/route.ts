@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/llm/vertex-client";
 import { ITERATOR_SYSTEM_PROMPT } from "@/lib/prompts/iterator";
 import type { Deck } from "@/lib/slide-types";
 import { sanitizeDeck, stripDashes } from "@/lib/sanitize-deck";
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const client = new Anthropic();
+        const client = createClaudeClient();
 
         let response: Anthropic.Messages.Message | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {

@@ -268,7 +268,7 @@ export function ResearchReview({
                 <div className="max-w-[760px] mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="text-[11.5px] text-[#737373] tracking-[-0.005em]">
                         {isGenerating
-                            ? "Generando propuesta con Claude Opus 4.7…"
+                            ? "Generando propuesta con Gemini 2.5 Pro…"
                             : "El ángulo del pitch y las notas del call alimentan directamente el deck."}
                     </div>
                     <button

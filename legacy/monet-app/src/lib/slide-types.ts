@@ -194,6 +194,9 @@ export interface IgCoverSlide {
     type: "ig-cover";
     eyebrow?: string;
     headline: string;
+    /** Some generations emit title/titleAccent instead of headline. */
+    title?: string;
+    titleAccent?: string;
     subtitle?: string;
     backgroundImage?: string;
 }

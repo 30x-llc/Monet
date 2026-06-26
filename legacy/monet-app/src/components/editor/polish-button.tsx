@@ -90,7 +90,7 @@ export function PolishButton({ deck, onDeckChange }: PolishButtonProps) {
             <button
                 onClick={run}
                 disabled={busy}
-                title="Pulir con Claude vision: render → critique → apply"
+                title="Pulir con Gemini vision: render → critique → apply"
                 className="h-7 px-2.5 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-[background,color,opacity] duration-150 text-[var(--chrome-fg-4)] hover:text-[var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ transitionTimingFunction: "var(--ease-out)" }}
             >

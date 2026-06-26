@@ -8,13 +8,15 @@ import type {
     ResearchResult,
 } from "@/lib/slide-types";
 import { EditorLayout } from "@/components/editor/editor-layout";
+import { ProposalFieldsEditor } from "@/components/editor/proposal-fields-editor";
+import { GenerationLoader } from "@/components/app/generation-loader";
 import { HomeView, type CreateArgs } from "@/components/app/home-view";
 import { GuidedIntake, type IntakeResult } from "@/components/app/guided-intake";
 import { ResearchReview } from "@/components/app/research-review";
 import { saveDeck, getRecentDecks, getDeckById, deleteDeck, type StoredDeck } from "@/lib/deck-storage";
 import { getTemplateById } from "@/lib/templates";
 
-type AppView = "home" | "intake" | "researching" | "research-review" | "generating" | "editor";
+type AppView = "home" | "intake" | "researching" | "research-review" | "generating" | "editor" | "fields";
 
 // Staged generation context — we carry it between the research step
 // (which calls /api/research) and the generate step (which calls
@@ -73,6 +75,7 @@ export default function Home() {
     const [isIterating, setIsIterating] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationLog, setGenerationLog] = useState("");
+    const [activeClient, setActiveClient] = useState("");
     const [recentDecks, setRecentDecks] = useState<StoredDeck[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
     const [intakeFormat, setIntakeFormat] = useState<ProjectFormat>("proposal");
@@ -147,7 +150,7 @@ export default function Home() {
     const runGenerate = useCallback(
         async (pending: PendingGeneration, editedResearch: ResearchResult | null) => {
             setIsGenerating(true);
-            setGenerationLog("Generando deck con Claude Opus 4.7…");
+            setGenerationLog("Generando deck con Gemini 2.5 Pro…");
             setGenerationError(null);
             setView("generating");
 
@@ -187,7 +190,10 @@ export default function Home() {
                             topic,
                         }),
                     },
-                    180_000,
+                    // Generation now includes Gemini web-scraping of logo,
+                    // banner, and mentor photos — give it room before the UI
+                    // surfaces a timeout.
+                    280_000,
                 );
                 const genData = await genRes.json().catch(() => ({
                     ok: false,
@@ -251,6 +257,7 @@ export default function Home() {
         }) => {
             const { format, intake, programId, corporateMode, topic, seed, clientName, theme, briefing, notes: directNotes } = args;
             const effectiveClientName = intake?.clientName || clientName || "";
+            setActiveClient(effectiveClientName);
             const isProposal = format === "proposal";
             const shouldResearch =
                 isProposal &&
@@ -586,6 +593,18 @@ export default function Home() {
                 onIterate={handleIterate}
                 onNewDeck={handleNewDeck}
                 isIterating={isIterating}
+                onEditFields={() => setView("fields")}
+            />
+        );
+    }
+
+    // ── Field editor (structured "Editar propuesta" form + live preview) ──
+    if (view === "fields" && deck) {
+        return (
+            <ProposalFieldsEditor
+                deck={deck}
+                onChange={handleDeckChange}
+                onBack={() => setView("editor")}
             />
         );
     }
@@ -620,92 +639,30 @@ export default function Home() {
         );
     }
 
-    // ── Researching (running /api/research) ──
+    // ── Researching / Generating — elegant animated progress ──
+    const cancelToHome = () => {
+        setGenerationError(null);
+        setGenerationLog("");
+        setView("home");
+    };
     if (view === "researching") {
         return (
-            <div className="flex h-screen bg-white items-center justify-center">
-                <div className="w-full max-w-[520px] px-6 text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-black/[0.04] border-black/[0.06] mb-6">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#E9FF7B] animate-pulse" />
-                        <span className="text-[11px] font-medium tracking-[-0.005em] text-[#0a0a0a]">
-                            Research con web_search + Opus 4.7
-                        </span>
-                    </div>
-                    <h2 className="text-[28px] font-semibold text-[#0a0a0a] tracking-[-0.03em] mb-2">
-                        Buscando intel de {pendingGen?.clientName ?? "la empresa"}…
-                    </h2>
-                    <p className="text-[13px] text-[#737373] mb-1">
-                        Logo, foto hero, noticias recientes, liderazgo, dolores.
-                    </p>
-                    <p className="text-[12px] text-[#a3a3a3]">
-                        ~30-60 segundos. Después revisas y ajustas antes de generar.
-                    </p>
-                    {generationError ? (
-                        <div className="rounded-xl bg-red-50 border border-red-200 p-4 mt-6 text-[12px] text-red-800 text-left whitespace-pre-wrap break-words">
-                            {generationError}
-                        </div>
-                    ) : null}
-                </div>
-            </div>
+            <GenerationLoader
+                phase="researching"
+                clientName={pendingGen?.clientName ?? activeClient ?? intakeHome?.clientName}
+                error={generationError}
+                onCancel={cancelToHome}
+            />
         );
     }
-
-    // ── Generating ──
     if (view === "generating" || isGenerating) {
-        const hasError = generationError !== null;
         return (
-            <div className="flex h-screen bg-white items-center justify-center">
-                <div className="w-full max-w-[640px] px-6 text-center">
-                    <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border mb-6 ${
-                            hasError
-                                ? "bg-red-50 border-red-200"
-                                : "bg-black/[0.04] border-black/[0.06]"
-                        }`}
-                    >
-                        <div
-                            className={`w-1.5 h-1.5 rounded-full ${
-                                hasError ? "bg-red-500" : "bg-[#E9FF7B] animate-pulse"
-                            }`}
-                        />
-                        <span
-                            className={`text-[11px] font-medium tracking-[-0.005em] ${
-                                hasError ? "text-red-700" : "text-[#0a0a0a]"
-                            }`}
-                        >
-                            {hasError ? "La generación falló" : "Generando con Claude Opus 4.7"}
-                        </span>
-                    </div>
-                    <h2 className="text-[28px] font-semibold text-[#0a0a0a] tracking-[-0.03em] mb-2">
-                        {hasError ? "Algo salió mal" : "Construyendo tu diseño"}
-                    </h2>
-                    <p className="text-[13px] text-[#737373] mb-8">
-                        {hasError
-                            ? "Revisa el detalle abajo. Puedes volver al home y reintentar."
-                            : "Estructurando el proyecto…"}
-                    </p>
-                    {hasError ? (
-                        <div className="rounded-xl bg-red-50 border border-red-200 p-4 mb-4 text-[12px] text-red-800 text-left whitespace-pre-wrap break-words">
-                            {generationError}
-                        </div>
-                    ) : null}
-                    <div className="rounded-xl bg-[#fafafa] border border-black/[0.06] p-4 h-[260px] overflow-y-auto text-[11px] text-[#525252] text-left whitespace-pre-wrap scrollbar-hide">
-                        {generationLog || (hasError ? "(sin salida del modelo)" : "Conectando…")}
-                    </div>
-                    <div className="mt-6 flex items-center justify-center gap-2">
-                        <button
-                            onClick={() => {
-                                setGenerationError(null);
-                                setGenerationLog("");
-                                setView("home");
-                            }}
-                            className="h-9 px-4 rounded-md text-[12px] font-semibold text-[#0a0a0a] border border-black/15 bg-white hover:bg-black/[0.04] transition-colors"
-                        >
-                            {hasError ? "Volver al home" : "Cancelar"}
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <GenerationLoader
+                phase="generating"
+                clientName={pendingGen?.clientName ?? activeClient ?? intakeHome?.clientName}
+                error={generationError}
+                onCancel={cancelToHome}
+            />
         );
     }
 

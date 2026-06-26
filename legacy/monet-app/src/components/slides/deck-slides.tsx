@@ -45,8 +45,8 @@ const PORTADA = BRAND_ASSETS.portada;
  * so Chrome's Opaque Response Blocking does not drop the image. Local
  * paths (starting with `/`) and data URIs pass through unchanged.
  */
-function proxyExternal(url: string): string {
-    if (!url) return url;
+function proxyExternal(url?: string | null): string | undefined {
+    if (!url) return undefined;
     if (url.startsWith("/") || url.startsWith("data:")) return url;
     return `/api/logo-proxy?url=${encodeURIComponent(url)}`;
 }
@@ -177,7 +177,7 @@ function LogoMarks({ clientLogoUrl }: { clientLogoUrl?: string }) {
             {clientLogoUrl ? (
                 <img
                     className="client-logo"
-                    src={clientLogoUrl}
+                    src={proxyExternal(clientLogoUrl)}
                     alt="Cliente"
                     onError={(e) => {
                         // Hide a broken partner logo rather than showing
@@ -198,7 +198,7 @@ export function CoverHero({ slide, clientLogoUrl }: { slide: CoverHeroSlide; cli
     return (
         <section className="deck-slide s-cover">
             <div className="bg-img">
-                <img src={slide.backgroundImage} alt="" />
+                <img src={proxyExternal(slide.backgroundImage)} alt="" />
             </div>
             <LogoMarks clientLogoUrl={clientLogoUrl} />
             <div className="title-wrap">
@@ -270,7 +270,7 @@ function CorporateCoverRecognition({
         <section className="deck-slide s-corp-recognition">
             <div className="bg-img">
                 <img
-                    src={bg}
+                    src={proxyExternal(bg)}
                     alt=""
                     onError={(e) => {
                         const img = e.currentTarget;
@@ -283,7 +283,7 @@ function CorporateCoverRecognition({
             {clientLogoUrl ? (
                 <img
                     className="partner-mark"
-                    src={clientLogoUrl}
+                    src={proxyExternal(clientLogoUrl)}
                     alt="Partner"
                     onError={(e) => {
                         e.currentTarget.style.display = "none";
@@ -317,7 +317,7 @@ function CorporateCoverBleed({ slide, clientLogoUrl }: { slide: CorporateCoverSl
         <section className="deck-slide s-corp-cover">
             <div className="bg-img">
                 <img
-                    src={bg}
+                    src={proxyExternal(bg)}
                     alt=""
                     onError={(e) => {
                         // Hero URLs from web_search sometimes expire or 404.
@@ -332,7 +332,7 @@ function CorporateCoverBleed({ slide, clientLogoUrl }: { slide: CorporateCoverSl
             {clientLogoUrl ? (
                 <img
                     className="hero-client-logo"
-                    src={clientLogoUrl}
+                    src={proxyExternal(clientLogoUrl)}
                     alt="Partner"
                     onError={(e) => {
                         e.currentTarget.style.display = "none";
@@ -363,7 +363,7 @@ function CorporateCoverSplit({ slide, clientLogoUrl }: { slide: CorporateCoverSl
                     <div className="partner-strip">
                         <span className="partner-label">Para</span>
                         <img
-                            src={clientLogoUrl}
+                            src={proxyExternal(clientLogoUrl)}
                             alt="Partner"
                             onError={(e) => {
                                 e.currentTarget.style.display = "none";
@@ -374,7 +374,7 @@ function CorporateCoverSplit({ slide, clientLogoUrl }: { slide: CorporateCoverSl
             </div>
             <div className="right">
                 <img
-                    src={bg}
+                    src={proxyExternal(bg)}
                     alt=""
                     onError={(e) => {
                         const img = e.currentTarget;
@@ -865,17 +865,34 @@ export function Content({ slide, clientLogoUrl }: { slide: ContentSlide; clientL
 // ============================================================
 
 export function IgCover({ slide }: { slide: IgCoverSlide }) {
+    const headline = slide.headline || slide.title || "";
+    const accent = slide.titleAccent;
+    // Brand-asset paths (/assets/...) live in a dead Blob store and resolve to
+    // placeholder avatars — never use one as a full-bleed cover. Keep only real
+    // external photos.
+    const bg =
+        slide.backgroundImage && !slide.backgroundImage.includes("/assets/")
+            ? slide.backgroundImage
+            : undefined;
     return (
         <section className="deck-slide s-ig-cover">
-            {slide.backgroundImage ? (
+            {bg ? (
                 <div className="bg">
-                    <img src={slide.backgroundImage} alt="" />
+                    <img src={proxyExternal(bg)} alt="" />
                 </div>
             ) : null}
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
             <div className="body">
                 {slide.eyebrow ? <div className="eyebrow" data-text-path='["eyebrow"]'>{slide.eyebrow}</div> : null}
-                <h1 className="h" data-text-path='["headline"]'>{slide.headline}</h1>
+                <h1 className="h" data-text-path='["headline"]'>
+                    {headline}
+                    {accent ? (
+                        <>
+                            {" "}
+                            <span style={{ color: "var(--t-accent)" }}>{accent}</span>
+                        </>
+                    ) : null}
+                </h1>
                 {slide.subtitle ? <div className="sub" data-text-path='["subtitle"]'>{slide.subtitle}</div> : null}
             </div>
         </section>
@@ -940,11 +957,15 @@ export function IgCta({ slide }: { slide: IgCtaSlide }) {
 // ============================================================
 
 export function StoryCover({ slide }: { slide: StoryCoverSlide }) {
+    const bg =
+        slide.backgroundImage && !slide.backgroundImage.includes("/assets/")
+            ? slide.backgroundImage
+            : undefined;
     return (
         <section className="deck-slide s-story-cover">
-            {slide.backgroundImage ? (
+            {bg ? (
                 <div className="bg">
-                    <img src={slide.backgroundImage} alt="" />
+                    <img src={proxyExternal(bg)} alt="" />
                 </div>
             ) : null}
             <img className="brand" src={LOGO_LIGHT} alt="30X" />
@@ -1081,7 +1102,7 @@ export function DocPage({
                                     <span className="lockup-divider" aria-hidden="true">|</span>
                                     <img
                                         className="lockup-partner"
-                                        src={clientLogoUrl}
+                                        src={proxyExternal(clientLogoUrl)}
                                         alt="Partner"
                                         onError={(e) => {
                                             e.currentTarget.style.display = "none";

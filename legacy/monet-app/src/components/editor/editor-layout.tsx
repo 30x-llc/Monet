@@ -29,6 +29,7 @@ interface EditorLayoutProps {
     onIterate: (instruction: string) => Promise<{ ok: boolean; summary?: string; error?: string }>;
     onNewDeck: () => void;
     isIterating: boolean;
+    onEditFields?: () => void;
 }
 
 export function EditorLayout({
@@ -37,6 +38,7 @@ export function EditorLayout({
     onIterate,
     onNewDeck,
     isIterating,
+    onEditFields,
 }: EditorLayoutProps) {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [selectedElementPath, setSelectedElementPath] =
@@ -325,6 +327,7 @@ export function EditorLayout({
                 theme={chromeTheme}
                 onToggleTheme={toggleTheme}
                 onLogoChange={(url) => onDeckChange({ ...deck, clientLogoUrl: url })}
+                onEditFields={onEditFields}
             />
 
             <div className="flex flex-1 min-h-0">

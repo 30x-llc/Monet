@@ -4,10 +4,21 @@
  * "server-only".
  */
 
-export type DeckStatus = "draft" | "sent" | "won" | "lost" | "archived";
+export type DeckStatus =
+    | "draft"
+    | "pending_approval"
+    | "approved"
+    | "rejected"
+    | "sent"
+    | "won"
+    | "lost"
+    | "archived";
 
 export const DECK_STATUSES: DeckStatus[] = [
     "draft",
+    "pending_approval",
+    "approved",
+    "rejected",
     "sent",
     "won",
     "lost",
@@ -16,6 +27,9 @@ export const DECK_STATUSES: DeckStatus[] = [
 
 export const DECK_STATUS_LABELS: Record<DeckStatus, string> = {
     draft: "Borrador",
+    pending_approval: "En aprobación",
+    approved: "Aprobada",
+    rejected: "Rechazada",
     sent: "Enviado",
     won: "Ganado",
     lost: "Perdido",

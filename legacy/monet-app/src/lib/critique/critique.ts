@@ -22,6 +22,7 @@
 
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/llm/vertex-client";
 import type { Deck } from "@/lib/slide-types";
 import {
     renderDeckToSlideScreenshots,
@@ -296,7 +297,7 @@ export async function runVisionCritique(
         text: `\nCompara contra las referencias y emite edits puntuales para dejar este deck al nivel de 30x. Llama edit_deck una vez.`,
     });
 
-    const client = new Anthropic();
+    const client = createClaudeClient();
     const response = await client.messages.create({
         model: "claude-opus-4-7",
         max_tokens: 4096,

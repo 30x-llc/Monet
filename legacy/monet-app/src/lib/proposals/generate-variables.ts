@@ -14,7 +14,7 @@
  */
 
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/llm/vertex-client";
 import type { ResearchResult } from "@/lib/slide-types";
 import type { ProgramEntry } from "@/lib/proposals/program-catalog";
 import type { PillarSlot, PlantillaMonetVariables } from "@/lib/proposals/plantilla-monet";
@@ -77,10 +77,7 @@ export interface GenerateVariablesInput {
 export async function generatePlantillaMonetVariables(
     input: GenerateVariablesInput,
 ): Promise<PlantillaMonetVariables> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-
-    const client = new Anthropic({ apiKey });
+    const client = createClaudeClient();
 
     const userMessage = buildUserMessage(input);
 

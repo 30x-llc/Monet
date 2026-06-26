@@ -1,12 +1,8 @@
 import type { NextConfig } from "next";
 
-// All static assets under /assets/* live in Vercel Blob in production.
-// In dev, Next.js serves them from public/assets/ directly. The rewrite
-// only applies at build time on Vercel — locally, the public dir wins.
-const BLOB_BASE_URL =
-    process.env.BLOB_BASE_URL ||
-    "https://hn1w2duxxggnvpal.public.blob.vercel-storage.com"; // 30x-design-assets store
-
+// Static assets under /assets/* are resolved by /api/asset (see its rewrite
+// below), which proxies the Vercel Blob store and falls back to a clean
+// placeholder when the store is unreachable.
 const nextConfig: NextConfig = {
     // Bake the deploy's git SHA into the client bundle so the version
     // detector can compare it against /api/version (read at request time)
@@ -52,10 +48,15 @@ const nextConfig: NextConfig = {
         "/api/generate": ["./private/reference-decks/**"],
     },
     async rewrites() {
+        // Route /assets/* through our resolver, which proxies the Blob store
+        // and falls back to a clean placeholder when an asset is missing
+        // (the Blob store currently 403s in every environment). Files present
+        // in public/assets/ (e.g. the 30X logos) are served directly — public
+        // wins over afterFiles rewrites.
         return [
             {
                 source: "/assets/:path*",
-                destination: `${BLOB_BASE_URL}/assets/:path*`,
+                destination: `/api/asset/:path*`,
             },
         ];
     },

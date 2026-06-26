@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { DECK_STATUS_LABELS, type DeckStatus } from "@/lib/db/types";
+import { DECK_STATUS_LABELS, DECK_STATUSES, type DeckStatus } from "@/lib/db/types";
 
 interface DeckRow {
     id: string;
@@ -112,8 +112,8 @@ export default function OpsDashboard() {
                 </div>
 
                 {byStatus ? (
-                    <div className="grid grid-cols-5 gap-3 mt-6">
-                        {(["draft", "sent", "won", "lost", "archived"] as DeckStatus[]).map((s) => (
+                    <div className="grid grid-cols-4 gap-3 mt-6">
+                        {DECK_STATUSES.map((s) => (
                             <button
                                 key={s}
                                 onClick={() => {
@@ -131,7 +131,7 @@ export default function OpsDashboard() {
                                     {DECK_STATUS_LABELS[s]}
                                 </div>
                                 <div className="text-[28px] font-semibold tabular-nums tracking-[-0.025em]">
-                                    {byStatus[s]}
+                                    {byStatus[s] ?? 0}
                                 </div>
                             </button>
                         ))}
@@ -271,6 +271,19 @@ function DeckRowComp({ d, onChange }: { d: DeckRow; onChange: () => void }) {
             setBusy(false);
         }
     };
+    const submitApproval = async () => {
+        setBusy(true);
+        try {
+            const res = await fetch(`/api/proposals/${d.id}/submit-approval`, { method: "POST" });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                alert(`No se pudo enviar a aprobación: ${data.error || `HTTP ${res.status}`}`);
+            }
+            onChange();
+        } finally {
+            setBusy(false);
+        }
+    };
     const updated = useMemo(() => formatRelative(d.updatedAt), [d.updatedAt]);
     const created = useMemo(() => formatRelative(d.createdAt), [d.createdAt]);
 
@@ -289,19 +302,45 @@ function DeckRowComp({ d, onChange }: { d: DeckRow; onChange: () => void }) {
             <div className="min-w-0 text-[11.5px] text-[#525252] truncate pr-3">
                 {d.programName ?? "—"}
             </div>
-            <div>
+            <div className="flex flex-col gap-1 items-start">
                 <select
                     value={d.status}
                     onChange={(e) => setStatus(e.target.value as DeckStatus)}
                     disabled={busy}
                     className="h-7 px-2 rounded-md border border-black/[0.09] bg-white text-[11.5px] tracking-[-0.005em] text-[#0a0a0a] focus:outline-none focus:border-black/35"
                 >
-                    {(["draft", "sent", "won", "lost", "archived"] as DeckStatus[]).map((s) => (
+                    {DECK_STATUSES.map((s) => (
                         <option key={s} value={s}>
                             {DECK_STATUS_LABELS[s]}
                         </option>
                     ))}
                 </select>
+                {d.status === "pending_approval" ? (
+                    <div className="flex gap-1.5">
+                        <button
+                            onClick={() => setStatus("approved")}
+                            disabled={busy}
+                            className="text-[10px] font-medium text-green-700 hover:underline"
+                        >
+                            ✓ Aprobar
+                        </button>
+                        <button
+                            onClick={() => setStatus("rejected")}
+                            disabled={busy}
+                            className="text-[10px] font-medium text-red-700 hover:underline"
+                        >
+                            ✕ Rechazar
+                        </button>
+                    </div>
+                ) : d.status === "draft" || d.status === "rejected" ? (
+                    <button
+                        onClick={submitApproval}
+                        disabled={busy}
+                        className="text-[10px] text-[#737373] hover:text-[#0a0a0a] hover:underline"
+                    >
+                        ↗ Enviar a aprobación
+                    </button>
+                ) : null}
             </div>
             <div className="text-[11px] text-[#737373] tabular-nums">{updated}</div>
             <div className="text-[11px] text-[#a3a3a3] tabular-nums">{created}</div>

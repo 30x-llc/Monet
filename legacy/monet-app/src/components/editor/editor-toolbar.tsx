@@ -21,6 +21,7 @@ interface EditorToolbarProps {
     theme?: "dark" | "light";
     onToggleTheme?: () => void;
     onLogoChange?: (url: string | undefined) => void;
+    onEditFields?: () => void;
 }
 
 export function EditorToolbar({
@@ -33,6 +34,7 @@ export function EditorToolbar({
     theme = "dark",
     onToggleTheme,
     onLogoChange,
+    onEditFields,
 }: EditorToolbarProps) {
     const isPrototype = deck.format === "prototype";
     const logoInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +81,15 @@ export function EditorToolbar({
             </div>
 
             <div className="flex items-center gap-1.5">
+                {onEditFields && (
+                    <button
+                        onClick={onEditFields}
+                        className="h-7 px-2.5 rounded-md text-[11px] font-medium text-[var(--chrome-fg-4)] hover:text-[var(--chrome-fg)] hover:bg-[var(--chrome-hover-bg)] transition-colors"
+                        style={{ transitionTimingFunction: "var(--ease-out)" }}
+                    >
+                        Editar campos
+                    </button>
+                )}
                 {onLogoChange && (
                     <div className="relative">
                         <input

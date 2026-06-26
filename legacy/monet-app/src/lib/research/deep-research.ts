@@ -27,6 +27,7 @@
 
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/llm/vertex-client";
 import {
     parallelExaSearch,
     type ExaResult,
@@ -306,7 +307,7 @@ export async function runDeepResearch(
     const corpus = renderCorpus(results);
 
     // 2. Hand corpus to Claude for synthesis with 30x voice.
-    const client = new Anthropic();
+    const client = createClaudeClient();
     const userMessage = `EMPRESA OBJETIVO: ${companyName}
 ${notes ? `\nNOTAS DEL VENDEDOR:\n${notes}\n` : ""}
 

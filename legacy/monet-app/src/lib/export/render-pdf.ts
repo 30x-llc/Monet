@@ -66,12 +66,22 @@ export async function renderDeckToPdfBuffer(
         process.env.LOCAL_CHROMIUM_PATH ||
         (await resolveChromiumExecutablePath(chromium));
 
+    // @sparticuz/chromium args are tuned for serverless headless chromium and
+    // crash a desktop Chrome (LOCAL_CHROMIUM_PATH). Use a minimal, conflict-free
+    // arg set + a throwaway profile when driving a local Chrome.
+    const launchArgs = process.env.LOCAL_CHROMIUM_PATH
+        ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--hide-scrollbars"]
+        : chromium.args;
+
     let browser: Browser | undefined;
     try {
         browser = await puppeteer.launch({
-            args: chromium.args,
+            args: launchArgs,
             executablePath,
             headless: true,
+            ...(process.env.LOCAL_CHROMIUM_PATH
+                ? { userDataDir: `/tmp/monet-chrome-${process.pid}-${Date.now()}-${Math.round(Math.random() * 1e6)}` }
+                : {}),
         });
 
         const page = await browser.newPage();
@@ -157,12 +167,22 @@ export async function renderDeckToSlideScreenshots(
         process.env.LOCAL_CHROMIUM_PATH ||
         (await resolveChromiumExecutablePath(chromium));
 
+    // @sparticuz/chromium args are tuned for serverless headless chromium and
+    // crash a desktop Chrome (LOCAL_CHROMIUM_PATH). Use a minimal, conflict-free
+    // arg set + a throwaway profile when driving a local Chrome.
+    const launchArgs = process.env.LOCAL_CHROMIUM_PATH
+        ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--hide-scrollbars"]
+        : chromium.args;
+
     let browser: Browser | undefined;
     try {
         browser = await puppeteer.launch({
-            args: chromium.args,
+            args: launchArgs,
             executablePath,
             headless: true,
+            ...(process.env.LOCAL_CHROMIUM_PATH
+                ? { userDataDir: `/tmp/monet-chrome-${process.pid}-${Date.now()}-${Math.round(Math.random() * 1e6)}` }
+                : {}),
         });
 
         const page = await browser.newPage();

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { createClaudeClient } from "@/lib/llm/vertex-client";
 import { programs } from "@/lib/programs";
 import type { ProjectFormat } from "@/lib/slide-types";
 
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
             seed?: SeedContext;
         } = await request.json();
 
-        const client = new Anthropic();
+        const client = createClaudeClient();
         const systemPrompt = buildSystemPrompt(format, home, seed);
 
         const response = await client.messages.create({

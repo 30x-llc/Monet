@@ -245,7 +245,7 @@ intro-mentors, curriculum-grid, pricing-cta, cover-globe — mismos schemas que 
 
 const CAROUSEL_STRUCTURE = `## ESTRUCTURA DE CARRUSEL (6–9 slides cuadradas 1080×1080)
 
-Slide 1: **ig-cover** — hook potente (título grande + subtítulo). backgroundImage opcional (foto de mentor).
+Slide 1: **ig-cover** — campos: \`eyebrow?\` (corto, uppercase), \`headline\` (hook 3-8 palabras), \`titleAccent?\` (frase corta que se resalta en lima), \`subtitle?\`. NO uses backgroundImage: la portada es limpia con la marca 30X.
 Slides 2–N: alternar entre:
   - **ig-text** — headline + body mediano. Numerado opcional ("01", "02"…).
   - **ig-stat** — dato grande (número + label corto + footnote opcional).
@@ -260,7 +260,7 @@ REGLAS:
 
 const STORY_STRUCTURE = `## ESTRUCTURA DE HISTORIA (3–5 slides verticales 1080×1920)
 
-Slide 1: **story-cover** — foto de fondo (mentor o evento) + eyebrow + headline + CTA.
+Slide 1: **story-cover** — eyebrow + headline (hook corto) + subtitle? + ctaLabel?. Portada limpia con la marca 30X (NO uses backgroundImage de assets internos).
 Slides siguientes: **story-text** alternando con **story-cover**. Cada story-text tiene headline corto + body + footer opcional.
 
 REGLAS:
